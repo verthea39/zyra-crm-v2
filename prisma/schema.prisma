@@ -1,0 +1,533 @@
+// ============================================================================
+// UAE Document Clearance / PRO Services / Business Setup CRM
+// Prisma Schema — Step 1 Scaffold
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+// ---------------------------------------------------------------- enums
+
+enum TxnDirection {
+  INCOME
+  EXPENSE
+}
+
+enum TxnStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  VOID
+}
+
+enum PaymentDirection {
+  IN
+  OUT
+}
+
+enum PaymentMode {
+  CASH
+  CARD
+  BANK_TRANSFER
+  PORTAL_BALANCE
+  CHEQUE
+}
+
+enum AccountType {
+  CASH
+  BANK
+  PORTAL
+}
+
+// ============================================================================
+// AUTH & RBAC
+// ============================================================================
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  users       User[]
+  createdAt   DateTime @default(now())
+}
+
+model User {
+  id           String  @id @default(cuid())
+  name         String
+  email        String  @unique
+  passwordHash String?
+  phone        String?
+  avatarUrl    String?
+  authId       String? @unique
+  isActive     Boolean @default(true)
+
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  clientId String? @unique
+  client   Client? @relation("ClientPortalUser", fields: [clientId], references: [id], onDelete: SetNull)
+
+  assignedTasks     Task[]             @relation("AssignedPRO")
+  assignedWorkflows WorkflowStep[]     @relation("StepAssignee")
+  fieldTaskLogs     FieldTaskCheckIn[]
+  documentsUploaded Document[]         @relation("UploadedBy")
+  auditLogs         AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignedClients Client[] @relation("AssignedClientPRO")
+
+  @@index([email])
+}
+
+// ============================================================================
+// CLIENT & COMPANY MANAGEMENT
+// ============================================================================
+
+model Client {
+  id            String @id @default(cuid())
+  clientType    String
+  accountStatus String @default("PROSPECT")
+  leadSource    String @default("OTHER")
+
+  code            String? @unique // ZC-0001
+  trn             String? // VAT registration number
+  creditLimitFils BigInt  @default(0)
+
+  assignedPROId String?
+  assignedPRO   User?   @relation("AssignedClientPRO", fields: [assignedPROId], references: [id])
+
+  corporateProfile  CorporateProfile?
+  individualProfile IndividualProfile?
+
+  documents  Document[]
+  workflows  Workflow[]
+  quotations Quotation[]
+
+  transactions Transaction[]
+  payments     Payment[]
+  cases        CaseFile[]
+
+  portalUser User? @relation("ClientPortalUser")
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientType])
+  @@index([accountStatus])
+}
+
+model CorporateProfile {
+  id       String @id @default(cuid())
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId String @unique
+
+  companyNameEn      String
+  companyNameAr      String?
+  tradeLicenseNumber String  @unique
+  licenseType        String?
+  issuingAuthority   String
+  legalType          String?
+
+  tradeLicenseExpiry DateTime?
+
+  establishmentCardImmNumber   String?
+  establishmentCardImmExpiry   DateTime?
+  establishmentCardMohreNumber String?
+  establishmentCardMohreExpiry DateTime?
+
+  corporateTaxTrn String?
+  vatTrn          String?
+
+  ejariNumber        String?
+  ejariExpiry        DateTime?
+  tenancyUnitDetails String?
+
+  authorizedSignatoryName     String?
+  authorizedSignatoryPassport String?
+  authorizedSignatoryEid      String?
+  authorizedSignatoryMobile   String?
+  authorizedSignatoryEmail    String?
+
+  employees IndividualProfile[] @relation("SponsorCompany")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tradeLicenseNumber])
+  @@index([issuingAuthority])
+}
+
+model IndividualProfile {
+  id       String @id @default(cuid())
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId String @unique
+
+  fullNameEn String
+  fullNameAr String?
+
+  passportNumber String
+  nationality    String
+  passportExpiry DateTime?
+
+  emiratesIdNumber String?
+  emiratesIdExpiry DateTime?
+
+  unifiedIdNumber String?
+  visaType        String?
+  visaExpiry      DateTime?
+
+  sponsorCompanyId String?
+  sponsorCompany   CorporateProfile? @relation("SponsorCompany", fields: [sponsorCompanyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([passportNumber])
+  @@index([emiratesIdNumber])
+}
+
+// ============================================================================
+// PRO SERVICES / WORKFLOW TRACKER 
+// ============================================================================
+
+model ServiceTemplate {
+  id          String           @id @default(cuid())
+  name        String
+  category    String
+  description String?
+  basePrice   Decimal?
+  stepDefs    ServiceStepDef[]
+  workflows   Workflow[]
+  createdAt   DateTime         @default(now())
+}
+
+model ServiceStepDef {
+  id          String          @id @default(cuid())
+  template    ServiceTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  templateId  String
+  order       Int
+  name        String
+  description String?
+}
+
+model Workflow {
+  id       String @id @default(cuid())
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId String
+
+  template   ServiceTemplate? @relation(fields: [templateId], references: [id])
+  templateId String?
+
+  name     String
+  category String
+  steps    WorkflowStep[]
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+}
+
+model WorkflowStep {
+  id         String   @id @default(cuid())
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  workflowId String
+
+  order  Int
+  name   String
+  status String @default("PENDING")
+
+  assigneeId String?
+  assignee   User?   @relation("StepAssignee", fields: [assigneeId], references: [id])
+
+  fee Decimal?
+
+  icpGdrfaRefNumber String?
+  tasheelRefNumber  String?
+  mohreTxnNumber    String?
+
+  dueDate     DateTime?
+  completedAt DateTime?
+
+  tasks Task[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workflowId])
+  @@index([status])
+}
+
+// ============================================================================
+// FIELD PRO & TASK DISPATCH MODULE
+// ============================================================================
+
+model Task {
+  id             String        @id @default(cuid())
+  workflowStep   WorkflowStep? @relation(fields: [workflowStepId], references: [id], onDelete: Cascade)
+  workflowStepId String?
+
+  title  String
+  venue  String
+  status String @default("PENDING")
+
+  assigneeId String
+  assignee   User   @relation("AssignedPRO", fields: [assigneeId], references: [id])
+
+  dueDate DateTime?
+  notes   String?
+
+  checkIns FieldTaskCheckIn[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([assigneeId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model FieldTaskCheckIn {
+  id     String @id @default(cuid())
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId String
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  latitude   Float?
+  longitude  Float?
+  note       String?
+  documentId String?
+  document   Document? @relation(fields: [documentId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model Document {
+  id       String @id @default(cuid())
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId String
+
+  category String
+  fileName String
+  fileUrl  String
+  mimeType String?
+
+  expiryDate         DateTime?
+  verificationStatus String    @default("PENDING_REVIEW")
+
+  uploadedById String?
+  uploadedBy   User?   @relation("UploadedBy", fields: [uploadedById], references: [id])
+
+  fieldCheckIns FieldTaskCheckIn[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([category])
+  @@index([expiryDate])
+}
+
+// ============================================================================
+// QUOTATIONS
+// ============================================================================
+
+model Quotation {
+  id       String @id @default(cuid())
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId String
+
+  reference String              @unique // e.g. QTN-2026-0001
+  lineItems QuotationLineItem[]
+
+  subtotal  Decimal
+  vatAmount Decimal
+  total     Decimal
+
+  status String @default("DRAFT")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model QuotationLineItem {
+  id          String    @id @default(cuid())
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  quotationId String
+
+  description   String
+  type          String
+  quantity      Decimal @default(1)
+  unitPrice     Decimal
+  govReceiptRef String?
+}
+
+// ============================================================================
+// FINANCE & TRANSACTIONS (New Module)
+// ============================================================================
+
+model CaseFile {
+  id            String    @id @default(cuid())
+  code          String    @unique // ZR-2026-0142
+  clientId      String
+  client        Client    @relation(fields: [clientId], references: [id])
+  serviceType   String // "Residence visa renewal", "Trade licence renewal"
+  applicantName String?
+  status        String    @default("OPEN") // OPEN | SUBMITTED | COMPLETED | CANCELLED
+  openedAt      DateTime  @default(now())
+  closedAt      DateTime?
+
+  transactions Transaction[]
+
+  @@index([clientId])
+  @@index([status])
+}
+
+model Category {
+  id              String       @id @default(cuid())
+  name            String
+  direction       TxnDirection
+  isGovernmentFee Boolean      @default(false)
+  isActive        Boolean      @default(true)
+  sortOrder       Int          @default(0)
+
+  transactions Transaction[]
+
+  @@unique([name, direction])
+}
+
+model Account {
+  id                 String      @id @default(cuid())
+  name               String      @unique // "Office cash", "ADCB current", "Amer portal"
+  type               AccountType
+  openingBalanceFils BigInt      @default(0)
+  isActive           Boolean     @default(true)
+
+  payments Payment[]
+}
+
+model DayTag {
+  id    String   @id @default(cuid())
+  date  DateTime @db.Date
+  label String
+  note  String?
+
+  @@unique([date, label])
+}
+
+model Transaction {
+  id        String @id @default(cuid())
+  reference String @unique // INV-2026-0001 / EXP-2026-0442
+
+  direction  TxnDirection
+  occurredAt DateTime
+  categoryId String
+  category   Category     @relation(fields: [categoryId], references: [id])
+
+  clientId   String?
+  client     Client?   @relation(fields: [clientId], references: [id])
+  caseFileId String?
+  caseFile   CaseFile? @relation(fields: [caseFileId], references: [id])
+
+  amountFils  BigInt
+  taxFils     BigInt    @default(0)
+  settledFils BigInt    @default(0)
+  status      TxnStatus @default(UNPAID)
+
+  description String?
+  vendorName  String?
+  tags        String[] @default([])
+
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  voidReason  String?
+
+  allocations PaymentAllocation[]
+
+  @@index([occurredAt])
+  @@index([direction, occurredAt])
+  @@index([clientId, status])
+  @@index([caseFileId])
+  @@index([categoryId])
+  @@index([deletedAt])
+}
+
+model Payment {
+  id         String           @id @default(cuid())
+  reference  String           @unique // RCT-2026-0001
+  direction  PaymentDirection
+  occurredAt DateTime
+  mode       PaymentMode
+  accountId  String
+  account    Account          @relation(fields: [accountId], references: [id])
+
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id])
+
+  amountFils    BigInt
+  unappliedFils BigInt @default(0)
+
+  chequeNo   String?
+  chequeDate DateTime?
+  notes      String?
+
+  createdById String?
+  createdAt   DateTime  @default(now())
+  deletedAt   DateTime?
+
+  allocations PaymentAllocation[]
+
+  @@index([occurredAt])
+  @@index([clientId])
+  @@index([accountId, occurredAt])
+}
+
+model PaymentAllocation {
+  id            String      @id @default(cuid())
+  paymentId     String
+  payment       Payment     @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  amountFils    BigInt
+  createdAt     DateTime    @default(now())
+
+  @@unique([paymentId, transactionId])
+  @@index([transactionId])
+}
+
+// ============================================================================
+// AUDIT LOG
+// ============================================================================
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  entity    String
+  entityId  String
+  action    String
+  before    Json?
+  after     Json?
+  reason    String?
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}

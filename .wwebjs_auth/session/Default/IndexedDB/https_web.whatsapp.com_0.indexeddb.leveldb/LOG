@@ -1,0 +1,17 @@
+2026/09/02-17:37:21.433 1290 Creating DB C:\Users\lenovo\Desktop\Web\Zyra CRm\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb since it was missing.
+2026/09/02-17:37:21.437 1290 Reusing MANIFEST C:\Users\lenovo\Desktop\Web\Zyra CRm\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/09/02-18:43:53.341 8d4 Level-0 table #5: started
+2026/09/02-18:43:53.401 8d4 Level-0 table #5: 1151633 bytes OK
+2026/09/02-18:43:53.404 8d4 Delete type=0 #3
+2026/09/02-19:40:50.226 8d4 Level-0 table #7: started
+2026/09/02-19:40:50.242 8d4 Level-0 table #7: 975147 bytes OK
+2026/09/02-19:40:50.244 8d4 Delete type=0 #4
+2026/09/02-19:41:05.896 8d4 Compacting 1@1 + 1@2 files
+2026/09/02-19:41:05.934 8d4 Generated table #8@1: 18535 keys, 906850 bytes
+2026/09/02-19:41:05.934 8d4 Compacted 1@1 + 1@2 files => 906850 bytes
+2026/09/02-19:41:05.935 8d4 compacted to: files[ 0 0 1 0 0 0 0 ]
+2026/09/02-19:41:05.935 8d4 Delete type=2 #5
+2026/09/02-19:41:05.935 8d4 Delete type=2 #7
+2026/09/02-20:31:14.503 8d4 Level-0 table #10: started
+2026/09/02-20:31:14.515 8d4 Level-0 table #10: 1021720 bytes OK
+2026/09/02-20:31:14.516 8d4 Delete type=0 #6
