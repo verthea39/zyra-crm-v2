@@ -489,7 +489,12 @@ export async function getReferenceData() {
       : c.individualProfile?.fullNameEn || 'Unknown Individual Client'
   }));
 
-  return { categories, clients: mappedClients };
+  const accounts = await db.account.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true, type: true }
+  });
+
+  return { categories, clients: mappedClients, accounts };
 }
 
 const svc = {

@@ -35,8 +35,37 @@ export async function createTask(formData: FormData) {
   });
 
   revalidatePath("/field-tasks");
+  revalidatePath("/field-tasks");
   revalidatePath("/");
   redirect("/field-tasks");
+}
+
+export async function editTask(taskId: string, formData: FormData) {
+  await requirePermission("workflows:assign");
+  const parsed = createTaskSchema.parse(Object.fromEntries(formData.entries()));
+
+  await db.task.update({
+    where: { id: taskId },
+    data: {
+      title: parsed.title,
+      venue: parsed.venue,
+      assigneeId: parsed.assigneeId,
+      workflowStepId: parsed.workflowStepId || null,
+      dueDate: parsed.dueDate ? new Date(parsed.dueDate) : null,
+      notes: parsed.notes || null,
+    },
+  });
+
+  revalidatePath("/field-tasks");
+  revalidatePath("/");
+  redirect("/field-tasks");
+}
+
+export async function deleteTask(taskId: string) {
+  await requirePermission("workflows:assign");
+  await db.task.delete({ where: { id: taskId } });
+  revalidatePath("/field-tasks");
+  revalidatePath("/");
 }
 
 export async function updateTaskStatus(taskId: string, status: TaskStatus) {

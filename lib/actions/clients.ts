@@ -181,18 +181,87 @@ export async function deleteClient(id: string) {
 export async function updateClient(id: string, formData: FormData) {
   await requirePermission("clients:write");
   const raw = Object.fromEntries(formData.entries());
-  // In a real app we'd validate the subset of fields updated, but for now we'll do a basic update.
-  // We'll assume the client is only updating account status or lead source for simplicity.
-  const updateData: any = {};
-  if (raw.leadSource) updateData.leadSource = raw.leadSource as string;
-  if (raw.accountStatus) updateData.accountStatus = raw.accountStatus as AccountStatus;
-  
-  if (Object.keys(updateData).length > 0) {
-    await db.client.update({
-      where: { id },
-      data: updateData,
-    });
+
+  const str = (key: string) => {
+    const v = raw[key];
+    return typeof v === "string" ? v.trim() : "";
+  };
+  const optStr = (key: string) => {
+    const v = str(key);
+    return v.length > 0 ? v : null;
+  };
+  const optDate = (key: string) => {
+    const v = str(key);
+    return v.length > 0 ? new Date(v) : null;
+  };
+  const has = (key: string) => Object.prototype.hasOwnProperty.call(raw, key);
+  const setIfPresent = (target: any, key: string, value: any) => {
+    if (has(key)) target[key] = value;
+  };
+
+  const client = await db.client.findUnique({
+    where: { id },
+    select: { clientType: true },
+  });
+  if (!client) throw new Error("Client not found");
+
+  try {
+    const clientData: any = {};
+    if (str("leadSource")) clientData.leadSource = str("leadSource");
+    if (str("accountStatus")) clientData.accountStatus = str("accountStatus") as AccountStatus;
+    setIfPresent(clientData, "code", optStr("code"));
+    setIfPresent(clientData, "trn", optStr("trn"));
+    setIfPresent(clientData, "notes", optStr("notes"));
+    setIfPresent(clientData, "assignedPROId", optStr("assignedPROId"));
+
+    if (client.clientType === "CORPORATE") {
+      const p: any = {};
+      if (str("companyNameEn")) p.companyNameEn = str("companyNameEn");
+      if (str("tradeLicenseNumber")) p.tradeLicenseNumber = str("tradeLicenseNumber");
+      if (str("issuingAuthority")) p.issuingAuthority = str("issuingAuthority");
+      setIfPresent(p, "companyNameAr", optStr("companyNameAr"));
+      setIfPresent(p, "licenseType", optStr("licenseType"));
+      setIfPresent(p, "legalType", optStr("legalType"));
+      setIfPresent(p, "tradeLicenseExpiry", optDate("tradeLicenseExpiry"));
+      setIfPresent(p, "vatTrn", optStr("vatTrn"));
+      setIfPresent(p, "corporateTaxTrn", optStr("corporateTaxTrn"));
+      setIfPresent(p, "ejariNumber", optStr("ejariNumber"));
+      setIfPresent(p, "ejariExpiry", optDate("ejariExpiry"));
+      setIfPresent(p, "establishmentCardImmNumber", optStr("establishmentCardImmNumber"));
+      setIfPresent(p, "establishmentCardImmExpiry", optDate("establishmentCardImmExpiry"));
+      setIfPresent(p, "establishmentCardMohreNumber", optStr("establishmentCardMohreNumber"));
+      setIfPresent(p, "establishmentCardMohreExpiry", optDate("establishmentCardMohreExpiry"));
+      setIfPresent(p, "authorizedSignatoryName", optStr("authorizedSignatoryName"));
+      setIfPresent(p, "authorizedSignatoryPassport", optStr("authorizedSignatoryPassport"));
+      setIfPresent(p, "authorizedSignatoryEid", optStr("authorizedSignatoryEid"));
+      setIfPresent(p, "authorizedSignatoryMobile", optStr("authorizedSignatoryMobile"));
+      setIfPresent(p, "authorizedSignatoryEmail", optStr("authorizedSignatoryEmail"));
+      if (Object.keys(p).length > 0) clientData.corporateProfile = { update: p };
+    } else {
+      const p: any = {};
+      if (str("fullNameEn")) p.fullNameEn = str("fullNameEn");
+      if (str("passportNumber")) p.passportNumber = str("passportNumber");
+      if (str("nationality")) p.nationality = str("nationality");
+      setIfPresent(p, "fullNameAr", optStr("fullNameAr"));
+      setIfPresent(p, "passportExpiry", optDate("passportExpiry"));
+      setIfPresent(p, "emiratesIdNumber", optStr("emiratesIdNumber"));
+      setIfPresent(p, "emiratesIdExpiry", optDate("emiratesIdExpiry"));
+      setIfPresent(p, "unifiedIdNumber", optStr("unifiedIdNumber"));
+      setIfPresent(p, "visaType", optStr("visaType"));
+      setIfPresent(p, "visaExpiry", optDate("visaExpiry"));
+      setIfPresent(p, "sponsorCompanyId", optStr("sponsorCompanyId"));
+      if (Object.keys(p).length > 0) clientData.individualProfile = { update: p };
+    }
+
+    await db.client.update({ where: { id }, data: clientData });
+  } catch (error: any) {
+    if (error?.code === "P2002") {
+      return { error: "A client with this Trade License Number or specific detail already exists." };
+    }
+    return { error: error?.message || "An unexpected error occurred." };
   }
+
   revalidatePath(`/clients/${id}`);
   revalidatePath("/clients");
+  revalidatePath("/companies");
 }

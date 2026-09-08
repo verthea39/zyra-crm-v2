@@ -3,6 +3,7 @@ import { StatsCard } from "@/components/dashboard/StatsCard";
 import { ExpiryAlertsWidget } from "@/components/dashboard/ExpiryAlertsWidget";
 import { TodayTasksWidget } from "@/components/dashboard/TodayTasksWidget";
 import { ActiveWorkflowsWidget } from "@/components/dashboard/ActiveWorkflowsWidget";
+import { QuickTransactionButtons } from "@/components/dashboard/QuickTransactionButtons";
 import { getDashboardMetrics, getExpiryAlerts, getTodaysFieldTasks, getActiveWorkflows } from "@/lib/dashboard";
 import { formatAED } from "@/lib/utils";
 
@@ -18,11 +19,14 @@ export default async function DashboardOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Dashboard Overview</h1>
-        <p className="text-sm text-muted-foreground">
-          Live snapshot of active cases, expiring documents, field tasks, and revenue.
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Dashboard Overview</h1>
+          <p className="text-sm text-muted-foreground">
+            Live snapshot of active cases, expiring documents, field tasks, and revenue.
+          </p>
+        </div>
+        <QuickTransactionButtons />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

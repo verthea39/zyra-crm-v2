@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma db push --accept-data-loss && prisma db execute --file prisma/finance.sql --schema prisma/schema.prisma && next build",
+    "build": "prisma generate && prisma db push && prisma db execute --file prisma/finance.sql --schema prisma/schema.prisma && next build",
     "start": "next start",
     "lint": "next lint",
     "prisma:generate": "prisma generate",
@@ -32,6 +32,7 @@
     "clsx": "^2.1.1",
     "cn": "^0.2.5",
     "date-fns": "^4.1.0",
+    "exceljs": "^4.4.0",
     "firebase": "^12.18.0",
     "framer-motion": "^13.1.1",
     "lucide-react": "^0.469.0",
@@ -47,6 +48,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^22.10.7",
     "@types/number-to-words": "^1.2.3",
     "@types/qrcode": "^1.5.6",

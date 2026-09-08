@@ -65,7 +65,7 @@ model User {
   passwordHash String?
   phone        String?
   avatarUrl    String?
-  authId       String? @unique
+  authId       String?
   isActive     Boolean @default(true)
 
   roleId String
@@ -79,6 +79,7 @@ model User {
   fieldTaskLogs     FieldTaskCheckIn[]
   documentsUploaded Document[]         @relation("UploadedBy")
   auditLogs         AuditLog[]
+  invoices          Invoice[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -98,7 +99,7 @@ model Client {
   accountStatus String @default("PROSPECT")
   leadSource    String @default("OTHER")
 
-  code            String? @unique // ZC-0001
+  code            String? // ZC-0001
   trn             String? // VAT registration number
   creditLimitFils BigInt  @default(0)
 
@@ -111,6 +112,7 @@ model Client {
   documents  Document[]
   workflows  Workflow[]
   quotations Quotation[]
+  invoices   Invoice[]
 
   transactions Transaction[]
   payments     Payment[]
@@ -360,6 +362,8 @@ model Quotation {
   total     Decimal
 
   status String @default("DRAFT")
+  convertedInvoiceId String? @unique
+  invoice Invoice? @relation(fields: [convertedInvoiceId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -375,6 +379,53 @@ model QuotationLineItem {
   quantity      Decimal @default(1)
   unitPrice     Decimal
   govReceiptRef String?
+}
+
+model Invoice {
+  id                       String            @id @default(cuid())
+  client                   Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId                 String
+
+  invoiceNumber            String            @unique
+  issueDate                DateTime          @default(now())
+  supplyDate               DateTime          @default(now())
+  currency                 String            @default("AED")
+  supplierTrn              String
+  customerTrn              String?
+  subtotalServiceFees      Decimal
+  vatAmount                Decimal
+  subtotalGovDisbursements Decimal
+  totalPayable             Decimal
+  paidAmount               Decimal           @default(0)
+  balanceDue               Decimal
+  status                   String            @default("DRAFT")
+  
+  createdById              String?
+  user                     User?             @relation(fields: [createdById], references: [id])
+  
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+  
+  lineItems                InvoiceLineItem[]
+  quotation                Quotation?
+
+  @@index([clientId])
+  @@index([status])
+}
+
+model InvoiceLineItem {
+  id            String  @id @default(cuid())
+  invoice       Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId     String
+
+  description   String
+  type          String
+  quantity      Decimal @default(1)
+  unitPrice     Decimal
+  vatRate       Decimal @default(0)
+  lineTotal     Decimal
+  govReceiptRef String?
+  govReceiptUrl String?
 }
 
 // ============================================================================
@@ -471,7 +522,7 @@ model Transaction {
 
 model Payment {
   id         String           @id @default(cuid())
-  reference  String           @unique // RCT-2026-0001
+  reference  String           // RCT-2026-0001
   direction  PaymentDirection
   occurredAt DateTime
   mode       PaymentMode

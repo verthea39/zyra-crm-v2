@@ -42,12 +42,12 @@ export function Sidebar() {
     <aside className="hidden w-64 flex-col glass-panel m-4 rounded-xl md:flex shrink-0 overflow-hidden relative">
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent opacity-50" />
       
-      <div className="p-6 flex items-center gap-3 border-b border-border/40 relative">
+      <Link href="/" className="p-6 flex items-center gap-3 border-b border-border/40 relative hover:bg-muted/30 transition-colors">
         <div className="size-8 rounded-full overflow-hidden flex items-center justify-center shrink-0 border border-border/50 bg-black">
           <Image src="/logo-icon.png" alt="Zyra CRM Logo" width={32} height={32} className="object-cover" />
         </div>
         <p className="text-sm font-bold text-foreground tracking-tight">ZYRA CRM</p>
-      </div>
+      </Link>
       <nav className="flex-1 space-y-1.5 p-4 z-10">
         {navItems.map(({ href, label, icon: Icon }, i) => {
           const isActive = pathname === href || (href !== "/" && pathname.startsWith(href));

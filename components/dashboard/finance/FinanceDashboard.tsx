@@ -8,7 +8,9 @@ import {
   DollarSign, 
   AlertCircle,
   SearchX,
-  FileText
+  FileText,
+  Lock,
+  Download
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,6 +26,20 @@ export default function FinanceDashboard({
   const [activeTab, setActiveTab] = useState("transactions");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalDirection, setModalDirection] = useState<"INCOME" | "EXPENSE">("INCOME");
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState(false);
+
+  const handleUnlock = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (pin === "471379") {
+      setIsUnlocked(true);
+      setPinError(false);
+    } else {
+      setPinError(true);
+      setPin("");
+    }
+  };
 
   const openModal = (direction: "INCOME" | "EXPENSE") => {
     setModalDirection(direction);
@@ -43,6 +59,47 @@ export default function FinanceDashboard({
     netFils: 0,
     outstandingDueFils: 0,
   };
+
+  if (!isUnlocked) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in fade-in zoom-in-95 duration-500">
+        <Card className="w-full max-w-md glass-panel p-8 text-center border-border/50 shadow-xl relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-warning/5 pointer-events-none" />
+          <div className="relative z-10 flex flex-col items-center">
+            <div className="size-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 shadow-inner border border-primary/20">
+              <Lock className="size-8 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight mb-2">Restricted Access</h2>
+            <p className="text-muted-foreground text-sm mb-8 max-w-[280px]">
+              To view Finance & Ledger data, please enter the 6-digit security PIN.
+            </p>
+            <form onSubmit={handleUnlock} className="w-full flex flex-col items-center gap-4">
+              <Input
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                placeholder="• • • • • •"
+                className={`text-center text-2xl tracking-[0.5em] font-mono h-14 w-full max-w-[200px] bg-background/50 border-border/50 shadow-inner ${
+                  pinError ? "border-rose-500/50 ring-2 ring-rose-500/20" : "focus:border-primary/50"
+                }`}
+                autoFocus
+              />
+              {pinError && (
+                <p className="text-sm font-medium text-rose-500 animate-in slide-in-from-top-1">
+                  Incorrect PIN. Please try again.
+                </p>
+              )}
+              <Button type="submit" className="w-full max-w-[200px] h-12 mt-2 shadow-lg shadow-primary/20 transition-transform active:scale-95" disabled={pin.length < 6}>
+                Unlock Ledger
+              </Button>
+            </form>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -137,6 +194,12 @@ export default function FinanceDashboard({
           </TabsList>
           
           <div className="flex items-center gap-3">
+            <Button variant="outline" className="border-primary/20 hover:bg-primary/5" onClick={() => {
+              window.location.href = "/api/export?scope=full";
+            }}>
+              <Download className="size-4 mr-2" />
+              Export Excel
+            </Button>
             <Button variant="outline" className="border-primary/20 hover:bg-primary/5" onClick={() => openModal("EXPENSE")}>
               Add Expense
             </Button>

@@ -15,6 +15,7 @@ interface TransactionModalProps {
 export default function TransactionModal({ isOpen, onClose, direction }: TransactionModalProps) {
   const [categories, setCategories] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,6 +27,12 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
   const [clientId, setClientId] = useState("");
   const [vendorName, setVendorName] = useState("");
   const [description, setDescription] = useState("");
+  
+  // Payment state
+  const [isPaidNow, setIsPaidNow] = useState(false);
+  const [paidAmount, setPaidAmount] = useState("");
+  const [accountId, setAccountId] = useState("");
+  const [paymentMode, setPaymentMode] = useState("CASH");
 
   useEffect(() => {
     if (isOpen) {
@@ -34,10 +41,12 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
         if (res.success) {
           setCategories(res.data.categories.filter((c: any) => c.direction === direction));
           setClients(res.data.clients);
+          setAccounts(res.data.accounts);
           
           // Auto-select first category if available
           const validCats = res.data.categories.filter((c: any) => c.direction === direction);
           if (validCats.length > 0) setCategoryId(validCats[0].id);
+          if (res.data.accounts?.length > 0) setAccountId(res.data.accounts[0].id);
         } else {
           setError("Failed to load reference data.");
         }
@@ -53,7 +62,7 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
     setIsSubmitting(true);
     setError(null);
 
-    const payload = {
+    const payload: any = {
       direction,
       amountAed: parseFloat(amount),
       occurredAt: new Date(date),
@@ -62,6 +71,12 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
       vendorName: vendorName || undefined,
       description: description || undefined,
     };
+
+    if (isPaidNow && paidAmount && parseFloat(paidAmount) > 0) {
+      payload.paidAmountAed = parseFloat(paidAmount);
+      payload.paymentMode = paymentMode;
+      payload.accountId = accountId;
+    }
 
     const res = await createTransactionAction(payload);
     
@@ -72,6 +87,8 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
       setAmount("");
       setDescription("");
       setVendorName("");
+      setIsPaidNow(false);
+      setPaidAmount("");
       onClose();
     } else {
       setError(res.error || "An error occurred");
@@ -107,6 +124,33 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
               {error && (
                 <div className="p-3 text-sm bg-rose-500/10 text-rose-600 rounded-md border border-rose-500/20">
                   {error}
+                </div>
+              )}
+
+              {direction === "INCOME" ? (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">Client</label>
+                  <select 
+                    className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm"
+                    required
+                    value={clientId}
+                    onChange={e => setClientId(e.target.value)}
+                  >
+                    <option value="" disabled>Select client</option>
+                    {clients.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">Vendor / Payee</label>
+                  <Input 
+                    type="text" 
+                    value={vendorName} 
+                    onChange={e => setVendorName(e.target.value)}
+                    placeholder="e.g. Dubai Municipality"
+                  />
                 </div>
               )}
 
@@ -148,33 +192,6 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
                 </select>
               </div>
 
-              {direction === "INCOME" ? (
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Client</label>
-                  <select 
-                    className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm"
-                    required
-                    value={clientId}
-                    onChange={e => setClientId(e.target.value)}
-                  >
-                    <option value="" disabled>Select client</option>
-                    {clients.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Vendor / Payee</label>
-                  <Input 
-                    type="text" 
-                    value={vendorName} 
-                    onChange={e => setVendorName(e.target.value)}
-                    placeholder="e.g. Dubai Municipality"
-                  />
-                </div>
-              )}
-
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Description (Optional)</label>
                 <Input 
@@ -183,6 +200,68 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
                   onChange={e => setDescription(e.target.value)}
                   placeholder="Additional notes..."
                 />
+              </div>
+
+              <div className="pt-2 border-t border-border mt-4">
+                <label className="flex items-center gap-2 text-sm font-medium cursor-pointer mb-3">
+                  <input 
+                    type="checkbox" 
+                    checked={isPaidNow}
+                    onChange={e => {
+                      setIsPaidNow(e.target.checked);
+                      if (e.target.checked && !paidAmount) setPaidAmount(amount);
+                    }}
+                    className="rounded border-input text-primary focus:ring-primary size-4"
+                  />
+                  Record payment now
+                </label>
+
+                {isPaidNow && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg border border-border/50 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium">Amount Paid</label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        min="0.01"
+                        max={amount || undefined}
+                        required={isPaidNow} 
+                        value={paidAmount} 
+                        onChange={e => setPaidAmount(e.target.value)}
+                        placeholder="e.g. 500.00"
+                        className="bg-background"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium">Payment Mode</label>
+                      <select 
+                        className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm"
+                        value={paymentMode}
+                        onChange={e => setPaymentMode(e.target.value)}
+                      >
+                        <option value="CASH">Cash</option>
+                        <option value="CARD">Card</option>
+                        <option value="BANK_TRANSFER">Bank Transfer</option>
+                        <option value="PORTAL_BALANCE">Portal Balance</option>
+                        <option value="CHEQUE">Cheque</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-sm font-medium">Account</label>
+                      <select 
+                        className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm"
+                        required={isPaidNow}
+                        value={accountId}
+                        onChange={e => setAccountId(e.target.value)}
+                      >
+                        <option value="" disabled>Select account</option>
+                        {accounts.map(a => (
+                          <option key={a.id} value={a.id}>{a.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
             </form>
           )}

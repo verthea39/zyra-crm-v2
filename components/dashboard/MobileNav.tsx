@@ -45,12 +45,12 @@ export function MobileNav() {
             className="fixed inset-y-0 left-0 w-72 bg-card border-r border-border shadow-xl flex flex-col"
           >
             <div className="p-6 flex items-center justify-between border-b border-border/50">
-              <div className="flex items-center gap-3">
+              <Link href="/" onClick={() => setIsOpen(false)} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                 <div className="size-8 rounded-full overflow-hidden flex items-center justify-center shrink-0 border border-border/50 bg-black">
                   <Image src="/logo-icon.png" alt="Zyra CRM Logo" width={32} height={32} className="object-cover" />
                 </div>
                 <p className="text-sm font-semibold text-foreground tracking-tight">ZYRA CRM</p>
-              </div>
+              </Link>
               <button
                 onClick={() => setIsOpen(false)}
                 className="rounded-md p-2 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"

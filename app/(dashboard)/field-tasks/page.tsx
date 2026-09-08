@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Plus, MapPin } from "lucide-react";
-import { listTasks } from "@/lib/actions/tasks";
+import { Plus, MapPin, Edit } from "lucide-react";
+import { listTasks, deleteTask } from "@/lib/actions/tasks";
 import { Badge } from "@/components/ui/badge";
+import { DeleteButton } from "@/components/ui/DeleteButton";
 
 export const dynamic = "force-dynamic";
 import { Button } from "@/components/ui/button";
@@ -49,9 +50,9 @@ export default async function FieldTasksPage() {
           return (
             <div
               key={task.id}
-              className="flex items-center justify-between rounded-lg border border-border bg-card p-4 shadow-sm"
+              className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-lg border border-border bg-card p-4 shadow-sm"
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 w-full sm:w-auto">
                 <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="font-medium text-card-foreground">{task.title}</p>
@@ -68,9 +69,15 @@ export default async function FieldTasksPage() {
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end sm:justify-start">
                 <Badge tone={statusTone[task.status as TaskStatus]}>{task.status.replaceAll("_", " ")}</Badge>
                 <TaskStatusButton taskId={task.id} status={task.status} />
+                <Link href={`/field-tasks/${task.id}/edit`}>
+                  <Button variant="ghost" size="icon">
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </Link>
+                <DeleteButton onDelete={deleteTask.bind(null, task.id)} itemName="this task" />
               </div>
             </div>
           );

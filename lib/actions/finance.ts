@@ -23,6 +23,12 @@ const transactionSchema = z.object({
   tags: z.array(z.string().max(40)).max(10).optional(),
 });
 
+const createTransactionWithPaymentSchema = transactionSchema.extend({
+  paidAmountAed: z.number().min(0).optional(),
+  paymentMode: z.nativeEnum(PaymentMode).optional(),
+  accountId: z.string().optional(),
+});
+
 const paymentSchema = z.object({
   direction: z.nativeEnum(PaymentDirection),
   occurredAt: z.coerce.date(),
@@ -85,8 +91,26 @@ export async function listTransactionsAction(filters: any) {
 export async function createTransactionAction(data: any) {
   return handleAction(async () => {
     const session = await requirePermission("invoices:write");
-    const parsed = transactionSchema.parse(data);
+    const parsed = createTransactionWithPaymentSchema.parse(data);
     const txn = await svc.createTransaction(parsed, session.user.id);
+    
+    if (parsed.paidAmountAed && parsed.paidAmountAed > 0) {
+      if (!parsed.paymentMode || !parsed.accountId) {
+        throw new BadRequest("Payment mode and account are required when recording a paid amount.");
+      }
+      
+      await svc.recordPayment({
+        direction: parsed.direction === "INCOME" ? "IN" : "OUT",
+        occurredAt: parsed.occurredAt,
+        mode: parsed.paymentMode,
+        accountId: parsed.accountId,
+        clientId: parsed.clientId,
+        amountAed: parsed.paidAmountAed,
+        notes: `Initial payment for ${txn.reference}`,
+        allocations: [{ transactionId: txn.id, amountAed: parsed.paidAmountAed }]
+      }, session.user.id);
+    }
+
     revalidatePath("/finance");
     return txn;
   });
