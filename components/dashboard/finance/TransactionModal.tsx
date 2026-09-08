@@ -59,8 +59,37 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
     setError(null);
+
+    // Explicit manual validation
+    if (direction === "INCOME" && !clientId) {
+      setError("Please select a client.");
+      return;
+    }
+    if (!amount || parseFloat(amount) <= 0) {
+      setError("Please enter a valid amount.");
+      return;
+    }
+    if (!date) {
+      setError("Please select a date.");
+      return;
+    }
+    if (!categoryId) {
+      setError("Please select a category.");
+      return;
+    }
+    if (isPaidNow) {
+      if (!paidAmount || parseFloat(paidAmount) <= 0) {
+        setError("Please enter a valid amount paid.");
+        return;
+      }
+      if (!accountId) {
+        setError("Please select an account for the payment.");
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
 
     const payload: any = {
       direction,
@@ -112,14 +141,14 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
           </button>
         </div>
 
-        {/* Body */}
-        <div className="p-4 overflow-y-auto flex-1">
-          {isLoading ? (
-            <div className="flex justify-center p-8">
-              <Loader2 className="size-6 animate-spin text-primary" />
-            </div>
-          ) : (
-            <form id="txn-form" onSubmit={handleSubmit} className="space-y-4">
+        {/* Body & Footer wrapped in Form */}
+        {isLoading ? (
+          <div className="flex justify-center p-8 flex-1 items-center">
+            <Loader2 className="size-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <form id="txn-form" onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="p-4 overflow-y-auto flex-1 space-y-4">
               
               {error && (
                 <div className="p-3 text-sm bg-rose-500/10 text-rose-600 rounded-md border border-rose-500/20">
@@ -129,10 +158,9 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
 
               {direction === "INCOME" ? (
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Client</label>
+                  <label className="text-sm font-medium">Client <span className="text-rose-500">*</span></label>
                   <select 
                     className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm"
-                    required
                     value={clientId}
                     onChange={e => setClientId(e.target.value)}
                   >
@@ -155,12 +183,11 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
               )}
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">Amount (AED)</label>
+                <label className="text-sm font-medium">Amount (AED) <span className="text-rose-500">*</span></label>
                 <Input 
                   type="number" 
                   step="0.01" 
                   min="0.01"
-                  required 
                   value={amount} 
                   onChange={e => setAmount(e.target.value)}
                   placeholder="e.g. 1500.00"
@@ -168,20 +195,18 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">Date</label>
+                <label className="text-sm font-medium">Date <span className="text-rose-500">*</span></label>
                 <Input 
                   type="date" 
-                  required 
                   value={date} 
                   onChange={e => setDate(e.target.value)}
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">Category</label>
+                <label className="text-sm font-medium">Category <span className="text-rose-500">*</span></label>
                 <select 
                   className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm"
-                  required
                   value={categoryId}
                   onChange={e => setCategoryId(e.target.value)}
                 >
@@ -219,13 +244,12 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
                 {isPaidNow && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg border border-border/50 animate-in fade-in zoom-in-95 duration-200">
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium">Amount Paid</label>
+                      <label className="text-sm font-medium">Amount Paid <span className="text-rose-500">*</span></label>
                       <Input 
                         type="number" 
                         step="0.01" 
                         min="0.01"
                         max={amount || undefined}
-                        required={isPaidNow} 
                         value={paidAmount} 
                         onChange={e => setPaidAmount(e.target.value)}
                         placeholder="e.g. 500.00"
@@ -247,10 +271,9 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
                       </select>
                     </div>
                     <div className="space-y-1.5 sm:col-span-2">
-                      <label className="text-sm font-medium">Account</label>
+                      <label className="text-sm font-medium">Account <span className="text-rose-500">*</span></label>
                       <select 
                         className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm"
-                        required={isPaidNow}
                         value={accountId}
                         onChange={e => setAccountId(e.target.value)}
                       >
@@ -263,27 +286,26 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
                   </div>
                 )}
               </div>
-            </form>
-          )}
-        </div>
+            </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t bg-muted/20 flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-            Cancel
-          </Button>
-          <Button type="submit" form="txn-form" disabled={isLoading || isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Save Transaction"
-            )}
-          </Button>
-        </div>
-
+            {/* Footer */}
+            <div className="p-4 border-t bg-muted/20 flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading || isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Transaction"
+                )}
+              </Button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

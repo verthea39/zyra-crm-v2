@@ -74,13 +74,15 @@ export async function createTransaction(data: any, userId?: string) {
   const count = await db.transaction.count();
   const ref = `${data.direction === "INCOME" ? "INV" : "EXP"}-${new Date().getFullYear()}-${(count + 1).toString().padStart(4, "0")}`;
 
+  const { amountAed, taxAed, paidAmountAed, paymentMode, accountId, ...transactionData } = data;
+
   return db.$transaction(async (tx) => {
     const txn = await tx.transaction.create({
       data: {
-        ...data,
+        ...transactionData,
         reference: ref,
-        amountFils: aedToFils(data.amountAed),
-        taxFils: data.taxAed ? aedToFils(data.taxAed) : BigInt(0),
+        amountFils: aedToFils(amountAed),
+        taxFils: taxAed ? aedToFils(taxAed) : BigInt(0),
         createdById: userId,
       },
     });
@@ -113,12 +115,14 @@ export async function updateTransaction(id: string, data: any, userId?: string) 
       }
     }
 
+    const { amountAed, taxAed, ...transactionData } = data;
+
     const updated = await tx.transaction.update({
       where: { id },
       data: {
-        ...data,
-        amountFils: data.amountAed !== undefined ? aedToFils(data.amountAed) : undefined,
-        taxFils: data.taxAed !== undefined ? aedToFils(data.taxAed) : undefined,
+        ...transactionData,
+        amountFils: amountAed !== undefined ? aedToFils(amountAed) : undefined,
+        taxFils: taxAed !== undefined ? aedToFils(taxAed) : undefined,
       },
     });
 

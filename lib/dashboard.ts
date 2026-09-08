@@ -33,7 +33,11 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     }),
     db.payment.aggregate({
       _sum: { amountFils: true },
-      where: { occurredAt: { gte: startOfDay, lt: endOfDay } },
+      where: { 
+        direction: "IN",
+        deletedAt: null,
+        occurredAt: { gte: startOfDay, lt: endOfDay } 
+      },
     }),
   ]);
 

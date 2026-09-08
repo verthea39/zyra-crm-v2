@@ -20,6 +20,7 @@ import {
   Settings,
   Landmark,
   ArrowRightLeft,
+  ReceiptText,
 } from "lucide-react";
 
 export const navItems = [
@@ -28,6 +29,8 @@ export const navItems = [
   { href: "/workflows", label: "PRO Workflows", icon: WorkflowIcon },
   { href: "/documents", label: "Document Vault", icon: FileText },
   { href: "/quotations", label: "Quotations", icon: FileSignature },
+  { href: "/invoices", label: "Invoices", icon: Receipt },
+  { href: "/receipts", label: "Receipts", icon: ReceiptText },
   { href: "/finance", label: "Finance & Ledger", icon: Landmark },
   { href: "/field-tasks", label: "Field PRO Tasks", icon: MapPin },
   { href: "/services", label: "Services", icon: Briefcase },
