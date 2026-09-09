@@ -58,6 +58,7 @@ export default function FinanceDashboard({
     expenseFils: 0,
     netFils: 0,
     outstandingDueFils: 0,
+    outstandingPayableFils: 0,
   };
 
   if (!isUnlocked) {
@@ -104,7 +105,7 @@ export default function FinanceDashboard({
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <Card className="glass shadow-sm transition-all hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Revenue (Billed)</CardTitle>
@@ -173,6 +174,26 @@ export default function FinanceDashboard({
             </div>
             <p className="text-xs font-medium text-warning-foreground/80 mt-1">
               Money earned not yet collected
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Visually emphasized Outstanding Payable card */}
+        <Card className="border-rose-500/50 bg-rose-500/5 shadow-sm transition-all hover:shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-bold text-rose-500">
+              Outstanding Payable
+            </CardTitle>
+            <div className="size-8 rounded-full bg-rose-500/20 flex items-center justify-center">
+              <AlertCircle className="h-4 w-4 text-rose-500" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-rose-500 tabular-nums">
+              {formatMoney(sum.outstandingPayableFils)}
+            </div>
+            <p className="text-xs font-medium text-rose-500/80 mt-1">
+              Money owed to vendors
             </p>
           </CardContent>
         </Card>

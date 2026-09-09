@@ -369,6 +369,44 @@ export async function listTransactions(filters: any) {
   return { data, meta: { total, page, pageSize } };
 }
 
+export async function listPayments(filters: any) {
+  const where: any = { deletedAt: null };
+
+  if (filters.direction) where.direction = filters.direction;
+  if (filters.mode) where.mode = filters.mode;
+  if (filters.accountId) where.accountId = filters.accountId;
+  if (filters.clientId) where.clientId = filters.clientId;
+  
+  if (filters.from || filters.to) {
+    where.occurredAt = {};
+    if (filters.from) where.occurredAt.gte = filters.from;
+    if (filters.to) where.occurredAt.lte = filters.to;
+  }
+  
+  if (filters.search) {
+    where.OR = [
+      { reference: { contains: filters.search, mode: "insensitive" } },
+      { notes: { contains: filters.search, mode: "insensitive" } },
+      { chequeNo: { contains: filters.search, mode: "insensitive" } },
+    ];
+  }
+
+  const page = filters.page || 1;
+  const pageSize = filters.pageSize || 50;
+
+  const data = await db.payment.findMany({
+    where,
+    include: { client: true, account: true },
+    orderBy: { [filters.sortBy || "occurredAt"]: filters.sortDir || "desc" },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+  });
+
+  const total = await db.payment.count({ where });
+
+  return { data, meta: { total, page, pageSize } };
+}
+
 // Analytics via Views
 export async function getClientBalance(clientId: string) {
   const result = await db.$queryRaw`SELECT * FROM "client_balance" WHERE "clientId" = ${clientId}`;
@@ -432,6 +470,13 @@ export async function getSummary(from: Date, to: Date) {
     SELECT SUM("dueFils") as "totalDue" FROM "client_balance"
   `;
   
+  // Outstanding Payable computation
+  const payableResult = await db.$queryRaw`
+    SELECT SUM("amountFils" + "taxFils" - "settledFils") as "totalPayable" 
+    FROM "Transaction" 
+    WHERE "direction" = 'EXPENSE' AND "status" IN ('UNPAID', 'PARTIAL') AND "deletedAt" IS NULL
+  `;
+
   // Cash in hand (all accounts)
   const cashResult = await db.$queryRaw`
     SELECT SUM("currentBalanceFils") as "totalCash" FROM "account_balance"
@@ -445,6 +490,7 @@ export async function getSummary(from: Date, to: Date) {
     cashInFils,
     cashOutFils,
     outstandingDueFils: (dueResult as any)[0]?.totalDue || BigInt(0),
+    outstandingPayableFils: (payableResult as any)[0]?.totalPayable || BigInt(0),
     cashInHandFils: (cashResult as any)[0]?.totalCash || BigInt(0),
     entryCount: txns.length + payments.length,
   };
@@ -509,6 +555,7 @@ const svc = {
   recordPayment,
   reversePayment,
   listTransactions,
+  listPayments,
   getClientBalance,
   getCaseMargin,
   getReceivables,

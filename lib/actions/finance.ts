@@ -88,6 +88,13 @@ export async function listTransactionsAction(filters: any) {
   });
 }
 
+export async function listPaymentsAction(filters: any) {
+  return handleAction(async () => {
+    await requirePermission("invoices:read");
+    return svc.listPayments(filters);
+  });
+}
+
 export async function createTransactionAction(data: any) {
   return handleAction(async () => {
     const session = await requirePermission("invoices:write");
