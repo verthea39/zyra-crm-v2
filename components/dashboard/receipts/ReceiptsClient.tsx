@@ -10,18 +10,21 @@ import {
   FileText,
   RotateCcw,
   X,
-  Loader2
+  Loader2,
+  Edit
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { reversePaymentAction } from "@/lib/actions/finance";
+import EditPaymentModal from "./EditPaymentModal";
 
 export default function ReceiptsClient({ initialData }: { initialData: any }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [payments, setPayments] = useState(initialData?.data || []);
   const [paymentToReverse, setPaymentToReverse] = useState<any>(null);
+  const [paymentToEdit, setPaymentToEdit] = useState<any>(null);
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -137,6 +140,15 @@ export default function ReceiptsClient({ initialData }: { initialData: any }) {
                       <Button
                         variant="ghost"
                         size="sm"
+                        className="text-primary hover:text-primary/80 hover:bg-primary/10"
+                        onClick={() => setPaymentToEdit(payment)}
+                        title="Edit Payment"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="text-rose-500 hover:text-rose-600 hover:bg-rose-50"
                         onClick={() => {
                           setPaymentToReverse(payment);
@@ -202,6 +214,13 @@ export default function ReceiptsClient({ initialData }: { initialData: any }) {
           </div>
         </div>
       )}
+
+      {/* Edit Payment Modal */}
+      <EditPaymentModal 
+        isOpen={!!paymentToEdit}
+        onClose={() => setPaymentToEdit(null)}
+        payment={paymentToEdit}
+      />
     </div>
   );
 }

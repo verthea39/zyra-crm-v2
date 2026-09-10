@@ -287,6 +287,57 @@ export async function recordPayment(data: any, userId?: string) {
   });
 }
 
+export async function updatePayment(id: string, data: any, userId?: string) {
+  return db.$transaction(async (tx) => {
+    const existing = await tx.payment.findUnique({
+      where: { id },
+      include: { allocations: true }
+    });
+    if (!existing) throw new NotFound("Payment not found");
+
+    const allocatedAmount = existing.amountFils - existing.unappliedFils;
+
+    let newUnappliedFils = existing.unappliedFils;
+    let newAmountFils = existing.amountFils;
+
+    if (data.amountAed !== undefined) {
+      newAmountFils = aedToFils(data.amountAed);
+      if (newAmountFils < allocatedAmount) {
+        throw new BadRequest(`Amount cannot be less than the ${(Number(allocatedAmount)/100).toFixed(2)} AED already allocated to invoices. Remove allocations first or reverse the payment.`);
+      }
+      newUnappliedFils = newAmountFils - allocatedAmount;
+    }
+
+    const { amountAed, ...paymentData } = data;
+
+    // Filter out fields that shouldn't be updated like allocations
+    if ('allocations' in paymentData) delete paymentData.allocations;
+    if ('direction' in paymentData) delete paymentData.direction;
+
+    const updated = await tx.payment.update({
+      where: { id },
+      data: {
+        ...paymentData,
+        amountFils: newAmountFils,
+        unappliedFils: newUnappliedFils,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        entity: "Payment",
+        entityId: id,
+        action: "UPDATE",
+        before: serialize(existing),
+        after: serialize(updated),
+        userId,
+      },
+    });
+
+    return tx.payment.findUnique({ where: { id }, include: { allocations: true } });
+  });
+}
+
 export async function reversePayment(id: string, reason: string, userId?: string) {
   return db.$transaction(async (tx) => {
     const existing = await tx.payment.findUnique({
@@ -589,6 +640,7 @@ const svc = {
   voidTransaction,
   deleteTransaction,
   recordPayment,
+  updatePayment,
   reversePayment,
   listTransactions,
   listPayments,

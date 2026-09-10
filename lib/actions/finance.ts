@@ -163,6 +163,16 @@ export async function recordPaymentAction(data: any) {
   });
 }
 
+export async function updatePaymentAction(id: string, data: any) {
+  return handleAction(async () => {
+    const session = await requirePermission("invoices:write");
+    const parsed = paymentSchema.partial().parse(data);
+    const payment = await svc.updatePayment(id, parsed, session.user.id);
+    revalidatePath("/finance");
+    return payment;
+  });
+}
+
 export async function reversePaymentAction(id: string, data: any) {
   return handleAction(async () => {
     const session = await requirePermission("invoices:write");
