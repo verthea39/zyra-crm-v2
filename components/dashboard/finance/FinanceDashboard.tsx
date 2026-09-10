@@ -26,6 +26,7 @@ export default function FinanceDashboard({
   const [activeTab, setActiveTab] = useState("transactions");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalDirection, setModalDirection] = useState<"INCOME" | "EXPENSE">("INCOME");
+  const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [pin, setPin] = useState("");
   const [pinError, setPinError] = useState(false);
@@ -41,8 +42,9 @@ export default function FinanceDashboard({
     }
   };
 
-  const openModal = (direction: "INCOME" | "EXPENSE") => {
+  const openModal = (direction: "INCOME" | "EXPENSE", transaction: any = null) => {
     setModalDirection(direction);
+    setEditingTransaction(transaction);
     setIsModalOpen(true);
   };
 
@@ -299,7 +301,10 @@ export default function FinanceDashboard({
                             {txn.status}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-primary hover:text-primary/80 font-medium cursor-pointer transition-colors opacity-0 group-hover:opacity-100">
+                        <td 
+                          className="px-6 py-4 text-primary hover:text-primary/80 font-medium cursor-pointer transition-colors opacity-0 group-hover:opacity-100"
+                          onClick={() => openModal(txn.direction as "INCOME" | "EXPENSE", txn)}
+                        >
                           Edit
                         </td>
                       </tr>
@@ -387,6 +392,7 @@ export default function FinanceDashboard({
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         direction={modalDirection} 
+        transaction={editingTransaction}
       />
     </div>
   );

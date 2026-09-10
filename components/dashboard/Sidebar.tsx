@@ -29,14 +29,14 @@ export const navItems = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/workflows", label: "PRO Workflows", icon: WorkflowIcon },
+  { href: "/field-tasks", label: "Field PRO Tasks", icon: MapPin },
   { href: "/documents", label: "Document Vault", icon: FileText },
   { href: "/quotations", label: "Quotations", icon: FileSignature },
   { href: "/invoices", label: "Invoices", icon: FileText },
   { href: "/receipts", label: "Receipts", icon: ReceiptText },
   { href: "/finance", label: "Finance & Ledger", icon: Landmark },
-  { href: "/field-tasks", label: "Field PRO Tasks", icon: MapPin },
-  { 
-    label: "Settings", 
+  {
+    label: "Settings",
     icon: Settings,
     subItems: [
       { href: "/services", label: "Services", icon: Briefcase },
@@ -59,14 +59,14 @@ export function Sidebar() {
   return (
     <aside className="hidden w-64 flex-col glass-panel m-4 rounded-xl md:flex shrink-0 overflow-hidden relative">
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent opacity-50" />
-      
+
       <Link href="/" className="p-6 flex items-center gap-3 border-b border-border/40 relative hover:bg-muted/30 transition-colors">
         <div className="size-8 rounded-full overflow-hidden flex items-center justify-center shrink-0 border border-border/50 bg-black">
           <Image src="/logo-icon.png" alt="Zyra CRM Logo" width={32} height={32} className="object-cover" />
         </div>
         <p className="text-sm font-bold text-foreground tracking-tight">ZYRA CRM</p>
       </Link>
-      
+
       <nav className="flex-1 overflow-y-auto space-y-1.5 p-4 z-10 custom-scrollbar">
         {navItems.map((item, i) => {
           if (item.subItems) {
@@ -82,20 +82,18 @@ export function Sidebar() {
                 >
                   <button
                     onClick={() => toggleExpanded(item.label)}
-                    className={`w-full relative flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-300 ${
-                      hasActiveChild && !isExpanded
+                    className={`w-full relative flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-300 ${hasActiveChild && !isExpanded
                         ? "text-primary-foreground shadow-sm shadow-primary/10 bg-primary/90"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <item.icon className="size-4 shrink-0" />
                       {item.label}
                     </div>
                     <ChevronDown
-                      className={`size-4 transition-transform duration-300 ${
-                        isExpanded ? "rotate-180" : ""
-                      }`}
+                      className={`size-4 transition-transform duration-300 ${isExpanded ? "rotate-180" : ""
+                        }`}
                     />
                   </button>
                 </motion.div>
@@ -116,11 +114,10 @@ export function Sidebar() {
                             <Link
                               key={subItem.href}
                               href={subItem.href}
-                              className={`relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-300 ${
-                                isSubActive
+                              className={`relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-300 ${isSubActive
                                   ? "text-primary-foreground shadow-sm shadow-primary/10"
                                   : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
-                              }`}
+                                }`}
                             >
                               {isSubActive && (
                                 <motion.div
@@ -152,11 +149,10 @@ export function Sidebar() {
             >
               <Link
                 href={item.href!}
-                className={`relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-300 ${
-                  isActive
+                className={`relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-300 ${isActive
                     ? "text-primary-foreground shadow-sm shadow-primary/10"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
-                }`}
+                  }`}
               >
                 {isActive && (
                   <motion.div

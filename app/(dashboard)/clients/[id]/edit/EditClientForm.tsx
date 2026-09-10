@@ -248,8 +248,8 @@ export function EditClientForm({
               <Input name="fullNameEn" defaultValue={ind?.fullNameEn ?? ""} required />
             </div>
             <div>
-              <Label>Full name (AR)</Label>
-              <Input name="fullNameAr" dir="rtl" defaultValue={ind?.fullNameAr ?? ""} />
+              <Label>Place</Label>
+              <Input name="fullNameAr" defaultValue={ind?.fullNameAr ?? ""} />
             </div>
             <div>
               <Label>Passport number</Label>

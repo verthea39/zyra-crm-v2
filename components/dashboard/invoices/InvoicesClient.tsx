@@ -5,14 +5,17 @@ import { format } from "date-fns";
 import { 
   Search,
   SearchX,
-  FileText
+  FileText,
+  DollarSign
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import ReceivePaymentModal from "./ReceivePaymentModal";
 
 export default function InvoicesClient({ initialData }: { initialData: any }) {
   const [search, setSearch] = useState("");
   const [transactions, setTransactions] = useState(initialData?.data || []);
+  const [paymentModalTxn, setPaymentModalTxn] = useState<any>(null);
 
   const formatMoney = (fils: string | number) => {
     return (Number(fils) / 100).toLocaleString('en-AE', { 
@@ -63,12 +66,13 @@ export default function InvoicesClient({ initialData }: { initialData: any }) {
                 <th className="px-6 py-4 font-medium text-right">Billed (AED)</th>
                 <th className="px-6 py-4 font-medium text-right">Balance Due (AED)</th>
                 <th className="px-6 py-4 font-medium text-center">Status</th>
+                <th className="px-6 py-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
               {transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-0 py-0">
+                  <td colSpan={8} className="px-0 py-0">
                     <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
                       <div className="size-16 rounded-full bg-muted/50 flex items-center justify-center mb-4 border border-border/50 shadow-sm">
                         <SearchX className="size-8 text-muted-foreground/70" />
@@ -105,6 +109,26 @@ export default function InvoicesClient({ initialData }: { initialData: any }) {
                           {txn.status}
                         </span>
                       </td>
+                      <td className="px-6 py-4 text-right flex items-center justify-end gap-1">
+                        {balanceFils > 0 && (
+                          <button
+                            onClick={() => setPaymentModalTxn(txn)}
+                            className="inline-flex items-center justify-center p-2 text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
+                            title="Receive Payment"
+                          >
+                            <DollarSign className="w-4 h-4" />
+                          </button>
+                        )}
+                        <a 
+                          href={`/api/invoices/${txn.id}/pdf`} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="inline-flex items-center justify-center p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
+                          title="Print/Download Invoice"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </a>
+                      </td>
                     </tr>
                   );
                 })
@@ -113,6 +137,12 @@ export default function InvoicesClient({ initialData }: { initialData: any }) {
           </table>
         </div>
       </Card>
+
+      <ReceivePaymentModal 
+        isOpen={!!paymentModalTxn}
+        onClose={() => setPaymentModalTxn(null)}
+        transaction={paymentModalTxn}
+      />
     </div>
   );
 }

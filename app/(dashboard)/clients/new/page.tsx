@@ -7,7 +7,7 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function NewClientPage() {
-  const [clientType, setClientType] = useState<"CORPORATE" | "INDIVIDUAL">("CORPORATE");
+  const [clientType, setClientType] = useState<"CORPORATE" | "INDIVIDUAL">("INDIVIDUAL");
   const [state, formAction, pending] = useActionState(createClient, null);
 
   return (
@@ -22,17 +22,6 @@ export default function NewClientPage() {
       <div className="flex gap-2">
         <button
           type="button"
-          onClick={() => setClientType("CORPORATE")}
-          className={`rounded-md border px-4 py-2 text-sm font-medium ${
-            clientType === "CORPORATE"
-              ? "border-primary bg-primary/10 text-primary"
-              : "border-border text-muted-foreground"
-          }`}
-        >
-          Corporate Account
-        </button>
-        <button
-          type="button"
           onClick={() => setClientType("INDIVIDUAL")}
           className={`rounded-md border px-4 py-2 text-sm font-medium ${
             clientType === "INDIVIDUAL"
@@ -41,6 +30,17 @@ export default function NewClientPage() {
           }`}
         >
           Individual Client
+        </button>
+        <button
+          type="button"
+          onClick={() => setClientType("CORPORATE")}
+          className={`rounded-md border px-4 py-2 text-sm font-medium ${
+            clientType === "CORPORATE"
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-border text-muted-foreground"
+          }`}
+        >
+          Corporate Account
         </button>
       </div>
 
@@ -155,8 +155,8 @@ export default function NewClientPage() {
                 <Input name="fullNameEn" required />
               </div>
               <div>
-                <Label>Full name (AR)</Label>
-                <Input name="fullNameAr" dir="rtl" />
+                <Label>Place</Label>
+                <Input name="fullNameAr" />
               </div>
               <div>
                 <Label>Passport number</Label>

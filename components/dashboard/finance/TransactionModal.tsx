@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getReferenceDataAction, createTransactionAction } from "@/lib/actions/finance";
+import { getReferenceDataAction, createTransactionAction, updateTransactionAction } from "@/lib/actions/finance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Loader2 } from "lucide-react";
@@ -10,9 +10,10 @@ interface TransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   direction: "INCOME" | "EXPENSE";
+  transaction?: any;
 }
 
-export default function TransactionModal({ isOpen, onClose, direction }: TransactionModalProps) {
+export default function TransactionModal({ isOpen, onClose, direction, transaction }: TransactionModalProps) {
   const [categories, setCategories] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -43,17 +44,35 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
           setClients(res.data.clients);
           setAccounts(res.data.accounts);
           
-          // Auto-select first category if available
-          const validCats = res.data.categories.filter((c: any) => c.direction === direction);
-          if (validCats.length > 0) setCategoryId(validCats[0].id);
-          if (res.data.accounts?.length > 0) setAccountId(res.data.accounts[0].id);
+          if (transaction) {
+            setAmount((Number(transaction.amountFils) / 100).toString());
+            setDate(new Date(transaction.occurredAt).toISOString().split("T")[0]);
+            setCategoryId(transaction.categoryId || "");
+            setClientId(transaction.clientId || "");
+            setVendorName(transaction.vendorName || "");
+            setDescription(transaction.description || "");
+            setIsPaidNow(false);
+          } else {
+            // Auto-select first category if available
+            const validCats = res.data.categories.filter((c: any) => c.direction === direction);
+            if (validCats.length > 0) setCategoryId(validCats[0].id);
+            if (res.data.accounts?.length > 0) setAccountId(res.data.accounts[0].id);
+            
+            setAmount("");
+            setDate(new Date().toISOString().split("T")[0]);
+            setClientId("");
+            setVendorName("");
+            setDescription("");
+            setIsPaidNow(false);
+            setPaidAmount("");
+          }
         } else {
           setError("Failed to load reference data.");
         }
         setIsLoading(false);
       });
     }
-  }, [isOpen, direction]);
+  }, [isOpen, direction, transaction]);
 
   if (!isOpen) return null;
 
@@ -101,13 +120,17 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
       description: description || undefined,
     };
 
-    if (isPaidNow && paidAmount && parseFloat(paidAmount) > 0) {
-      payload.paidAmountAed = parseFloat(paidAmount);
-      payload.paymentMode = paymentMode;
-      payload.accountId = accountId;
+    let res;
+    if (transaction) {
+      res = await updateTransactionAction(transaction.id, payload);
+    } else {
+      if (isPaidNow && paidAmount && parseFloat(paidAmount) > 0) {
+        payload.paidAmountAed = parseFloat(paidAmount);
+        payload.paymentMode = paymentMode;
+        payload.accountId = accountId;
+      }
+      res = await createTransactionAction(payload);
     }
-
-    const res = await createTransactionAction(payload);
     
     setIsSubmitting(false);
     
@@ -131,7 +154,7 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">
-            Add {direction === "INCOME" ? "Income" : "Expense"}
+            {transaction ? "Edit" : "Add"} {direction === "INCOME" ? "Income" : "Expense"}
           </h2>
           <button 
             onClick={onClose}
@@ -227,7 +250,8 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
                 />
               </div>
 
-              <div className="pt-2 border-t border-border mt-4">
+              {!transaction && (
+                <div className="pt-2 border-t border-border mt-4">
                 <label className="flex items-center gap-2 text-sm font-medium cursor-pointer mb-3">
                   <input 
                     type="checkbox" 
@@ -286,6 +310,7 @@ export default function TransactionModal({ isOpen, onClose, direction }: Transac
                   </div>
                 )}
               </div>
+              )}
             </div>
 
             {/* Footer */}

@@ -356,13 +356,31 @@ export async function listTransactions(filters: any) {
   const page = filters.page || 1;
   const pageSize = filters.pageSize || 50;
 
-  const data = await db.transaction.findMany({
+  const rawData = await db.transaction.findMany({
     where,
-    include: { client: true, category: true },
+    include: { 
+      client: {
+        include: {
+          corporateProfile: { select: { companyNameEn: true } },
+          individualProfile: { select: { fullNameEn: true } }
+        }
+      }, 
+      category: true 
+    },
     orderBy: { [filters.sortBy || "occurredAt"]: filters.sortDir || "desc" },
     skip: (page - 1) * pageSize,
     take: pageSize,
   });
+
+  const data = rawData.map(txn => ({
+    ...txn,
+    client: txn.client ? {
+      ...txn.client,
+      name: txn.client.clientType === 'CORPORATE' 
+        ? txn.client.corporateProfile?.companyNameEn || 'Unknown Corporate Client'
+        : txn.client.individualProfile?.fullNameEn || 'Unknown Individual Client'
+    } : null
+  }));
 
   const total = await db.transaction.count({ where });
 
@@ -394,13 +412,31 @@ export async function listPayments(filters: any) {
   const page = filters.page || 1;
   const pageSize = filters.pageSize || 50;
 
-  const data = await db.payment.findMany({
+  const rawData = await db.payment.findMany({
     where,
-    include: { client: true, account: true },
+    include: { 
+      client: {
+        include: {
+          corporateProfile: { select: { companyNameEn: true } },
+          individualProfile: { select: { fullNameEn: true } }
+        }
+      }, 
+      account: true 
+    },
     orderBy: { [filters.sortBy || "occurredAt"]: filters.sortDir || "desc" },
     skip: (page - 1) * pageSize,
     take: pageSize,
   });
+
+  const data = rawData.map(payment => ({
+    ...payment,
+    client: payment.client ? {
+      ...payment.client,
+      name: payment.client.clientType === 'CORPORATE' 
+        ? payment.client.corporateProfile?.companyNameEn || 'Unknown Corporate Client'
+        : payment.client.individualProfile?.fullNameEn || 'Unknown Individual Client'
+    } : null
+  }));
 
   const total = await db.payment.count({ where });
 

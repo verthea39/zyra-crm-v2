@@ -60,20 +60,48 @@ export function MobileNav() {
             </div>
 
             <nav className="flex-1 overflow-y-auto p-4 space-y-1.5">
-              {navItems.map(({ href, label, icon: Icon }) => {
-                const isActive = pathname === href || (href !== "/" && pathname.startsWith(href));
+              {navItems.map((item) => {
+                if (item.subItems) {
+                  return (
+                    <div key={item.label} className="mt-4 space-y-1.5">
+                      <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                        <item.icon className="size-4 shrink-0" />
+                        {item.label}
+                      </div>
+                      {item.subItems.map((subItem) => {
+                        const isSubActive = pathname === subItem.href || (subItem.href !== "/" && pathname.startsWith(subItem.href));
+                        return (
+                          <Link
+                            key={subItem.href}
+                            href={subItem.href}
+                            className={`flex items-center gap-3 rounded-lg px-3 py-3 pl-9 text-sm font-medium transition-all ${
+                              isSubActive
+                                ? "bg-primary text-primary-foreground shadow-sm shadow-primary/10"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                            }`}
+                          >
+                            <subItem.icon className={`size-5 shrink-0 ${isSubActive ? "scale-110" : ""}`} />
+                            {subItem.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  );
+                }
+
+                const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href!));
                 return (
                   <Link
-                    key={href}
-                    href={href}
+                    key={item.href}
+                    href={item.href!}
                     className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all ${
                       isActive
                         ? "bg-primary text-primary-foreground shadow-sm shadow-primary/10"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
                     }`}
                   >
-                    <Icon className={`size-5 shrink-0 ${isActive ? "scale-110" : ""}`} />
-                    {label}
+                    <item.icon className={`size-5 shrink-0 ${isActive ? "scale-110" : ""}`} />
+                    {item.label}
                   </Link>
                 );
               })}
