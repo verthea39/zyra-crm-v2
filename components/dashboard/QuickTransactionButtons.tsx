@@ -16,6 +16,9 @@ export function QuickTransactionButtons() {
   return (
     <>
       <div className="flex items-center gap-3">
+        <Button variant="outline" className="border-primary/20 hover:bg-primary/5" onClick={() => { window.location.href = "/clients/new"; }}>
+          Add Client
+        </Button>
         <Button variant="outline" className="border-primary/20 hover:bg-primary/5" onClick={() => openModal("EXPENSE")}>
           Add Expense
         </Button>

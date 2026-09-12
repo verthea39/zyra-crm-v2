@@ -12,8 +12,8 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-sm rounded-lg border border-border bg-card p-8 shadow-sm">
         <div className="mb-6 flex justify-center">
-          <div className="size-16 rounded-full overflow-hidden flex items-center justify-center shrink-0 border border-border/50 bg-black">
-            <Image src="/logo-icon.png" alt="Zyra Logo" width={64} height={64} className="object-cover" />
+          <div className="size-16 rounded-full overflow-hidden flex items-center justify-center shrink-0 border border-border/50 bg-black text-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-8 text-[#d4af37]"><path d="M12 2L2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
           </div>
         </div>
         <h1 className="text-xl font-bold text-card-foreground text-center">Sign in</h1>

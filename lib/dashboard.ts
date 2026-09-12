@@ -32,7 +32,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
       where: { dueDate: { gte: startOfDay, lt: endOfDay } },
     }),
     db.payment.aggregate({
-      _sum: { amountFils: true },
+      _sum: { amountMinor: true },
       where: { 
         direction: "IN",
         deletedAt: null,
@@ -46,7 +46,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     expiringNext30Days,
     expiringNext60Days,
     todaysFieldTasks,
-    dailyRevenueAED: Number(dailyPayments._sum.amountFils ?? 0) / 100,
+    dailyRevenueAED: Number(dailyPayments._sum?.amountMinor ?? 0) / 100,
   };
 }
 

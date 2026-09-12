@@ -11,10 +11,12 @@ async function main() {
   await db.$transaction([
     db.paymentAllocation.deleteMany(),
     db.payment.deleteMany(),
-    db.transaction.deleteMany(),
-    db.dayTag.deleteMany(),
+    db.journalLine.deleteMany(),
+    db.journalEntry.deleteMany(),
+    db.invoiceLineItem.deleteMany(),
+    db.invoice.deleteMany(),
     db.account.deleteMany(),
-    db.category.deleteMany(),
+    db.product.deleteMany(),
     db.caseFile.deleteMany(),
 
     db.auditLog.deleteMany(),

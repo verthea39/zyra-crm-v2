@@ -56,6 +56,11 @@ export default async function QuotationDetailPage({
               Download PDF
             </button>
           </a>
+          <Link href={`/quotations/${quotation.id}/edit`}>
+            <button className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
+              Edit
+            </button>
+          </Link>
           <DeleteButton onDelete={deleteAction} itemName="this quotation" />
         </div>
       </div>
@@ -83,13 +88,15 @@ export default async function QuotationDetailPage({
         <CardContent className="space-y-1 text-sm">
           {serviceLines.length === 0 && <p className="text-muted-foreground">None</p>}
           {serviceLines.map((li) => {
-            const lineTotal = Number(li.quantity) * Number(li.unitPrice) * 1.05; // including 5% VAT
+            const unitPrice = Number(li.unitPriceMinor) / 100;
+            const lineTotalFils = Number(li.quantity) * Number(li.unitPriceMinor) * 1.05; // including 5% VAT
+            const lineTotal = lineTotalFils / 100;
             return (
               <div key={li.id} className="flex justify-between">
                 <span>
-                  {li.description} × {li.quantity.toString()}
+                  {li.quantity}x {li.description} (@ {(unitPrice).toFixed(2)} AED)
                 </span>
-                <span>{formatAED(lineTotal)}</span>
+                <span>{lineTotal.toFixed(2)} AED</span>
               </div>
             );
           })}
@@ -103,7 +110,7 @@ export default async function QuotationDetailPage({
         <CardContent className="space-y-1 text-sm">
           {govLines.length === 0 && <p className="text-muted-foreground">None</p>}
           {govLines.map((li) => {
-            const lineTotal = Number(li.quantity) * Number(li.unitPrice);
+            const lineTotal = Number(li.quantity) * (Number(li.unitPriceMinor) / 100);
             return (
               <div key={li.id} className="flex justify-between">
                 <span>
@@ -118,17 +125,17 @@ export default async function QuotationDetailPage({
 
       <Card>
         <CardContent className="space-y-1 pt-4 text-sm">
-          <div className="flex justify-between text-muted-foreground">
-            <span>Subtotal</span>
-            <span>{formatAED(Number(quotation.subtotal))}</span>
+          <div className="flex justify-between text-muted-foreground mt-4">
+            <span>Subtotal:</span>
+            <span>{(Number(quotation.subtotalMinor) / 100).toFixed(2)} AED</span>
           </div>
           <div className="flex justify-between text-muted-foreground">
-            <span>VAT Amount (5%)</span>
-            <span>{formatAED(Number(quotation.vatAmount))}</span>
+            <span>VAT (5%):</span>
+            <span>{(Number(quotation.vatAmountMinor) / 100).toFixed(2)} AED</span>
           </div>
-          <div className="flex justify-between border-t border-border pt-2 text-base font-semibold">
-            <span>Total Estimated (AED)</span>
-            <span>{formatAED(Number(quotation.total))}</span>
+          <div className="flex justify-between font-bold text-lg mt-2 pt-2 border-t">
+            <span>Total:</span>
+            <span>{(Number(quotation.totalMinor) / 100).toFixed(2)} AED</span>
           </div>
         </CardContent>
       </Card>

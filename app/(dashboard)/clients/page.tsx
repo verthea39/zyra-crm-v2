@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
-import { listClients } from "@/lib/actions/clients";
+import { Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { listClientsPaginated } from "@/lib/actions/clients";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
@@ -21,10 +21,11 @@ const statusTone: Record<AccountStatus, "success" | "warning" | "muted" | "destr
 export default async function ClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; type?: ClientType; status?: AccountStatus }>;
+  searchParams: Promise<{ q?: string; type?: ClientType; status?: AccountStatus; page?: string }>;
 }) {
-  const { q, type, status } = await searchParams;
-  const clients = (await listClients({ query: q, clientType: type, status })) as any[];
+  const { q, type, status, page } = await searchParams;
+  const currentPage = Number(page) || 1;
+  const { clients, totalPages, totalCount } = await listClientsPaginated({ query: q, clientType: type, status, page: currentPage, pageSize: 20 });
 
   return (
     <div className="space-y-6">
@@ -116,6 +117,34 @@ export default async function ClientsPage({
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-sm text-muted-foreground">
+            Showing page {currentPage} of {totalPages} ({totalCount} total clients)
+          </p>
+          <div className="flex items-center space-x-2">
+            {currentPage <= 1 ? (
+              <Button variant="outline" size="sm" disabled>
+                <ChevronLeft className="mr-2 h-4 w-4" /> Previous
+              </Button>
+            ) : (
+              <Link href={`/clients?q=${q || ""}&type=${type || ""}&status=${status || ""}&page=${currentPage - 1}`} className="inline-flex h-7 items-center justify-center rounded-[12px] border border-border bg-background px-2.5 text-[0.8rem] font-medium hover:bg-muted hover:text-foreground">
+                <ChevronLeft className="mr-2 h-4 w-4" /> Previous
+              </Link>
+            )}
+            {currentPage >= totalPages ? (
+              <Button variant="outline" size="sm" disabled>
+                Next <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            ) : (
+              <Link href={`/clients?q=${q || ""}&type=${type || ""}&status=${status || ""}&page=${currentPage + 1}`} className="inline-flex h-7 items-center justify-center rounded-[12px] border border-border bg-background px-2.5 text-[0.8rem] font-medium hover:bg-muted hover:text-foreground">
+                Next <ChevronRight className="ml-2 h-4 w-4" />
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

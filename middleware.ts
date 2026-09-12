@@ -6,7 +6,7 @@ export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
     return supabaseResponse;
@@ -51,6 +51,25 @@ export async function middleware(request: NextRequest) {
   if (isLoggedIn && isAuthRoute) {
     return NextResponse.redirect(new URL("/", request.nextUrl));
   }
+
+  // --- Finance Role Protection ---
+  const role = request.cookies.get('user-role')?.value || 'VIEWER';
+  
+  if (pathname.startsWith('/api/finance/actions')) {
+    const isMutation = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method);
+
+    if (isMutation && role === 'VIEWER') {
+      return NextResponse.json(
+        { error: 'Forbidden: Insufficient permissions for financial write operations' },
+        { status: 403 }
+      );
+    }
+  }
+
+  // --- Inject Security Headers ---
+  supabaseResponse.headers.set('X-Frame-Options', 'DENY');
+  supabaseResponse.headers.set('X-Content-Type-Options', 'nosniff');
+  supabaseResponse.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
   return supabaseResponse;
 }

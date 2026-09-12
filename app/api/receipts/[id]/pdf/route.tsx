@@ -30,7 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       ? payment.client.corporateProfile?.companyNameEn 
       : payment.client?.individualProfile?.fullNameEn;
 
-    const amountStr = (Number(payment.amountFils) / 100).toLocaleString('en-AE', { minimumFractionDigits: 2 });
+    const amountStr = (Number(payment.amountMinor) / 100).toLocaleString('en-AE', { minimumFractionDigits: 2 });
 
     const pdfBuffer = await renderToBuffer(
       <ReceiptDocument

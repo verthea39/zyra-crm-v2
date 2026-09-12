@@ -14,6 +14,14 @@ const expiryTone: Record<string, "destructive" | "warning" | "default" | "muted"
   OK: "muted",
 };
 
+const expiryTrafficLight: Record<string, string> = {
+  EXPIRED: "🔴",
+  DUE_30: "🟡",
+  DUE_60: "🟢",
+  DUE_90: "🟢",
+  OK: "🟢",
+};
+
 export default async function ClientDetailPage({
   params,
 }: {
@@ -123,7 +131,7 @@ export default async function ClientDetailPage({
                 return (
                   <div key={doc.id} className="flex items-center justify-between text-sm">
                     <span>
-                      {doc.category.replaceAll("_", " ")} — {doc.fileName}
+                      {expiryTrafficLight[tier] || "⚪"} {doc.category.replaceAll("_", " ")} — {doc.fileName}
                     </span>
                     <div className="flex items-center gap-2">
                       {doc.expiryDate && (
@@ -169,6 +177,27 @@ export default async function ClientDetailPage({
           </Card>
 
 
+          <Card>
+            <CardHeader className="flex items-center justify-between">
+              <CardTitle>Activity Timeline</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {client.activities && client.activities.length === 0 && (
+                <p className="text-sm text-muted-foreground">No activities logged yet.</p>
+              )}
+              {client.activities && client.activities.map((activity: any) => (
+                <div key={activity.id} className="border-l-2 border-primary/20 pl-4 pb-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-semibold text-sm">{activity.type}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDate(activity.createdAt)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{activity.description}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

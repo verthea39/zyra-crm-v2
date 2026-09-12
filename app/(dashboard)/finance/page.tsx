@@ -28,15 +28,11 @@ export default async function FinancePage(props: {
     to = new Date(2999, 11, 31);
   }
   
-  const summaryRes = await getSummaryAction(from, to);
-  const receivablesRes = await getReceivablesAction(10);
-  
-  const txnsRes = await listTransactionsAction({
-    page: 1,
-    pageSize: 50,
-    from,
-    to,
-  });
+  const [summaryRes, receivablesRes, txnsRes] = await Promise.all([
+    getSummaryAction(from, to),
+    getReceivablesAction(10),
+    listTransactionsAction({ page: 1, pageSize: 50, from, to }),
+  ]);
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">

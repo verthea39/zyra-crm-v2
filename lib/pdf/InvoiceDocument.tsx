@@ -13,7 +13,7 @@ Font.register({
 });
 
 const styles = StyleSheet.create({
-  page: { paddingTop: 30, paddingBottom: 30, paddingLeft: 45, paddingRight: 45, fontFamily: "Poppins", fontSize: 9, color: "#333" },
+  page: { paddingTop: 30, paddingBottom: 80, paddingLeft: 45, paddingRight: 45, fontFamily: "Poppins", fontSize: 9, color: "#333" },
   header: { flexDirection: "row", justifyContent: "space-between", marginBottom: 15 },
   companyInfo: { flexDirection: "column" },
   title: { fontSize: 20, fontWeight: 700, color: "#b68d40", marginBottom: 2 },
@@ -221,12 +221,7 @@ export const InvoiceDocument = (props: Props) => {
 
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 10 }}>
           <View style={{ width: "45%" }}>
-            <Text style={styles.sectionTitle}>PAYMENT DETAILS:</Text>
-            <Text style={styles.text}>Beneficiary Name: ZYRA DOCUMENTS CLEARANCE SERVICES</Text>
-            <Text style={styles.text}>Bank Name: Emirates NBD</Text>
-            <Text style={styles.text}>Account Number: 1012345678901</Text>
-            <Text style={styles.text}>IBAN: AE230260001012345678901</Text>
-            
+            {/* Payment details removed per request */}
             {props.amountInWords && (
               <View style={{ marginTop: 10 }}>
                 <Text style={styles.text}>Amount in Words: {props.amountInWords}</Text>

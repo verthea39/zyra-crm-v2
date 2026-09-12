@@ -27,7 +27,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
                 <MobileNav />
                 <Link href="/" className="md:hidden flex items-center gap-2">
                   <div className="size-6 rounded-full overflow-hidden flex items-center justify-center shrink-0 border border-border/50 bg-black">
-                    <img src="/logo-icon.png" alt="Zyra CRM Logo" className="w-full h-full object-cover" />
+                    <img src="/logo-full-gold.png" alt="Zyra CRM Logo" className="w-full h-full object-contain" />
                   </div>
                   <span className="text-sm font-bold tracking-tight">ZYRA CRM</span>
                 </Link>

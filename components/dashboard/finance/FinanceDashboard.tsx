@@ -10,7 +10,9 @@ import {
   SearchX,
   FileText,
   Lock,
-  Download
+  Download,
+  UserPlus,
+  Plus
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -217,17 +219,26 @@ export default function FinanceDashboard({
           </TabsList>
           
           <div className="flex items-center gap-3">
-            <Button variant="outline" className="border-primary/20 hover:bg-primary/5" onClick={() => {
-              window.location.href = "/api/export?scope=full";
-            }}>
-              <Download className="size-4 mr-2" />
-              Export Excel
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 transition-transform active:scale-95"
+              onClick={() => { window.location.href = "/clients/new"; }}
+            >
+              <UserPlus className="size-4 mr-2" />
+              Add Client
             </Button>
-            <Button variant="outline" className="border-primary/20 hover:bg-primary/5" onClick={() => openModal("EXPENSE")}>
-              Add Expense
-            </Button>
-            <Button className="shadow-lg shadow-primary/20 transition-transform active:scale-95" onClick={() => openModal("INCOME")}>
+            <Button 
+              className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20 transition-transform active:scale-95"
+              onClick={() => openModal("INCOME")}
+            >
+              <Plus className="size-4 mr-2" />
               Add Income
+            </Button>
+            <Button 
+              className="bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-900/20 transition-transform active:scale-95 dark:bg-slate-800 dark:hover:bg-slate-700"
+              onClick={() => openModal("EXPENSE")}
+            >
+              <Plus className="size-4 mr-2" />
+              Add Expense
             </Button>
           </div>
         </div>

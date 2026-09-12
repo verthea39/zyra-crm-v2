@@ -132,12 +132,12 @@ export async function listClients(params: {
         ? [
             {
               corporateProfile: {
-                is: { companyNameEn: { contains: params.query } },
+                is: { companyNameEn: { contains: params.query, mode: "insensitive" as const } },
               },
             },
             {
               individualProfile: {
-                is: { fullNameEn: { contains: params.query } },
+                is: { fullNameEn: { contains: params.query, mode: "insensitive" as const } },
               },
             },
           ]
@@ -146,6 +146,52 @@ export async function listClients(params: {
     include: { corporateProfile: true, individualProfile: true, assignedPRO: true },
     orderBy: { createdAt: "desc" },
   });
+}
+
+export async function listClientsPaginated(params: {
+  clientType?: ClientType;
+  query?: string;
+  status?: AccountStatus;
+  page: number;
+  pageSize: number;
+}) {
+  await requirePermission("clients:read");
+  const where = {
+    clientType: params.clientType,
+    accountStatus: params.status,
+    OR: params.query
+      ? [
+          {
+            corporateProfile: {
+              is: { companyNameEn: { contains: params.query, mode: "insensitive" as const } },
+            },
+          },
+          {
+            individualProfile: {
+              is: { fullNameEn: { contains: params.query, mode: "insensitive" as const } },
+            },
+          },
+        ]
+      : undefined,
+  };
+
+  const [data, total] = await Promise.all([
+    db.client.findMany({
+      where,
+      include: { corporateProfile: true, individualProfile: true, assignedPRO: true },
+      orderBy: { createdAt: "desc" },
+      take: params.pageSize,
+      skip: (params.page - 1) * params.pageSize,
+    }),
+    db.client.count({ where }),
+  ]);
+
+  return {
+    clients: data,
+    totalPages: Math.ceil(total / params.pageSize),
+    currentPage: params.page,
+    totalCount: total,
+  };
 }
 
 export async function getClient(id: string) {
@@ -158,6 +204,7 @@ export async function getClient(id: string) {
       documents: { orderBy: { expiryDate: "asc" } },
       workflows: { include: { steps: true }, orderBy: { createdAt: "desc" } },
       assignedPRO: true,
+      activities: { orderBy: { createdAt: "desc" } },
     },
   });
 }

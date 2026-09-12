@@ -13,7 +13,7 @@ Font.register({
 });
 
 const styles = StyleSheet.create({
-  page: { paddingTop: 30, paddingBottom: 30, paddingLeft: 45, paddingRight: 45, fontFamily: "Poppins", fontSize: 9, color: "#333" },
+  page: { paddingTop: 30, paddingBottom: 80, paddingLeft: 45, paddingRight: 45, fontFamily: "Poppins", fontSize: 9, color: "#333" },
   header: { flexDirection: "row", justifyContent: "space-between", marginBottom: 15 },
   companyInfo: { flexDirection: "column" },
   title: { fontSize: 20, fontWeight: 700, color: "#b68d40", marginBottom: 2 },
@@ -147,8 +147,6 @@ export const QuotationDocument = (props: Props) => (
           <View key={i} style={styles.tableRow}>
             <View style={styles.col1}>
               <Text style={styles.text}>{item.description}</Text>
-              {item.type === "GOVERNMENT_CHARGE" && <Text style={{ fontSize: 8, color: "#777" }}>Govt Fee / Disbursement (0% VAT)</Text>}
-              {item.type === "AGENCY_SERVICE_FEE" && <Text style={{ fontSize: 8, color: "#777" }}>Service Fee</Text>}
             </View>
             <Text style={[styles.text, styles.col2]}>{item.quantity}</Text>
             <Text style={[styles.text, styles.col3]}>{item.unitPrice}</Text>
@@ -189,11 +187,7 @@ export const QuotationDocument = (props: Props) => (
         </View>
 
         <View style={{ width: "50%" }}>
-          <Text style={styles.sectionTitle}>BANK / PAYMENT DETAILS:</Text>
-          <Text style={styles.text}>Bank Name: Emirates NBD</Text>
-          <Text style={styles.text}>Account Name: ZYRA DOCUMENTS CLEARANCE SERVICES</Text>
-          <Text style={styles.text}>IBAN: AE230260001012345678901</Text>
-          <Text style={styles.text}>Swift Code: EBILAEADXXX</Text>
+          {/* Bank details removed per request */}
         </View>
       </View>
 

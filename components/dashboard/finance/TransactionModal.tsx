@@ -14,7 +14,6 @@ interface TransactionModalProps {
 }
 
 export default function TransactionModal({ isOpen, onClose, direction, transaction }: TransactionModalProps) {
-  const [categories, setCategories] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,7 +23,6 @@ export default function TransactionModal({ isOpen, onClose, direction, transacti
   // Form state
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
-  const [categoryId, setCategoryId] = useState("");
   const [clientId, setClientId] = useState("");
   const [vendorName, setVendorName] = useState("");
   const [description, setDescription] = useState("");
@@ -40,22 +38,18 @@ export default function TransactionModal({ isOpen, onClose, direction, transacti
       setIsLoading(true);
       getReferenceDataAction().then((res) => {
         if (res.success) {
-          setCategories(res.data.categories.filter((c: any) => c.direction === direction));
           setClients(res.data.clients);
           setAccounts(res.data.accounts);
           
           if (transaction) {
             setAmount((Number(transaction.amountFils) / 100).toString());
             setDate(new Date(transaction.occurredAt).toISOString().split("T")[0]);
-            setCategoryId(transaction.categoryId || "");
             setClientId(transaction.clientId || "");
             setVendorName(transaction.vendorName || "");
             setDescription(transaction.description || "");
             setIsPaidNow(false);
           } else {
-            // Auto-select first category if available
-            const validCats = res.data.categories.filter((c: any) => c.direction === direction);
-            if (validCats.length > 0) setCategoryId(validCats[0].id);
+            // Auto-select first account if available
             if (res.data.accounts?.length > 0) setAccountId(res.data.accounts[0].id);
             
             setAmount("");
@@ -93,8 +87,8 @@ export default function TransactionModal({ isOpen, onClose, direction, transacti
       setError("Please select a date.");
       return;
     }
-    if (!categoryId) {
-      setError("Please select a category.");
+    if (!date) {
+      setError("Please select a date.");
       return;
     }
     if (isPaidNow) {
@@ -114,7 +108,6 @@ export default function TransactionModal({ isOpen, onClose, direction, transacti
       direction,
       amountAed: parseFloat(amount),
       occurredAt: new Date(date),
-      categoryId,
       clientId: clientId || null,
       vendorName: vendorName || undefined,
       description: description || undefined,
@@ -206,7 +199,7 @@ export default function TransactionModal({ isOpen, onClose, direction, transacti
               )}
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">Amount (AED) <span className="text-rose-500">*</span></label>
+                <label className="text-sm font-medium">Total Amount (AED) <span className="text-rose-500">*</span></label>
                 <Input 
                   type="number" 
                   step="0.01" 
@@ -224,20 +217,6 @@ export default function TransactionModal({ isOpen, onClose, direction, transacti
                   value={date} 
                   onChange={e => setDate(e.target.value)}
                 />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Category <span className="text-rose-500">*</span></label>
-                <select 
-                  className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm"
-                  value={categoryId}
-                  onChange={e => setCategoryId(e.target.value)}
-                >
-                  <option value="" disabled>Select category</option>
-                  {categories.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
               </div>
 
               <div className="space-y-1.5">
@@ -268,7 +247,7 @@ export default function TransactionModal({ isOpen, onClose, direction, transacti
                 {isPaidNow && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg border border-border/50 animate-in fade-in zoom-in-95 duration-200">
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium">Amount Paid <span className="text-rose-500">*</span></label>
+                      <label className="text-sm font-medium">Paid Amount (AED) <span className="text-rose-500">*</span></label>
                       <Input 
                         type="number" 
                         step="0.01" 

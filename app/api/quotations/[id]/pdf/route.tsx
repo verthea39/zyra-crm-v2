@@ -39,9 +39,9 @@ export async function GET(
     description: li.description,
     type: li.type,
     quantity: li.quantity.toString(),
-    unitPrice: li.unitPrice.toString(),
+    unitPrice: (Number(li.unitPriceMinor) / 100).toString(),
     vatRate: li.type === "AGENCY_SERVICE_FEE" ? "5" : "0",
-    lineTotal: (Number(li.quantity) * Number(li.unitPrice) * (li.type === "AGENCY_SERVICE_FEE" ? 1.05 : 1)).toString(),
+    lineTotal: (Number(li.quantity) * (Number(li.unitPriceMinor) / 100) * (li.type === "AGENCY_SERVICE_FEE" ? 1.05 : 1)).toString(),
     govReceiptRef: li.govReceiptRef,
   }));
 
@@ -50,7 +50,7 @@ export async function GET(
   const totals = calculateInvoiceTotals(quotation.lineItems.map(item => ({
     type: item.type,
     quantity: Number(item.quantity),
-    unitPrice: Number(item.unitPrice),
+    unitPrice: Number(item.unitPriceMinor) / 100,
   })));
 
   const pdfBuffer = await renderToBuffer(

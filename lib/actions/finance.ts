@@ -13,7 +13,6 @@ const money = z.number().positive().max(10_000_000, "Amount looks wrong. Check t
 const transactionSchema = z.object({
   direction: z.nativeEnum(TxnDirection),
   occurredAt: z.coerce.date(),
-  categoryId: z.string().min(1, "Pick a category"),
   clientId: z.string().nullish(),
   caseFileId: z.string().nullish(),
   amountAed: money,
@@ -119,6 +118,7 @@ export async function createTransactionAction(data: any) {
     }
 
     revalidatePath("/finance");
+    revalidatePath("/");
     return txn;
   });
 }

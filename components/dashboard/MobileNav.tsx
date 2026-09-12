@@ -47,7 +47,7 @@ export function MobileNav() {
             <div className="p-6 flex items-center justify-between border-b border-border/50">
               <Link href="/" onClick={() => setIsOpen(false)} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                 <div className="size-8 rounded-full overflow-hidden flex items-center justify-center shrink-0 border border-border/50 bg-black">
-                  <Image src="/logo-icon.png" alt="Zyra CRM Logo" width={32} height={32} className="object-cover" />
+                  <img src="/logo-full-gold.png" alt="Zyra CRM Logo" className="w-full h-full object-contain" />
                 </div>
                 <p className="text-sm font-semibold text-foreground tracking-tight">ZYRA CRM</p>
               </Link>

@@ -9,8 +9,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("POSTGRES_PRISMA_URL")
-  directUrl = env("POSTGRES_URL_NON_POOLING")
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ---------------------------------------------------------------- enums
@@ -41,6 +41,12 @@ enum PaymentMode {
 }
 
 enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+  // Temporary for migration
   CASH
   BANK
   PORTAL
@@ -85,6 +91,9 @@ model User {
   updatedAt DateTime @updatedAt
 
   assignedClients Client[] @relation("AssignedClientPRO")
+  assignedLeads     Lead[]             @relation("LeadAssignee")
+  assignedDeals     Deal[]             @relation("DealAssignee")
+  createdActivities Activity[]         @relation("ActivityCreator")
 
   @@index([email])
 }
@@ -99,9 +108,11 @@ model Client {
   accountStatus String @default("PROSPECT")
   leadSource    String @default("OTHER")
 
-  code            String? // ZC-0001
-  trn             String? // VAT registration number
-  creditLimitFils BigInt  @default(0)
+  code             String? // ZC-0001
+  trn              String? // VAT registration number
+  creditLimitFils  BigInt  @default(0)
+  paymentTermsDays Int     @default(14)
+  defaultCurrency  String  @default("AED")
 
   assignedPROId String?
   assignedPRO   User?   @relation("AssignedClientPRO", fields: [assignedPROId], references: [id])
@@ -114,15 +125,18 @@ model Client {
   quotations Quotation[]
   invoices   Invoice[]
 
-  transactions Transaction[]
-  payments     Payment[]
-  cases        CaseFile[]
+  payments Payment[]
+  cases    CaseFile[]
+  deals    Deal[]
+  activities Activity[]
 
   portalUser User? @relation("ClientPortalUser")
 
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  journalLines JournalLine[]
+  ledgerTransactions LedgerTransaction[]
 
   @@index([clientType])
   @@index([accountStatus])
@@ -159,6 +173,7 @@ model CorporateProfile {
   authorizedSignatoryEid      String?
   authorizedSignatoryMobile   String?
   authorizedSignatoryEmail    String?
+  contactEmail                String?
 
   employees IndividualProfile[] @relation("SponsorCompany")
 
@@ -176,6 +191,8 @@ model IndividualProfile {
 
   fullNameEn String
   fullNameAr String?
+  email      String?
+  mobileNumber String?
 
   passportNumber String
   nationality    String
@@ -300,6 +317,7 @@ model Task {
   @@index([assigneeId])
   @@index([status])
   @@index([dueDate])
+  @@index([workflowStepId])
 }
 
 model FieldTaskCheckIn {
@@ -357,13 +375,13 @@ model Quotation {
   reference String              @unique // e.g. QTN-2026-0001
   lineItems QuotationLineItem[]
 
-  subtotal  Decimal
-  vatAmount Decimal
-  total     Decimal
+  subtotalMinor  BigInt
+  vatAmountMinor BigInt
+  totalMinor     BigInt
 
-  status String @default("DRAFT")
-  convertedInvoiceId String? @unique
-  invoice Invoice? @relation(fields: [convertedInvoiceId], references: [id])
+  status             String   @default("DRAFT")
+  convertedInvoiceId String?  @unique
+  invoice            Invoice? @relation(fields: [convertedInvoiceId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -374,58 +392,86 @@ model QuotationLineItem {
   quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
   quotationId String
 
-  description   String
-  type          String
-  quantity      Decimal @default(1)
-  unitPrice     Decimal
-  govReceiptRef String?
+  description    String
+  type           String
+  quantity       Int     @default(1)
+  unitPriceMinor BigInt
+  govReceiptRef  String?
+
+  @@index([quotationId])
 }
 
 model Invoice {
-  id                       String            @id @default(cuid())
-  client                   Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  clientId                 String
+  id       String @id @default(cuid())
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId String
 
-  invoiceNumber            String            @unique
-  issueDate                DateTime          @default(now())
-  supplyDate               DateTime          @default(now())
-  currency                 String            @default("AED")
-  supplierTrn              String
-  customerTrn              String?
-  subtotalServiceFees      Decimal
-  vatAmount                Decimal
-  subtotalGovDisbursements Decimal
-  totalPayable             Decimal
-  paidAmount               Decimal           @default(0)
-  balanceDue               Decimal
-  status                   String            @default("DRAFT")
-  
-  createdById              String?
-  user                     User?             @relation(fields: [createdById], references: [id])
-  
-  createdAt                DateTime          @default(now())
-  updatedAt                DateTime          @updatedAt
-  
-  lineItems                InvoiceLineItem[]
-  quotation                Quotation?
+  invoiceNumber                 String   @unique
+  issueDate                     DateTime @default(now())
+  supplyDate                    DateTime @default(now())
+  currency                      String   @default("AED")
+  supplierTrn                   String
+  customerTrn                   String?
+  subtotalServiceFeesMinor      BigInt
+  vatAmountMinor                BigInt
+  subtotalGovDisbursementsMinor BigInt
+  totalPayableMinor             BigInt
+  paidAmountMinor               BigInt   @default(0)
+  balanceDueMinor               BigInt
+  govReceiptUrl                 String?
+  status                        String   @default("DRAFT")
 
-  @@index([clientId])
+  createdById String?
+  user        User?   @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lineItems          InvoiceLineItem[]
+  quotation          Quotation?
+  paymentAllocations PaymentAllocation[]
+
+  @@index([clientId, status, createdAt(sort: Desc)])
   @@index([status])
 }
 
 model InvoiceLineItem {
-  id            String  @id @default(cuid())
-  invoice       Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  invoiceId     String
+  id        String  @id @default(cuid())
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId String
 
-  description   String
-  type          String
-  quantity      Decimal @default(1)
-  unitPrice     Decimal
-  vatRate       Decimal @default(0)
-  lineTotal     Decimal
-  govReceiptRef String?
-  govReceiptUrl String?
+  description    String
+  type           String
+  quantity       Int     @default(1)
+  unitPriceMinor BigInt
+  vatRate        Decimal @default(0)
+  lineTotalMinor BigInt
+  govReceiptRef  String?
+  govReceiptUrl  String?
+
+  @@index([invoiceId])
+}
+
+model Expense {
+  id            String   @id @default(cuid())
+  reference     String   @unique // e.g. EXP-2026-0001
+  vendorName    String?
+  description   String?
+  
+  amountMinor   BigInt
+  taxMinor      BigInt   @default(0)
+  totalMinor    BigInt
+  paidMinor     BigInt   @default(0)
+  balanceDueMinor BigInt @default(0)
+  
+  status        String   @default("UNPAID") // UNPAID, PARTIALLY_PAID, PAID, VOID
+  occurredAt    DateTime
+
+  createdById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  paymentAllocations PaymentAllocation[]
 }
 
 // ============================================================================
@@ -443,86 +489,72 @@ model CaseFile {
   openedAt      DateTime  @default(now())
   closedAt      DateTime?
 
-  transactions Transaction[]
-
   @@index([clientId])
   @@index([status])
 }
 
-model Category {
-  id              String       @id @default(cuid())
-  name            String
-  direction       TxnDirection
-  isGovernmentFee Boolean      @default(false)
-  isActive        Boolean      @default(true)
-  sortOrder       Int          @default(0)
-
-  transactions Transaction[]
-
-  @@unique([name, direction])
-}
-
 model Account {
   id                 String      @id @default(cuid())
-  name               String      @unique // "Office cash", "ADCB current", "Amer portal"
+  code               String      @unique // e.g., '1000', '4000'
+  name               String      @unique
   type               AccountType
+  isBank             Boolean     @default(false)
+  currency           String      @default("AED")
   openingBalanceFils BigInt      @default(0)
   isActive           Boolean     @default(true)
 
-  payments Payment[]
+  journalLines JournalLine[]
+  payments     Payment[]
 }
 
-model DayTag {
-  id    String   @id @default(cuid())
-  date  DateTime @db.Date
-  label String
-  note  String?
+model JournalEntry {
+  id           String        @id @default(cuid())
+  entryDate    DateTime
+  sourceType   String // e.g., 'INVOICE', 'PAYMENT', 'MANUAL'
+  sourceId     String? // ID of the related document
+  memo         String?
+  reversedById String?       @unique
+  reversedBy   JournalEntry? @relation("Reversals", fields: [reversedById], references: [id])
+  reverses     JournalEntry? @relation("Reversals")
 
-  @@unique([date, label])
+  lines     JournalLine[]
+  createdAt DateTime      @default(now())
 }
 
-model Transaction {
-  id        String @id @default(cuid())
-  reference String @unique // INV-2026-0001 / EXP-2026-0442
+model JournalLine {
+  id             String       @id @default(cuid())
+  journalEntryId String
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  accountId      String
+  account        Account      @relation(fields: [accountId], references: [id])
 
-  direction  TxnDirection
-  occurredAt DateTime
-  categoryId String
-  category   Category     @relation(fields: [categoryId], references: [id])
+  debitMinor  BigInt @default(0)
+  creditMinor BigInt @default(0)
 
-  clientId   String?
-  client     Client?   @relation(fields: [clientId], references: [id])
-  caseFileId String?
-  caseFile   CaseFile? @relation(fields: [caseFileId], references: [id])
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id])
 
-  amountFils  BigInt
-  taxFils     BigInt    @default(0)
-  settledFils BigInt    @default(0)
-  status      TxnStatus @default(UNPAID)
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@index([clientId])
+}
 
-  description String?
-  vendorName  String?
-  tags        String[] @default([])
+model Product {
+  id              String  @id @default(cuid())
+  name            String
+  description     String?
+  unitPriceMinor  BigInt
+  taxCategoryId   String?
+  incomeAccountId String
+  isActive        Boolean @default(true)
 
-  createdById String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
-  voidReason  String?
-
-  allocations PaymentAllocation[]
-
-  @@index([occurredAt])
-  @@index([direction, occurredAt])
-  @@index([clientId, status])
-  @@index([caseFileId])
-  @@index([categoryId])
-  @@index([deletedAt])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Payment {
   id         String           @id @default(cuid())
-  reference  String           // RCT-2026-0001
+  reference  String // RCT-2026-0001
   direction  PaymentDirection
   occurredAt DateTime
   mode       PaymentMode
@@ -532,8 +564,8 @@ model Payment {
   clientId String?
   client   Client? @relation(fields: [clientId], references: [id])
 
-  amountFils    BigInt
-  unappliedFils BigInt @default(0)
+  amountMinor    BigInt
+  unappliedMinor BigInt @default(0)
 
   chequeNo   String?
   chequeDate DateTime?
@@ -551,16 +583,24 @@ model Payment {
 }
 
 model PaymentAllocation {
-  id            String      @id @default(cuid())
-  paymentId     String
-  payment       Payment     @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  transactionId String
-  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  amountFils    BigInt
-  createdAt     DateTime    @default(now())
+  id        String  @id @default(cuid())
+  paymentId String
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
-  @@unique([paymentId, transactionId])
-  @@index([transactionId])
+  invoiceId   String?
+  invoice     Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  expenseId   String?
+  expense     Expense? @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  amountMinor BigInt
+
+  createdAt DateTime @default(now())
+
+  @@unique([paymentId, invoiceId])
+  @@unique([paymentId, expenseId])
+  @@index([invoiceId])
+  @@index([expenseId])
 }
 
 // ============================================================================
@@ -582,3 +622,146 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([createdAt])
 }
+
+// ============================================================================
+// CRM & PIPELINE
+// ============================================================================
+
+model Lead {
+  id             String   @id @default(cuid())
+  name           String
+  companyName    String?
+  email          String?
+  phone          String?
+  serviceNeeded  String?
+  status         String   @default("NEW") // NEW, CONTACTED, QUALIFIED, LOST
+  source         String   @default("OTHER") // WHATSAPP, WEBSITE, REFERRAL
+  notes          String?
+  
+  assignedToId   String?
+  assignedTo     User?    @relation("LeadAssignee", fields: [assignedToId], references: [id])
+  
+  activities     Activity[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status])
+}
+
+model Deal {
+  id             String   @id @default(cuid())
+  title          String
+  valueMinor     BigInt   @default(0)
+  stage          String   @default("QUALIFIED") // QUALIFIED, PROPOSAL_SENT, GOV_PROCESSING, WON, LOST
+  priority       String   @default("MEDIUM") // LOW, MEDIUM, HIGH
+  expectedCloseDate DateTime?
+  
+  clientId       String
+  client         Client   @relation(fields: [clientId], references: [id])
+
+  assignedToId   String?
+  assignedTo     User?    @relation("DealAssignee", fields: [assignedToId], references: [id])
+
+  activities     Activity[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([stage])
+  @@index([clientId])
+}
+
+model Activity {
+  id             String   @id @default(cuid())
+  type           String   // CALL, EMAIL, WHATSAPP, NOTE, MEETING
+  description    String
+  
+  leadId         String?
+  lead           Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  
+  dealId         String?
+  deal           Deal?    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  
+  clientId       String?
+  client         Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  createdById    String?
+  createdBy      User?    @relation("ActivityCreator", fields: [createdById], references: [id])
+
+  createdAt      DateTime @default(now())
+  
+  @@index([leadId])
+  @@index([dealId])
+  @@index([clientId])
+}
+
+// ============================================================================
+// COCKPIT DASHBOARD (LEDGER)
+// ============================================================================
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum TransactionStatus {
+  PAID
+  PENDING
+  OVERDUE
+  PARTIALLY_PAID
+  CANCELLED
+}
+
+model LedgerTransaction {
+  id               String            @id @default(cuid())
+  referenceId      String            @unique
+  clientId         String?
+  client           Client?           @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  counterpartyName String
+  counterpartyPhone String?
+  type             TransactionType
+  category         String
+  totalAmountMinor BigInt            @default(0) // Storing in minor units (fils) for precise calculation
+  paidAmountMinor  BigInt            @default(0)
+  balanceAmountMinor BigInt          @default(0) // We'll compute this in app logic since generated columns might be tricky depending on DB provider
+  currency         String            @default("AED")
+  status           TransactionStatus @default(PENDING)
+  transactionDate  DateTime          @default(now())
+  dueDate          DateTime?
+  notes            String?
+  
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([clientId])
+  @@index([status])
+  @@index([type])
+  @@index([transactionDate])
+}
+
+enum UserRole {
+  VIEWER
+  FINANCE_OPERATOR
+  TREASURY_ADMIN
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+model FinanceAuditLog {
+  id              String       @id @default(uuid())
+  transactionId   String?
+  actorEmail      String
+  action          AuditAction
+  previousPayload Json?
+  newPayload      Json?
+  timestamp       DateTime     @default(now())
+
+  @@index([transactionId])
+  @@index([actorEmail])
+}
+

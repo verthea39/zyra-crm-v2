@@ -22,7 +22,12 @@ async function main() {
 
   if (authError) {
     if (authError.message.includes('already been registered') || authError.code === 'email_exists') {
-       console.log('User already exists in Supabase Auth.');
+       console.log('User already exists in Supabase Auth. Updating password...');
+       const { data: users } = await supabase.auth.admin.listUsers();
+       const existing = users.users.find(u => u.email === email);
+       if (existing) {
+         await supabase.auth.admin.updateUserById(existing.id, { password });
+       }
     } else {
        console.error('Error creating auth user:', authError);
        return;

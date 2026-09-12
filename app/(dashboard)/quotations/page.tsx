@@ -68,7 +68,7 @@ export default async function QuotationsPage() {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{clientName}</td>
                   <td className="px-4 py-3 text-muted-foreground">{formatDate(qtn.createdAt)}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{formatAED(Number(qtn.total))}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{formatAED(Number(qtn.totalMinor) / 100)}</td>
                   <td className="px-4 py-3">
                     <Badge tone={statusTone[qtn.status as QuotationStatus] || "muted"}>{qtn.status.replaceAll("_", " ")}</Badge>
                   </td>

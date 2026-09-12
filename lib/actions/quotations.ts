@@ -45,16 +45,16 @@ export async function createQuotation(formData: FormData) {
     data: {
       clientId: parsed.clientId,
       reference,
-      subtotal,
-      vatAmount: totals.vatAmount,
-      total: totals.totalPayable,
+      subtotalMinor: BigInt(Math.round(subtotal * 100)),
+      vatAmountMinor: BigInt(Math.round(totals.vatAmount * 100)),
+      totalMinor: BigInt(Math.round(totals.totalPayable * 100)),
       status: "DRAFT",
       lineItems: {
         create: lineItems.map((item) => ({
           description: item.description,
           type: item.type,
           quantity: item.quantity,
-          unitPrice: item.unitPrice,
+          unitPriceMinor: BigInt(Math.round(item.unitPrice * 100)),
           govReceiptRef: item.govReceiptRef || null,
         })),
       },
@@ -64,6 +64,40 @@ export async function createQuotation(formData: FormData) {
   revalidatePath("/quotations");
   revalidatePath(`/clients/${parsed.clientId}`);
   redirect(`/quotations/${quotation.id}`);
+}
+
+export async function updateQuotation(id: string, formData: FormData) {
+  await requirePermission("workflows:write");
+  const parsed = createQuotationSchema.parse(Object.fromEntries(formData.entries()));
+  const lineItems = z.array(lineItemSchema).min(1).parse(JSON.parse(parsed.lineItemsJson));
+
+  const totals = calculateInvoiceTotals(lineItems);
+  const subtotal = totals.subtotalServiceFees + totals.subtotalGovDisbursements;
+
+  const quotation = await db.quotation.update({
+    where: { id },
+    data: {
+      clientId: parsed.clientId,
+      subtotalMinor: BigInt(Math.round(subtotal * 100)),
+      vatAmountMinor: BigInt(Math.round(totals.vatAmount * 100)),
+      totalMinor: BigInt(Math.round(totals.totalPayable * 100)),
+      lineItems: {
+        deleteMany: {},
+        create: lineItems.map((item) => ({
+          description: item.description,
+          type: item.type,
+          quantity: item.quantity,
+          unitPriceMinor: BigInt(Math.round(item.unitPrice * 100)),
+          govReceiptRef: item.govReceiptRef || null,
+        })),
+      },
+    },
+  });
+
+  revalidatePath("/quotations");
+  revalidatePath(`/quotations/${id}`);
+  revalidatePath(`/clients/${parsed.clientId}`);
+  redirect(`/quotations/${id}`);
 }
 
 export async function setQuotationStatus(quotationId: string, status: string) {

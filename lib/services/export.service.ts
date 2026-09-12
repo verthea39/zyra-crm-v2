@@ -8,10 +8,9 @@ export async function generateExport(filters: any, userId: string) {
   const workbook = new ExcelJS.Workbook();
 
   // 2. Fetch data
-  const transactions = await db.transaction.findMany({
-    where: { deletedAt: null },
-    include: { client: { include: { corporateProfile: true, individualProfile: true } }, category: true, caseFile: true },
-    orderBy: { occurredAt: "desc" }
+  const transactions = await db.invoice.findMany({
+    include: { client: { include: { corporateProfile: true, individualProfile: true } } },
+    orderBy: { issueDate: "desc" }
   });
 
   const clients = await db.client.findMany({
@@ -44,18 +43,18 @@ export async function generateExport(filters: any, userId: string) {
       ? t.client.corporateProfile?.companyNameEn 
       : t.client?.individualProfile?.fullNameEn;
     return [
-      t.reference,
-      t.occurredAt,
-      t.direction,
-      t.category.name,
+      t.invoiceNumber,
+      t.issueDate,
+      "INCOME",
+      "Invoice",
       clientName || "N/A",
-      t.caseFile?.code || "N/A",
-      Number(t.amountFils) / 100,
-      Number(t.taxFils) / 100,
-      Number(t.settledFils) / 100,
-      Number(t.amountFils + t.taxFils - t.settledFils) / 100,
+      "N/A",
+      Number(t.subtotalServiceFeesMinor) / 100,
+      Number(t.vatAmountMinor) / 100,
+      Number(t.paidAmountMinor) / 100,
+      Number(t.balanceDueMinor) / 100,
       t.status,
-      t.description || ""
+      "Invoice"
     ];
   });
   
@@ -172,9 +171,9 @@ export async function generateExport(filters: any, userId: string) {
       p.mode,
       p.account.name,
       clientName || "N/A",
-      Number(p.amountFils) / 100,
-      Number(p.amountFils - p.unappliedFils) / 100,
-      Number(p.unappliedFils) / 100,
+      Number(p.amountMinor) / 100,
+      Number(p.amountMinor - p.unappliedMinor) / 100,
+      Number(p.unappliedMinor) / 100,
       p.chequeNo || "",
       p.notes || ""
     ];

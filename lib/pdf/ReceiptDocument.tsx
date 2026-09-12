@@ -12,7 +12,7 @@ Font.register({
 });
 
 const styles = StyleSheet.create({
-  page: { paddingTop: 40, paddingBottom: 40, paddingLeft: 45, paddingRight: 45, fontFamily: "Poppins", fontSize: 10, color: "#333" },
+  page: { paddingTop: 40, paddingBottom: 80, paddingLeft: 45, paddingRight: 45, fontFamily: "Poppins", fontSize: 10, color: "#333" },
   header: { flexDirection: "row", justifyContent: "space-between", marginBottom: 30, borderBottomWidth: 2, borderBottomColor: "#b68d40", paddingBottom: 15 },
   companyInfo: { flexDirection: "column" },
   title: { fontSize: 24, fontWeight: 700, color: "#b68d40", marginBottom: 5 },

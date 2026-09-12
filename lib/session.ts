@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createSupabaseContext } from "@/lib/supabase/context";
 import { db } from "@/lib/db";
 import { assertPermission, type Permission, type RoleName } from "@/lib/rbac";
@@ -24,7 +25,13 @@ export class ForbiddenError extends Error {
   }
 }
 
-export async function requireSession() {
+/**
+ * Cached per-request: React dedupes calls with identical args within one
+ * render pass, so layout + every action on a page share one auth check
+ * instead of each re-verifying the Supabase session and re-querying the
+ * user row.
+ */
+export const requireSession = cache(async function requireSession() {
   const { data, error } = await createSupabaseContext();
   if (error || !data) throw new UnauthorizedError();
 
@@ -47,7 +54,7 @@ export async function requireSession() {
   };
 
   return { user: sessionUser };
-}
+});
 
 /** Throws unless the signed-in user's role has the given permission. */
 export async function requirePermission(permission: Permission) {

@@ -22,7 +22,7 @@ export async function GET(
   const totals = calculateInvoiceTotals(quotation.lineItems.map(item => ({
     type: item.type,
     quantity: Number(item.quantity),
-    unitPrice: Number(item.unitPrice),
+    unitPrice: Number(item.unitPriceMinor) / 100,
   })));
 
   const disbursements = quotation.lineItems
@@ -32,20 +32,24 @@ export async function GET(
       authority: "OTHER", // Defaulting to OTHER as we don't store authority yet
       description: li.description,
       voucherRef: li.govReceiptRef || "",
-      amount: Number(li.unitPrice) * Number(li.quantity),
+      amount: (Number(li.unitPriceMinor) / 100) * Number(li.quantity),
     }));
 
   const services = quotation.lineItems
     .filter(li => li.type === "AGENCY_SERVICE_FEE")
-    .map((li, idx) => ({
-      id: idx + 1,
-      description: li.description,
-      quantity: Number(li.quantity),
-      unitPrice: Number(li.unitPrice),
-      vatRatePercent: 5.0,
-      vatAmount: (Number(li.unitPrice) * Number(li.quantity) * 0.05),
-      totalAmount: (Number(li.unitPrice) * Number(li.quantity) * 1.05),
-    }));
+    .map((li, idx) => {
+      const up = Number(li.unitPriceMinor) / 100;
+      const qty = Number(li.quantity);
+      return {
+        id: idx + 1,
+        description: li.description,
+        quantity: qty,
+        unitPrice: up,
+        vatRatePercent: 5.0,
+        vatAmount: (up * qty * 0.05),
+        totalAmount: (up * qty * 1.05),
+      };
+    });
 
   const issueDateStr = quotation.createdAt.toISOString().split("T")[0];
 

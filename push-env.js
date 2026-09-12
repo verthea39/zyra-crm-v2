@@ -17,17 +17,27 @@ for (const line of lines) {
   if (key && value) {
     console.log(`Adding ${key}...`);
     try {
-      execSync(`npx vercel env add ${key} production`, {
+      try {
+        execSync(`npx vercel env rm ${key} production --yes`, { stdio: 'ignore' });
+        execSync(`npx vercel env rm ${key} preview --yes`, { stdio: 'ignore' });
+        execSync(`npx vercel env rm ${key} development --yes`, { stdio: 'ignore' });
+      } catch (e) {
+        // Ignore errors if the key doesn't exist
+      }
+      
+      const typeFlag = key.startsWith('NEXT_PUBLIC_') ? '--type config' : '';
+      
+      execSync(`npx vercel env add ${key} production ${typeFlag}`, {
         input: value,
-        stdio: ['pipe', 'ignore', 'ignore']
+        stdio: ['pipe', 'inherit', 'inherit']
       });
-      execSync(`npx vercel env add ${key} preview`, {
+      execSync(`npx vercel env add ${key} preview ${typeFlag}`, {
         input: value,
-        stdio: ['pipe', 'ignore', 'ignore']
+        stdio: ['pipe', 'inherit', 'inherit']
       });
-      execSync(`npx vercel env add ${key} development`, {
+      execSync(`npx vercel env add ${key} development ${typeFlag}`, {
         input: value,
-        stdio: ['pipe', 'ignore', 'ignore']
+        stdio: ['pipe', 'inherit', 'inherit']
       });
     } catch (e) {
       console.log(`Failed to add ${key}`);

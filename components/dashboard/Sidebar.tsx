@@ -12,6 +12,7 @@ import {
   Workflow as WorkflowIcon,
   FolderLock,
   Receipt,
+  Activity,
   MapPinned,
   Briefcase,
   UserPlus,
@@ -41,6 +42,7 @@ export const navItems = [
     subItems: [
       { href: "/services", label: "Services", icon: Briefcase },
       { href: "/staff", label: "Staff", icon: UserPlus },
+      { href: "/activity", label: "Activity Log", icon: Activity },
       { href: "/settings/backup", label: "Backup & Restore", icon: Settings },
     ]
   },
@@ -62,7 +64,7 @@ export function Sidebar() {
 
       <Link href="/" className="p-6 flex items-center gap-3 border-b border-border/40 relative hover:bg-muted/30 transition-colors">
         <div className="size-8 rounded-full overflow-hidden flex items-center justify-center shrink-0 border border-border/50 bg-black">
-          <Image src="/logo-icon.png" alt="Zyra CRM Logo" width={32} height={32} className="object-cover" />
+          <Image src="/logo-full-gold.png" alt="Zyra CRM Logo" width={32} height={32} className="object-contain" />
         </div>
         <p className="text-sm font-bold text-foreground tracking-tight">ZYRA CRM</p>
       </Link>

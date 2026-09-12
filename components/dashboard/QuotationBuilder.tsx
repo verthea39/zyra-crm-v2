@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createQuotation } from "@/lib/actions/quotations";
+import { createQuotation, updateQuotation } from "@/lib/actions/quotations";
 import { calculateInvoiceTotals } from "@/lib/invoice-utils";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
@@ -30,13 +30,19 @@ const emptyLine: LineItem = {
 export function QuotationBuilder({
   clients,
   services = [],
+  initialData,
 }: {
   clients: { id: string; label: string }[];
   services?: any[];
+  initialData?: {
+    id: string;
+    clientId: string;
+    lineItems: LineItem[];
+  };
 }) {
-  const [clientId, setClientId] = useState("");
+  const [clientId, setClientId] = useState(initialData?.clientId || "");
   
-  const [lineItems, setLineItems] = useState<LineItem[]>([{ ...emptyLine }]);
+  const [lineItems, setLineItems] = useState<LineItem[]>(initialData?.lineItems?.length ? initialData.lineItems : [{ ...emptyLine }]);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
@@ -61,7 +67,11 @@ export function QuotationBuilder({
     formData.set("clientId", clientId);
     formData.set("lineItemsJson", JSON.stringify(lineItems));
     
-    await createQuotation(formData);
+    if (initialData?.id) {
+      await updateQuotation(initialData.id, formData);
+    } else {
+      await createQuotation(formData);
+    }
     
     // Server action redirects, this is a fallback only.
     setSubmitting(false);
