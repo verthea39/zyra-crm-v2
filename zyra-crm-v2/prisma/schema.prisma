@@ -1,0 +1,285 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  COORDINATOR
+  // New Roles
+  SUPER_ADMIN
+  PRO_SPECIALIST
+  TYPIST
+  ACCOUNTANT
+}
+
+enum ClientType {
+  INDIVIDUAL
+  CORPORATE
+}
+
+enum CaseStage {
+  PRE_CHECK
+  SUBMITTED
+  COMPLETED
+  
+  // New Pipeline Stages
+  DRAFT_INTAKE
+  OFFER_LETTER_MOHRE
+  ENTRY_PERMIT
+  MEDICAL_BIOMETRICS
+  VISA_STAMPING_EID
+  COMPLETED_HANDOVER
+}
+
+enum DocStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum TransactionStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  role         Role          @default(COORDINATOR)
+  password     String?       // For initial auth if needed
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  lastLogin    DateTime?
+  cases        CaseFile[]
+  whatsappLogs WhatsAppLog[]
+  auditLogs    AuditLog[]
+}
+
+model Client {
+  id              String     @id @default(cuid())
+  type            ClientType
+  leadSource      String?
+  name            String
+  email           String?
+  phone           String?
+  place           String?
+  nationality     String?
+  visaType        String?
+  passportNo      String?
+  passportExpiry  DateTime?
+  emiratesIdNo    String?
+  tradeLicenseNo  String?
+  expiryDate      DateTime?
+  createdAt       DateTime   @default(now())
+  cases           CaseFile[]
+  transactions    Transaction[]
+  employees           Employee[]
+  vaultDocuments      DocumentVault[]
+  portalTransactions  PortalTransaction[]
+  whatsappLogs        WhatsAppLog[]
+
+  @@index([type])
+  @@index([expiryDate])
+}
+
+model CaseFile {
+  id             String              @id @default(cuid())
+  reference      String              @unique
+  applicantName  String?
+  mohreAppNo     String?
+  gdrfaRequestNo String?
+  serviceType    String
+  stage          CaseStage           @default(DRAFT_INTAKE)
+  stageUpdatedAt DateTime            @default(now())
+  createdAt      DateTime            @default(now())
+  clientId       String
+  client         Client              @relation(fields: [clientId], references: [id])
+  coordinatorId  String
+  coordinator    User                @relation(fields: [coordinatorId], references: [id])
+  documents      DocumentChecklist[]
+  transactions   Transaction[]
+  whatsappLogs   WhatsAppLog[]
+  trackingToken  String?             @unique @default(uuid())
+
+  @@index([clientId])
+  @@index([coordinatorId])
+  @@index([stage])
+  @@index([trackingToken])
+}
+
+model DocumentChecklist {
+  id         String    @id @default(cuid())
+  title      String
+  status     DocStatus @default(PENDING)
+  caseFileId String
+  caseFile   CaseFile  @relation(fields: [caseFileId], references: [id], onDelete: Cascade)
+
+  @@index([caseFileId])
+  @@index([status])
+}
+
+model Transaction {
+  id              String            @id @default(cuid())
+  reference       String            @unique // e.g. EXP-2026-018, INV-2026-042
+  type            TransactionType
+  date            DateTime          @default(now())
+  dueDate         DateTime?
+  counterparty    String            // Client name or Vendor name
+  category        String            // e.g., "Meta Ad", "MOHRE Fee", "Service Charge"
+  paymentMode     String?           // CASH, BANK_TRANSFER, CARD
+  description     String?
+  amountTotal     Int               // Minor units
+  amountPaid      Int               @default(0)
+  status          TransactionStatus @default(PENDING)
+  
+  // Dual-Bucket Strict Accounting (Only applies to Case Invoices)
+  isCaseInvoice   Boolean           @default(false)
+  govFeePart      Int?
+  serviceFeePart  Int?
+  lineItems       Json?
+
+  
+  caseFileId      String?
+  caseFile        CaseFile?         @relation(fields: [caseFileId], references: [id], onDelete: SetNull)
+  
+  clientId        String?
+  client          Client?           @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  @@index([type])
+  @@index([status])
+  @@index([date])
+}
+
+model Employee {
+  id             String    @id @default(cuid())
+  name           String
+  designation    String?
+  basicSalary    Float?
+  visaCategory   String?
+  expiryDate     DateTime?
+  corporateId    String
+  corporate      Client    @relation(fields: [corporateId], references: [id], onDelete: Cascade)
+  documents      DocumentVault[]
+  createdAt      DateTime  @default(now())
+  
+  @@index([corporateId])
+}
+
+model DocumentVault {
+  id           String    @id @default(cuid())
+  category     String    // Passports, UAE Visas, Emirates IDs, Trade Licenses, Ejari / Tenancy, Establishment Cards, Labor Cards
+  title        String
+  fileUrl      String?
+  expiryDate   DateTime?
+  
+  clientId     String?
+  client       Client?   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  employeeId   String?
+  employee     Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  remarks      String?
+  createdAt    DateTime  @default(now())
+}
+
+model PortalWallet {
+  id           String   @id @default(cuid())
+  entityName   String   @unique // Tas-heel, Amer, ICP, DED
+  balance      Float    @default(0)
+  lastUpdated  DateTime @updatedAt
+  transactions PortalTransaction[]
+}
+
+model PortalTransaction {
+  id             String        @id @default(cuid())
+  walletId       String
+  wallet         PortalWallet  @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  
+  clientId       String?
+  client         Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  type           String        // TOP_UP, DEDUCTION
+  amount         Float
+  balanceAfter   Float?
+  
+  receiptRef     String?
+  caseRef        String?
+  date           DateTime      @default(now())
+  description    String?
+
+  @@index([walletId])
+  @@index([caseRef])
+  @@index([clientId])
+}
+
+model WhatsAppLog {
+  id           String    @id @default(cuid())
+  caseId       String
+  caseFile     CaseFile  @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  clientId     String
+  client       Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  templateType String
+  phone        String
+  sentById     String?
+  sentBy       User?     @relation(fields: [sentById], references: [id], onDelete: SetNull)
+  sentAt       DateTime  @default(now())
+
+  @@index([caseId])
+  @@index([clientId])
+  @@index([sentById])
+}
+
+model ServiceItem {
+  id           String    @id @default(cuid())
+  name         String    @unique
+  category     String
+  govFee       Float
+  agencyFee    Float
+  isVatExempt  Boolean   @default(false)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model CompanySettings {
+  id              String   @id @default(cuid()) // Expected to have only one row, e.g. "DEFAULT"
+  companyNameEn   String?
+  companyNameAr   String?
+  trn             String?
+  tradeLicenseNo  String?
+  address         String?
+  bankName        String?
+  accountName     String?
+  iban            String?
+  swift           String?
+  invoiceNotes    String?
+  financePin      String?  // Store hashed or plain (depending on security reqs) - usually we'd hash, but for MVP plain/simple hash.
+  updatedAt       DateTime @updatedAt
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action      String
+  details     String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
