@@ -1,49 +1,19 @@
-import { cn } from "@/lib/utils";
-import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import * as React from "react"
+import { Input as InputPrimitive } from "@base-ui/react/input"
+import { cn } from "cn"
 
-export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
+function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
-    <input
+    <InputPrimitive
+      type={type}
+      data-slot="input"
       className={cn(
-        "h-9 w-full rounded-md border border-border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40",
+        "h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm    ",
         className
       )}
       {...props}
     />
-  );
+  )
 }
 
-export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return (
-    <textarea
-      className={cn(
-        "w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40",
-        className
-      )}
-      {...props}
-    />
-  );
-}
-
-export function Select({ className, children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <select
-      className={cn(
-        "h-9 w-full rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40",
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </select>
-  );
-}
-
-export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
-  return (
-    <label
-      className={cn("mb-1 block text-sm font-medium text-card-foreground", className)}
-      {...props}
-    />
-  );
-}
+export { Input }

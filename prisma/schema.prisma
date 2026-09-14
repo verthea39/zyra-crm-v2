@@ -1,8 +1,3 @@
-// ============================================================================
-// UAE Document Clearance / PRO Services / Business Setup CRM
-// Prisma Schema — Step 1 Scaffold
-// ============================================================================
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,692 +8,40 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// ---------------------------------------------------------------- enums
-
-enum TxnDirection {
-  INCOME
-  EXPENSE
+enum Role {
+  ADMIN
+  COORDINATOR
+  // New Roles
+  SUPER_ADMIN
+  PRO_SPECIALIST
+  TYPIST
+  ACCOUNTANT
 }
 
-enum TxnStatus {
-  UNPAID
-  PARTIAL
-  PAID
-  VOID
+enum ClientType {
+  INDIVIDUAL
+  CORPORATE
 }
 
-enum PaymentDirection {
-  IN
-  OUT
-}
-
-enum PaymentMode {
-  CASH
-  CARD
-  BANK_TRANSFER
-  PORTAL_BALANCE
-  CHEQUE
-}
-
-enum AccountType {
-  ASSET
-  LIABILITY
-  EQUITY
-  INCOME
-  EXPENSE
-  // Temporary for migration
-  CASH
-  BANK
-  PORTAL
-}
-
-// ============================================================================
-// AUTH & RBAC
-// ============================================================================
-
-model Role {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  description String?
-  users       User[]
-  createdAt   DateTime @default(now())
-}
-
-model User {
-  id           String  @id @default(cuid())
-  name         String
-  email        String  @unique
-  passwordHash String?
-  phone        String?
-  avatarUrl    String?
-  authId       String?
-  isActive     Boolean @default(true)
-
-  roleId String
-  role   Role   @relation(fields: [roleId], references: [id])
-
-  clientId String? @unique
-  client   Client? @relation("ClientPortalUser", fields: [clientId], references: [id], onDelete: SetNull)
-
-  assignedTasks     Task[]             @relation("AssignedPRO")
-  assignedWorkflows WorkflowStep[]     @relation("StepAssignee")
-  fieldTaskLogs     FieldTaskCheckIn[]
-  documentsUploaded Document[]         @relation("UploadedBy")
-  auditLogs         AuditLog[]
-  invoices          Invoice[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  assignedClients Client[] @relation("AssignedClientPRO")
-  assignedLeads     Lead[]             @relation("LeadAssignee")
-  assignedDeals     Deal[]             @relation("DealAssignee")
-  createdActivities Activity[]         @relation("ActivityCreator")
-
-  @@index([email])
-}
-
-// ============================================================================
-// CLIENT & COMPANY MANAGEMENT
-// ============================================================================
-
-model Client {
-  id            String @id @default(cuid())
-  clientType    String
-  accountStatus String @default("PROSPECT")
-  leadSource    String @default("OTHER")
-
-  code             String? // ZC-0001
-  trn              String? // VAT registration number
-  creditLimitFils  BigInt  @default(0)
-  paymentTermsDays Int     @default(14)
-  defaultCurrency  String  @default("AED")
-
-  assignedPROId String?
-  assignedPRO   User?   @relation("AssignedClientPRO", fields: [assignedPROId], references: [id])
-
-  corporateProfile  CorporateProfile?
-  individualProfile IndividualProfile?
-
-  documents  Document[]
-  workflows  Workflow[]
-  quotations Quotation[]
-  invoices   Invoice[]
-
-  payments Payment[]
-  cases    CaseFile[]
-  deals    Deal[]
-  activities Activity[]
-
-  portalUser User? @relation("ClientPortalUser")
-
-  notes        String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  journalLines JournalLine[]
-  ledgerTransactions LedgerTransaction[]
-
-  @@index([clientType])
-  @@index([accountStatus])
-}
-
-model CorporateProfile {
-  id       String @id @default(cuid())
-  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  clientId String @unique
-
-  companyNameEn      String
-  companyNameAr      String?
-  tradeLicenseNumber String  @unique
-  licenseType        String?
-  issuingAuthority   String
-  legalType          String?
-
-  tradeLicenseExpiry DateTime?
-
-  establishmentCardImmNumber   String?
-  establishmentCardImmExpiry   DateTime?
-  establishmentCardMohreNumber String?
-  establishmentCardMohreExpiry DateTime?
-
-  corporateTaxTrn String?
-  vatTrn          String?
-
-  ejariNumber        String?
-  ejariExpiry        DateTime?
-  tenancyUnitDetails String?
-
-  authorizedSignatoryName     String?
-  authorizedSignatoryPassport String?
-  authorizedSignatoryEid      String?
-  authorizedSignatoryMobile   String?
-  authorizedSignatoryEmail    String?
-  contactEmail                String?
-
-  employees IndividualProfile[] @relation("SponsorCompany")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([tradeLicenseNumber])
-  @@index([issuingAuthority])
-}
-
-model IndividualProfile {
-  id       String @id @default(cuid())
-  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  clientId String @unique
-
-  fullNameEn String
-  fullNameAr String?
-  email      String?
-  mobileNumber String?
-
-  passportNumber String
-  nationality    String
-  passportExpiry DateTime?
-
-  emiratesIdNumber String?
-  emiratesIdExpiry DateTime?
-
-  unifiedIdNumber String?
-  visaType        String?
-  visaExpiry      DateTime?
-
-  sponsorCompanyId String?
-  sponsorCompany   CorporateProfile? @relation("SponsorCompany", fields: [sponsorCompanyId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([passportNumber])
-  @@index([emiratesIdNumber])
-}
-
-// ============================================================================
-// PRO SERVICES / WORKFLOW TRACKER 
-// ============================================================================
-
-model ServiceTemplate {
-  id          String           @id @default(cuid())
-  name        String
-  category    String
-  description String?
-  basePrice   Decimal?
-  stepDefs    ServiceStepDef[]
-  workflows   Workflow[]
-  createdAt   DateTime         @default(now())
-}
-
-model ServiceStepDef {
-  id          String          @id @default(cuid())
-  template    ServiceTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  templateId  String
-  order       Int
-  name        String
-  description String?
-}
-
-model Workflow {
-  id       String @id @default(cuid())
-  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  clientId String
-
-  template   ServiceTemplate? @relation(fields: [templateId], references: [id])
-  templateId String?
-
-  name     String
-  category String
-  steps    WorkflowStep[]
-
-  startedAt   DateTime  @default(now())
-  completedAt DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([clientId])
-}
-
-model WorkflowStep {
-  id         String   @id @default(cuid())
-  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  workflowId String
-
-  order  Int
-  name   String
-  status String @default("PENDING")
-
-  assigneeId String?
-  assignee   User?   @relation("StepAssignee", fields: [assigneeId], references: [id])
-
-  fee Decimal?
-
-  icpGdrfaRefNumber String?
-  tasheelRefNumber  String?
-  mohreTxnNumber    String?
-
-  dueDate     DateTime?
-  completedAt DateTime?
-
-  tasks Task[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([workflowId])
-  @@index([status])
-}
-
-// ============================================================================
-// FIELD PRO & TASK DISPATCH MODULE
-// ============================================================================
-
-model Task {
-  id             String        @id @default(cuid())
-  workflowStep   WorkflowStep? @relation(fields: [workflowStepId], references: [id], onDelete: Cascade)
-  workflowStepId String?
-
-  title  String
-  venue  String
-  status String @default("PENDING")
-
-  assigneeId String
-  assignee   User   @relation("AssignedPRO", fields: [assigneeId], references: [id])
-
-  dueDate DateTime?
-  notes   String?
-
-  checkIns FieldTaskCheckIn[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([assigneeId])
-  @@index([status])
-  @@index([dueDate])
-  @@index([workflowStepId])
-}
-
-model FieldTaskCheckIn {
-  id     String @id @default(cuid())
-  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  taskId String
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
-  latitude   Float?
-  longitude  Float?
-  note       String?
-  documentId String?
-  document   Document? @relation(fields: [documentId], references: [id])
-
-  createdAt DateTime @default(now())
-}
-
-model Document {
-  id       String @id @default(cuid())
-  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  clientId String
-
-  category String
-  fileName String
-  fileUrl  String
-  mimeType String?
-
-  expiryDate         DateTime?
-  verificationStatus String    @default("PENDING_REVIEW")
-
-  uploadedById String?
-  uploadedBy   User?   @relation("UploadedBy", fields: [uploadedById], references: [id])
-
-  fieldCheckIns FieldTaskCheckIn[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([clientId])
-  @@index([category])
-  @@index([expiryDate])
-}
-
-// ============================================================================
-// QUOTATIONS
-// ============================================================================
-
-model Quotation {
-  id       String @id @default(cuid())
-  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  clientId String
-
-  reference String              @unique // e.g. QTN-2026-0001
-  lineItems QuotationLineItem[]
-
-  subtotalMinor  BigInt
-  vatAmountMinor BigInt
-  totalMinor     BigInt
-
-  status             String   @default("DRAFT")
-  convertedInvoiceId String?  @unique
-  invoice            Invoice? @relation(fields: [convertedInvoiceId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model QuotationLineItem {
-  id          String    @id @default(cuid())
-  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
-  quotationId String
-
-  description    String
-  type           String
-  quantity       Int     @default(1)
-  unitPriceMinor BigInt
-  govReceiptRef  String?
-
-  @@index([quotationId])
-}
-
-model Invoice {
-  id       String @id @default(cuid())
-  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  clientId String
-
-  invoiceNumber                 String   @unique
-  issueDate                     DateTime @default(now())
-  supplyDate                    DateTime @default(now())
-  currency                      String   @default("AED")
-  supplierTrn                   String
-  customerTrn                   String?
-  subtotalServiceFeesMinor      BigInt
-  vatAmountMinor                BigInt
-  subtotalGovDisbursementsMinor BigInt
-  totalPayableMinor             BigInt
-  paidAmountMinor               BigInt   @default(0)
-  balanceDueMinor               BigInt
-  govReceiptUrl                 String?
-  status                        String   @default("DRAFT")
-
-  createdById String?
-  user        User?   @relation(fields: [createdById], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  lineItems          InvoiceLineItem[]
-  quotation          Quotation?
-  paymentAllocations PaymentAllocation[]
-
-  @@index([clientId, status, createdAt(sort: Desc)])
-  @@index([status])
-}
-
-model InvoiceLineItem {
-  id        String  @id @default(cuid())
-  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  invoiceId String
-
-  description    String
-  type           String
-  quantity       Int     @default(1)
-  unitPriceMinor BigInt
-  vatRate        Decimal @default(0)
-  lineTotalMinor BigInt
-  govReceiptRef  String?
-  govReceiptUrl  String?
-
-  @@index([invoiceId])
-}
-
-model Expense {
-  id            String   @id @default(cuid())
-  reference     String   @unique // e.g. EXP-2026-0001
-  vendorName    String?
-  description   String?
+enum CaseStage {
+  PRE_CHECK
+  SUBMITTED
+  COMPLETED
   
-  amountMinor   BigInt
-  taxMinor      BigInt   @default(0)
-  totalMinor    BigInt
-  paidMinor     BigInt   @default(0)
-  balanceDueMinor BigInt @default(0)
-  
-  status        String   @default("UNPAID") // UNPAID, PARTIALLY_PAID, PAID, VOID
-  occurredAt    DateTime
-
-  createdById   String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  paymentAllocations PaymentAllocation[]
+  // New Pipeline Stages
+  DRAFT_INTAKE
+  OFFER_LETTER_MOHRE
+  ENTRY_PERMIT
+  MEDICAL_BIOMETRICS
+  VISA_STAMPING_EID
+  COMPLETED_HANDOVER
 }
 
-// ============================================================================
-// FINANCE & TRANSACTIONS (New Module)
-// ============================================================================
-
-model CaseFile {
-  id            String    @id @default(cuid())
-  code          String    @unique // ZR-2026-0142
-  clientId      String
-  client        Client    @relation(fields: [clientId], references: [id])
-  serviceType   String // "Residence visa renewal", "Trade licence renewal"
-  applicantName String?
-  status        String    @default("OPEN") // OPEN | SUBMITTED | COMPLETED | CANCELLED
-  openedAt      DateTime  @default(now())
-  closedAt      DateTime?
-
-  @@index([clientId])
-  @@index([status])
+enum DocStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
-
-model Account {
-  id                 String      @id @default(cuid())
-  code               String      @unique // e.g., '1000', '4000'
-  name               String      @unique
-  type               AccountType
-  isBank             Boolean     @default(false)
-  currency           String      @default("AED")
-  openingBalanceFils BigInt      @default(0)
-  isActive           Boolean     @default(true)
-
-  journalLines JournalLine[]
-  payments     Payment[]
-}
-
-model JournalEntry {
-  id           String        @id @default(cuid())
-  entryDate    DateTime
-  sourceType   String // e.g., 'INVOICE', 'PAYMENT', 'MANUAL'
-  sourceId     String? // ID of the related document
-  memo         String?
-  reversedById String?       @unique
-  reversedBy   JournalEntry? @relation("Reversals", fields: [reversedById], references: [id])
-  reverses     JournalEntry? @relation("Reversals")
-
-  lines     JournalLine[]
-  createdAt DateTime      @default(now())
-}
-
-model JournalLine {
-  id             String       @id @default(cuid())
-  journalEntryId String
-  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
-  accountId      String
-  account        Account      @relation(fields: [accountId], references: [id])
-
-  debitMinor  BigInt @default(0)
-  creditMinor BigInt @default(0)
-
-  clientId String?
-  client   Client? @relation(fields: [clientId], references: [id])
-
-  @@index([journalEntryId])
-  @@index([accountId])
-  @@index([clientId])
-}
-
-model Product {
-  id              String  @id @default(cuid())
-  name            String
-  description     String?
-  unitPriceMinor  BigInt
-  taxCategoryId   String?
-  incomeAccountId String
-  isActive        Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Payment {
-  id         String           @id @default(cuid())
-  reference  String // RCT-2026-0001
-  direction  PaymentDirection
-  occurredAt DateTime
-  mode       PaymentMode
-  accountId  String
-  account    Account          @relation(fields: [accountId], references: [id])
-
-  clientId String?
-  client   Client? @relation(fields: [clientId], references: [id])
-
-  amountMinor    BigInt
-  unappliedMinor BigInt @default(0)
-
-  chequeNo   String?
-  chequeDate DateTime?
-  notes      String?
-
-  createdById String?
-  createdAt   DateTime  @default(now())
-  deletedAt   DateTime?
-
-  allocations PaymentAllocation[]
-
-  @@index([occurredAt])
-  @@index([clientId])
-  @@index([accountId, occurredAt])
-}
-
-model PaymentAllocation {
-  id        String  @id @default(cuid())
-  paymentId String
-  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-
-  invoiceId   String?
-  invoice     Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-
-  expenseId   String?
-  expense     Expense? @relation(fields: [expenseId], references: [id], onDelete: Cascade)
-
-  amountMinor BigInt
-
-  createdAt DateTime @default(now())
-
-  @@unique([paymentId, invoiceId])
-  @@unique([paymentId, expenseId])
-  @@index([invoiceId])
-  @@index([expenseId])
-}
-
-// ============================================================================
-// AUDIT LOG
-// ============================================================================
-
-model AuditLog {
-  id        String   @id @default(cuid())
-  entity    String
-  entityId  String
-  action    String
-  before    Json?
-  after     Json?
-  reason    String?
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-
-  @@index([entity, entityId])
-  @@index([createdAt])
-}
-
-// ============================================================================
-// CRM & PIPELINE
-// ============================================================================
-
-model Lead {
-  id             String   @id @default(cuid())
-  name           String
-  companyName    String?
-  email          String?
-  phone          String?
-  serviceNeeded  String?
-  status         String   @default("NEW") // NEW, CONTACTED, QUALIFIED, LOST
-  source         String   @default("OTHER") // WHATSAPP, WEBSITE, REFERRAL
-  notes          String?
-  
-  assignedToId   String?
-  assignedTo     User?    @relation("LeadAssignee", fields: [assignedToId], references: [id])
-  
-  activities     Activity[]
-
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  @@index([status])
-}
-
-model Deal {
-  id             String   @id @default(cuid())
-  title          String
-  valueMinor     BigInt   @default(0)
-  stage          String   @default("QUALIFIED") // QUALIFIED, PROPOSAL_SENT, GOV_PROCESSING, WON, LOST
-  priority       String   @default("MEDIUM") // LOW, MEDIUM, HIGH
-  expectedCloseDate DateTime?
-  
-  clientId       String
-  client         Client   @relation(fields: [clientId], references: [id])
-
-  assignedToId   String?
-  assignedTo     User?    @relation("DealAssignee", fields: [assignedToId], references: [id])
-
-  activities     Activity[]
-
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  @@index([stage])
-  @@index([clientId])
-}
-
-model Activity {
-  id             String   @id @default(cuid())
-  type           String   // CALL, EMAIL, WHATSAPP, NOTE, MEETING
-  description    String
-  
-  leadId         String?
-  lead           Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  
-  dealId         String?
-  deal           Deal?    @relation(fields: [dealId], references: [id], onDelete: Cascade)
-  
-  clientId       String?
-  client         Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  
-  createdById    String?
-  createdBy      User?    @relation("ActivityCreator", fields: [createdById], references: [id])
-
-  createdAt      DateTime @default(now())
-  
-  @@index([leadId])
-  @@index([dealId])
-  @@index([clientId])
-}
-
-// ============================================================================
-// COCKPIT DASHBOARD (LEDGER)
-// ============================================================================
 
 enum TransactionType {
   INCOME
@@ -706,62 +49,237 @@ enum TransactionType {
 }
 
 enum TransactionStatus {
-  PAID
   PENDING
+  PAID
   OVERDUE
-  PARTIALLY_PAID
-  CANCELLED
 }
 
-model LedgerTransaction {
-  id               String            @id @default(cuid())
-  referenceId      String            @unique
-  clientId         String?
-  client           Client?           @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  counterpartyName String
-  counterpartyPhone String?
-  type             TransactionType
-  category         String
-  totalAmountMinor BigInt            @default(0) // Storing in minor units (fils) for precise calculation
-  paidAmountMinor  BigInt            @default(0)
-  balanceAmountMinor BigInt          @default(0) // We'll compute this in app logic since generated columns might be tricky depending on DB provider
-  currency         String            @default("AED")
-  status           TransactionStatus @default(PENDING)
-  transactionDate  DateTime          @default(now())
-  dueDate          DateTime?
-  notes            String?
-  
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  role         Role          @default(COORDINATOR)
+  password     String?       // For initial auth if needed
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  lastLogin    DateTime?
+  cases        CaseFile[]
+  whatsappLogs WhatsAppLog[]
+  auditLogs    AuditLog[]
+}
+
+model Client {
+  id              String     @id @default(cuid())
+  type            ClientType
+  leadSource      String?
+  name            String
+  email           String?
+  phone           String?
+  place           String?
+  nationality     String?
+  visaType        String?
+  passportNo      String?
+  passportExpiry  DateTime?
+  emiratesIdNo    String?
+  tradeLicenseNo  String?
+  expiryDate      DateTime?
+  createdAt       DateTime   @default(now())
+  cases           CaseFile[]
+  transactions    Transaction[]
+  employees           Employee[]
+  vaultDocuments      DocumentVault[]
+  portalTransactions  PortalTransaction[]
+  whatsappLogs        WhatsAppLog[]
+
+  @@index([type])
+  @@index([expiryDate])
+}
+
+model CaseFile {
+  id             String              @id @default(cuid())
+  reference      String              @unique
+  applicantName  String?
+  mohreAppNo     String?
+  gdrfaRequestNo String?
+  serviceType    String
+  stage          CaseStage           @default(DRAFT_INTAKE)
+  stageUpdatedAt DateTime            @default(now())
+  createdAt      DateTime            @default(now())
+  clientId       String
+  client         Client              @relation(fields: [clientId], references: [id])
+  coordinatorId  String
+  coordinator    User                @relation(fields: [coordinatorId], references: [id])
+  documents      DocumentChecklist[]
+  transactions   Transaction[]
+  whatsappLogs   WhatsAppLog[]
+  trackingToken  String?             @unique @default(uuid())
 
   @@index([clientId])
+  @@index([coordinatorId])
+  @@index([stage])
+  @@index([trackingToken])
+}
+
+model DocumentChecklist {
+  id         String    @id @default(cuid())
+  title      String
+  status     DocStatus @default(PENDING)
+  caseFileId String
+  caseFile   CaseFile  @relation(fields: [caseFileId], references: [id], onDelete: Cascade)
+
+  @@index([caseFileId])
   @@index([status])
+}
+
+model Transaction {
+  id              String            @id @default(cuid())
+  reference       String            @unique // e.g. EXP-2026-018, INV-2026-042
+  type            TransactionType
+  date            DateTime          @default(now())
+  dueDate         DateTime?
+  counterparty    String            // Client name or Vendor name
+  category        String            // e.g., "Meta Ad", "MOHRE Fee", "Service Charge"
+  paymentMode     String?           // CASH, BANK_TRANSFER, CARD
+  description     String?
+  amountTotal     Int               // Minor units
+  amountPaid      Int               @default(0)
+  status          TransactionStatus @default(PENDING)
+  
+  // Dual-Bucket Strict Accounting (Only applies to Case Invoices)
+  isCaseInvoice   Boolean           @default(false)
+  govFeePart      Int?
+  serviceFeePart  Int?
+  lineItems       Json?
+
+  
+  caseFileId      String?
+  caseFile        CaseFile?         @relation(fields: [caseFileId], references: [id], onDelete: SetNull)
+  
+  clientId        String?
+  client          Client?           @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
   @@index([type])
-  @@index([transactionDate])
+  @@index([status])
+  @@index([date])
 }
 
-enum UserRole {
-  VIEWER
-  FINANCE_OPERATOR
-  TREASURY_ADMIN
+model Employee {
+  id             String    @id @default(cuid())
+  name           String
+  designation    String?
+  basicSalary    Float?
+  visaCategory   String?
+  expiryDate     DateTime?
+  corporateId    String
+  corporate      Client    @relation(fields: [corporateId], references: [id], onDelete: Cascade)
+  documents      DocumentVault[]
+  createdAt      DateTime  @default(now())
+  
+  @@index([corporateId])
 }
 
-enum AuditAction {
-  CREATE
-  UPDATE
-  DELETE
+model DocumentVault {
+  id           String    @id @default(cuid())
+  category     String    // Passports, UAE Visas, Emirates IDs, Trade Licenses, Ejari / Tenancy, Establishment Cards, Labor Cards
+  title        String
+  fileUrl      String?
+  expiryDate   DateTime?
+  
+  clientId     String?
+  client       Client?   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  employeeId   String?
+  employee     Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  remarks      String?
+  createdAt    DateTime  @default(now())
 }
 
-model FinanceAuditLog {
-  id              String       @id @default(uuid())
-  transactionId   String?
-  actorEmail      String
-  action          AuditAction
-  previousPayload Json?
-  newPayload      Json?
-  timestamp       DateTime     @default(now())
-
-  @@index([transactionId])
-  @@index([actorEmail])
+model PortalWallet {
+  id           String   @id @default(cuid())
+  entityName   String   @unique // Tas-heel, Amer, ICP, DED
+  balance      Float    @default(0)
+  lastUpdated  DateTime @updatedAt
+  transactions PortalTransaction[]
 }
 
+model PortalTransaction {
+  id             String        @id @default(cuid())
+  walletId       String
+  wallet         PortalWallet  @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  
+  clientId       String?
+  client         Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  type           String        // TOP_UP, DEDUCTION
+  amount         Float
+  balanceAfter   Float?
+  
+  receiptRef     String?
+  caseRef        String?
+  date           DateTime      @default(now())
+  description    String?
+
+  @@index([walletId])
+  @@index([caseRef])
+  @@index([clientId])
+}
+
+model WhatsAppLog {
+  id           String    @id @default(cuid())
+  caseId       String
+  caseFile     CaseFile  @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  clientId     String
+  client       Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  templateType String
+  phone        String
+  sentById     String?
+  sentBy       User?     @relation(fields: [sentById], references: [id], onDelete: SetNull)
+  sentAt       DateTime  @default(now())
+
+  @@index([caseId])
+  @@index([clientId])
+  @@index([sentById])
+}
+
+model ServiceItem {
+  id           String    @id @default(cuid())
+  name         String    @unique
+  category     String
+  govFee       Float
+  agencyFee    Float
+  isVatExempt  Boolean   @default(false)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model CompanySettings {
+  id              String   @id @default(cuid()) // Expected to have only one row, e.g. "DEFAULT"
+  companyNameEn   String?
+  companyNameAr   String?
+  trn             String?
+  tradeLicenseNo  String?
+  address         String?
+  bankName        String?
+  accountName     String?
+  iban            String?
+  swift           String?
+  invoiceNotes    String?
+  financePin      String?  // Store hashed or plain (depending on security reqs) - usually we'd hash, but for MVP plain/simple hash.
+  updatedAt       DateTime @updatedAt
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action      String
+  details     String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}

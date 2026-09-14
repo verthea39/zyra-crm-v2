@@ -1,197 +1,156 @@
-'use server';
+"use server";
 
-import { prisma } from '@/lib/prisma';
-import { revalidatePath } from 'next/cache';
-import { transactionInputSchema } from '@/lib/validations/finance';
-import { recordAuditEntry } from '@/lib/finance-audit';
-import { AuditAction } from '@prisma/client';
-import { sendPaymentReminder } from '@/lib/services/notifications';
+import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
-export async function createClient(formData: FormData) {
-  const profileType = formData.get('profileType') as 'CORPORATE' | 'INDIVIDUAL';
-  const name = formData.get('name') as string;
-  const phone = formData.get('phone') as string;
-  const email = formData.get('email') as string;
+export async function createIncome(data: any) {
+  try {
+    const govFee = Math.round(data.govFees * 100);
+    const serviceFee = Math.round(data.serviceFee * 100);
+    const amountTotal = govFee + serviceFee;
+    const amountPaid = Math.round(data.amountPaid * 100);
+    const balance = amountTotal - amountPaid;
+    
+    let status = "PENDING";
+    if (balance <= 0) status = "PAID";
+    else if (data.dueDate && new Date(data.dueDate) < new Date()) status = "OVERDUE";
 
-  await prisma.client.create({
-    data: {
-      clientType: profileType,
-      corporateProfile:
-        profileType === 'CORPORATE'
-          ? {
-              create: {
-                companyNameEn: name,
-                contactEmail: email,
-                authorizedSignatoryMobile: phone,
-                tradeLicenseNumber: `TMP-${Date.now()}`,
-                issuingAuthority: 'TBD'
-              },
-            }
-          : undefined,
-      individualProfile:
-        profileType === 'INDIVIDUAL'
-          ? {
-              create: {
-                fullNameEn: name,
-                email: email,
-                mobileNumber: phone,
-                passportNumber: `TMP-${Date.now()}`,
-                nationality: 'TBD'
-              },
-            }
-          : undefined,
-    },
-  });
+    // Auto-generate reference INV-{Year}-{Random or Sequence}
+    const year = new Date().getFullYear();
+    const count = await prisma.transaction.count({ where: { type: 'INCOME' }});
+    const reference = `INV-${year}-${String(count + 1).padStart(3, '0')}`;
 
-  revalidatePath('/');
-  return { success: true };
+    // Link to client if a match is found
+    const client = await prisma.client.findFirst({
+      where: { name: { equals: data.clientName, mode: 'insensitive' } }
+    });
+
+    const tx = await prisma.transaction.create({
+      data: {
+        reference,
+        type: "INCOME",
+        counterparty: data.clientName,
+        category: data.category,
+        paymentMode: data.paymentMode,
+        amountTotal,
+        amountPaid,
+        status: status as any,
+        date: data.issueDate ? new Date(data.issueDate) : new Date(),
+        dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        description: data.description,
+        isCaseInvoice: true, // As per rule, we assume this adds to dual-bucket
+        govFeePart: govFee,
+        serviceFeePart: serviceFee,
+        clientId: client?.id,
+      }
+    });
+
+    revalidatePath("/finance/cockpit");
+    return { success: true, tx };
+  } catch (error) {
+    console.error("Error creating income:", error);
+    return { success: false, error: "Failed to create income transaction." };
+  }
 }
 
-export async function createTransaction(formData: FormData) {
-  const refId = formData.get('refId') as string;
-  const type = formData.get('type') as 'INCOME' | 'EXPENSE';
-  const clientId = formData.get('clientId') as string;
-  const counterpartyName = formData.get('counterpartyName') as string;
-  const category = formData.get('category') as string;
-  const totalAmount = parseFloat(formData.get('totalAmount') as string) || 0;
-  const paidAmount = parseFloat(formData.get('paidAmount') as string) || 0;
-  const dueDateStr = formData.get('dueDate') as string;
+export async function createInvoice(data: any) {
+  try {
+    const govFee = Math.round(data.govCost * 100);
+    const serviceFee = Math.round(data.proFee * 100);
+    const vatAmount = Math.round(data.vatAmount * 100);
+    const amountTotal = govFee + serviceFee + vatAmount;
+    const amountPaid = 0; // Invoices are generated unpaid initially
+    
+    const year = new Date().getFullYear();
+    const count = await prisma.transaction.count({ where: { type: 'INCOME' }});
+    const reference = `INV-${year}-${String(count + 1).padStart(3, '0')}`;
 
-  const status =
-    paidAmount >= totalAmount
-      ? 'PAID'
-      : new Date(dueDateStr) < new Date()
-      ? 'OVERDUE'
-      : 'PENDING';
+    const tx = await prisma.transaction.create({
+      data: {
+        reference,
+        type: "INCOME",
+        counterparty: data.clientName,
+        category: "Invoice Generation",
+        paymentMode: "Pending",
+        amountTotal,
+        amountPaid,
+        status: "PENDING",
+        date: new Date(),
+        description: data.caseRef ? `Case Ref: ${data.caseRef}` : 'Auto-generated invoice',
+        isCaseInvoice: true,
+        govFeePart: govFee,
+        serviceFeePart: serviceFee,
+        clientId: data.clientId || null,
+        lineItems: data.lineItems
+      }
+    });
 
-  const newTxn = await (prisma as any).ledgerTransaction.create({
-    data: {
-      referenceId: refId,
-      type,
-      clientId: clientId || null,
-      counterpartyName,
-      counterpartyPhone: null,
-      category,
-      totalAmountMinor: BigInt(Math.round(totalAmount * 100)),
-      paidAmountMinor: BigInt(Math.round(paidAmount * 100)),
-      status,
-      transactionDate: new Date(),
-      dueDate: dueDateStr ? new Date(dueDateStr) : null,
-    },
-  });
-
-  await recordAuditEntry({
-    transactionId: newTxn.id,
-    actorEmail: 'system@zyracrm.local', // Placeholder until auth context is integrated
-    action: AuditAction.CREATE,
-    newPayload: { refId, totalAmount, paidAmount, status },
-  });
-
-  revalidatePath('/finance/cockpit');
-  return { success: true };
+    revalidatePath("/finance/cockpit");
+    return { success: true, tx, reference };
+  } catch (error) {
+    console.error("Error creating invoice:", error);
+    return { success: false, error: "Failed to create invoice." };
+  }
 }
 
-export async function updateTransaction(id: string, formData: FormData) {
-  const counterpartyName = formData.get('counterpartyName') as string;
-  const category = formData.get('category') as string;
-  const totalAmount = parseFloat(formData.get('totalAmount') as string) || 0;
-  const paidAmount = parseFloat(formData.get('paidAmount') as string) || 0;
-  const dueDateStr = formData.get('dueDate') as string;
+export async function createExpense(data: any) {
+  try {
+    const amountTotal = Math.round(data.amount * 100);
+    const amountPaid = Math.round(data.amountPaid * 100);
+    const balance = amountTotal - amountPaid;
+    
+    let status = "PENDING";
+    if (balance <= 0) status = "PAID";
+    else if (data.dueDate && new Date(data.dueDate) < new Date()) status = "OVERDUE";
 
-  const status =
-    paidAmount >= totalAmount
-      ? 'PAID'
-      : new Date(dueDateStr) < new Date()
-      ? 'OVERDUE'
-      : 'PENDING';
+    // Auto-generate reference EXP-{Year}-{Random or Sequence}
+    const year = new Date().getFullYear();
+    const count = await prisma.transaction.count({ where: { type: 'EXPENSE' }});
+    const reference = `EXP-${year}-${String(count + 1).padStart(3, '0')}`;
 
-  const updatedTxn = await (prisma as any).ledgerTransaction.update({
-    where: { id },
-    data: {
-      counterpartyName,
-      category,
-      totalAmountMinor: BigInt(Math.round(totalAmount * 100)),
-      paidAmountMinor: BigInt(Math.round(paidAmount * 100)),
-      status,
-      dueDate: dueDateStr ? new Date(dueDateStr) : null,
-    },
-  });
+    const tx = await prisma.transaction.create({
+      data: {
+        reference,
+        type: "EXPENSE",
+        counterparty: data.vendor,
+        category: data.category,
+        paymentMode: data.paymentMode,
+        amountTotal,
+        amountPaid,
+        status: status as any,
+        date: data.issueDate ? new Date(data.issueDate) : new Date(),
+        dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        description: data.description,
+      }
+    });
 
-  await recordAuditEntry({
-    transactionId: updatedTxn.id,
-    actorEmail: 'system@zyracrm.local',
-    action: AuditAction.UPDATE,
-    newPayload: { totalAmount, paidAmount, status },
-  });
-
-  revalidatePath('/finance/cockpit');
-  return { success: true };
+    revalidatePath("/finance/cockpit");
+    return { success: true, tx };
+  } catch (error) {
+    console.error("Error creating expense:", error);
+    return { success: false, error: "Failed to create expense transaction." };
+  }
 }
 
-export async function deleteTransaction(id: string) {
-  const deletedTxn = await (prisma as any).ledgerTransaction.delete({
-    where: { id },
-  });
-
-  await recordAuditEntry({
-    transactionId: deletedTxn.id,
-    actorEmail: 'system@zyracrm.local',
-    action: AuditAction.DELETE,
-    previousPayload: { refId: deletedTxn.referenceId },
-  });
-
-  revalidatePath('/finance/cockpit');
-  return { success: true };
-}
-
-export async function dispatchReminderAction(transactionId: string, channel: 'WHATSAPP' | 'EMAIL') {
-  const tx = await (prisma as any).ledgerTransaction.findUnique({
-    where: { id: transactionId },
-    include: {
-      client: {
-        include: {
-          corporateProfile: true,
-          individualProfile: true,
-        },
+export async function getPendingInvoices(clientId: string) {
+  try {
+    const invoices = await prisma.transaction.findMany({
+      where: {
+        clientId,
+        type: "INCOME",
+        status: { in: ["PENDING", "OVERDUE"] },
       },
-    },
-  });
-
-  if (!tx) {
-    throw new Error('Transaction record not found.');
+      select: {
+        id: true,
+        reference: true,
+        amountTotal: true,
+        amountPaid: true,
+      },
+      orderBy: { date: "desc" },
+    });
+    return invoices;
+  } catch (error) {
+    console.error("Error fetching invoices:", error);
+    return [];
   }
-
-  const recipientName =
-    tx.client?.corporateProfile?.companyNameEn ||
-    tx.client?.individualProfile?.fullNameEn ||
-    tx.counterpartyName;
-
-  const recipientContact =
-    channel === 'WHATSAPP'
-      ? tx.client?.corporateProfile?.authorizedSignatoryMobile ||
-        tx.client?.individualProfile?.mobileNumber ||
-        tx.counterpartyPhone
-      : tx.client?.corporateProfile?.contactEmail ||
-        tx.client?.individualProfile?.email;
-
-  if (!recipientContact) {
-    return {
-      success: false,
-      error: `Missing recipient ${channel.toLowerCase()} contact details.`,
-    };
-  }
-
-  const result = await sendPaymentReminder({
-    transactionId: tx.id,
-    recipientName,
-    recipientContact,
-    amountDue: Number(tx.balanceAmountMinor) / 100, // Convert fils to standard AED
-    currency: tx.currency,
-    dueDate: tx.dueDate ? new Date(tx.dueDate).toLocaleDateString('en-GB') : 'Immediate',
-    referenceId: tx.referenceId,
-    channel,
-  });
-
-  revalidatePath('/finance/cockpit');
-  return result;
 }
