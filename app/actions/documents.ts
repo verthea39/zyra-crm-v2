@@ -81,6 +81,7 @@ export async function createDocument(input: CreateDocumentInput) {
     });
 
     revalidatePath("/documents");
+    revalidatePath("/");
     return { success: true, document: doc };
   } catch (err) {
     console.error("Failed to create document:", err);

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +9,7 @@ import { toast } from "sonner";
 import { downloadDocumentPDF, printViaIframe, LineItem, DEFAULT_QUOTATION_TERMS } from "@/lib/printUtils";
 import type { CompanyBranding } from "@/lib/companyBranding";
 import { getBranding } from "@/app/actions/branding";
+import { createDocument } from "@/app/actions/documents";
 import { FileSignature, Plus, Trash2, X, ChevronRight, ArrowLeft, Zap } from "lucide-react";
 import { MobileStepTabs } from "@/components/ui/mobile-step-tabs";
 import { LineItemEditorSheet } from "./LineItemEditorSheet";
@@ -21,6 +23,7 @@ import { useEffect } from "react";
 const MOBILE_STEPS = ["Client & Dates", "Line Items", "Terms & Notes", "Summary"];
 
 export function QuotationModal({ open, onOpenChange, clients }: { open: boolean; onOpenChange: (open: boolean) => void; clients: Client[] }) {
+  const router = useRouter();
   const [loading, setLoading] = useState<false | "saving" | "pdf">(false);
   const [clientId, setClientId] = useState("");
   const [items, setItems] = useState<LineItem[]>([{ desc: "", govCost: 0, proFee: 0 }]);
@@ -105,6 +108,20 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const govFeeNumCheck = items.reduce((sum, item) => sum + item.govCost, 0);
+    const proFeeNumCheck = items.reduce((sum, item) => sum + item.proFee, 0);
+    const hasValidItem = items.some((i) => i.desc.trim() && (i.govCost > 0 || i.proFee > 0));
+
+    if (!clientId) {
+      toast.error("Please select a client and add at least one billable service.");
+      return;
+    }
+    if (!hasValidItem || govFeeNumCheck + proFeeNumCheck <= 0) {
+      toast.error("Please select a client and add at least one billable service.");
+      return;
+    }
+
     setLoading("saving");
 
     try {
@@ -115,12 +132,30 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
       const clientDocumentRef = selectedClient?.type === 'CORPORATE' ? selectedClient?.tradeLicenseNo : selectedClient?.passportNo;
       const clientEmail = selectedClient?.email || undefined;
 
-      const year = new Date().getFullYear();
-      const randomSeq = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-      const qtReference = `QT-${year}-${randomSeq}`;
-
       const govFeeNum = items.reduce((sum, item) => sum + item.govCost, 0);
       const proFeeNum = items.reduce((sum, item) => sum + item.proFee, 0);
+
+      const validItems = items.filter((i) => i.desc.trim());
+      const docRes = await createDocument({
+        type: "QUOTATION",
+        clientId,
+        items: validItems.map((i) => ({
+          description: i.desc,
+          quantity: 1,
+          unitPriceMinor: Math.round((i.govCost + i.proFee) * 100),
+          vatExempt: false,
+        })),
+        expiryDate: expiry || undefined,
+        notes: notes || undefined,
+      });
+
+      if (!docRes.success || !docRes.document) {
+        setLoading(false);
+        toast.error(docRes.error || "Failed to save quotation to database");
+        return;
+      }
+
+      const qtReference = docRes.document.reference;
 
       const printPayload = {
         type: 'QUOTATION' as const,
@@ -140,20 +175,22 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
         terms
       };
 
-      toast.success("Quotation generated successfully!");
+      toast.success("Quotation created successfully");
 
       setLoading("pdf");
       try {
         await downloadDocumentPDF(printPayload, branding ?? undefined);
       } catch (pdfErr) {
         console.error("PDF generation failed:", pdfErr);
-        toast.error("Quotation generated, but PDF download failed. Use Print instead.", {
+        toast.error("Quotation saved, but PDF download failed. Use Print instead.", {
           action: { label: "Print", onClick: () => printViaIframe(printPayload, branding ?? undefined) },
         });
       }
 
       setLoading(false);
       onOpenChange(false);
+      router.push(`/documents/${docRes.document.id}`);
+      router.refresh();
 
       // Reset form
       setClientId("");
@@ -174,7 +211,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] w-full h-[100dvh] sm:h-auto max-w-full m-0 p-0 sm:rounded-2xl rounded-none bg-white border-none shadow-2xl flex flex-col overflow-hidden">
+      <DialogContent className="sm:max-w-[600px] w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] max-w-full m-0 p-0 sm:rounded-2xl rounded-none bg-white border-none shadow-2xl flex flex-col overflow-hidden">
         <DialogHeader className="bg-white border-b border-slate-200 p-5 sm:p-6 sm:rounded-t-2xl shrink-0 relative">
           <button onClick={() => onOpenChange(false)} className="absolute right-5 top-5 p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors">
             <X className="w-4 h-4" />
@@ -194,7 +231,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
 
         <MobileStepTabs steps={MOBILE_STEPS} activeStep={mobileStep} furthestStep={furthestStep} onStepClick={goToStep} />
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:px-2 flex flex-col gap-5">
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:px-2 flex flex-col gap-5">
           <div className={`${mobileStep === 0 ? "block" : "hidden"} sm:block space-y-2`}>
             <Label>Select Client *</Label>
             <div className="flex gap-2">
