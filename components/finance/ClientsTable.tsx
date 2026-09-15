@@ -1,4 +1,4 @@
-import { MessageCircle, Edit, Trash2 } from "lucide-react";
+import { MessageCircle, Edit, Trash2, ChevronRight } from "lucide-react";
 import { Client, Transaction } from "@prisma/client";
 
 export type ClientWithTransactions = Client & {
@@ -68,7 +68,92 @@ Greetings from Zyra Documents Clearance Services. How can our PRO operations tea
   };
 
   return (
-    <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden mt-6">
+    <div className="mt-6">
+      {/* Mobile card view */}
+      <div className="md:hidden space-y-3">
+        {clients.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 space-y-3 bg-card border border-border rounded-xl">
+            <div className="w-12 h-12 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center">
+              <MessageCircle className="w-5 h-5 text-slate-400" />
+            </div>
+            <p className="text-muted-foreground text-sm">No clients found matching the filters.</p>
+          </div>
+        )}
+        {clients.map((client) => {
+          const daysRemaining = getDaysRemaining(client.type === 'CORPORATE' ? client.expiryDate : client.passportExpiry);
+          const { totalBilled, outstanding } = calculateFinancials(client.transactions);
+          const formattedPhone = client.phone?.replace(/[^0-9]/g, '');
+
+          return (
+            <div key={client.id} className="bg-card border border-border rounded-xl shadow-sm p-4 active:scale-[0.99] transition-transform">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-foreground truncate">{client.name}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="font-mono text-[11px] font-semibold text-slate-500">{client.id.substring(0, 11).toUpperCase()}</span>
+                    <span className={`px-2 py-0.5 text-[10px] font-semibold tracking-wide rounded-full border ${
+                      client.type === 'CORPORATE' ? 'bg-indigo-50 border-indigo-200 text-indigo-800' : 'bg-blue-50 border-blue-200 text-blue-800'
+                    }`}>
+                      {client.type}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  {outstanding > 0 ? (
+                    <div className="text-rose-600 font-bold text-sm">AED {outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                  ) : (
+                    <span className="text-emerald-600 text-[11px] font-bold uppercase tracking-wider">Clear</span>
+                  )}
+                  <div className="text-[11px] text-muted-foreground mt-0.5">Billed AED {totalBilled.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
+                <span>{client.phone || "No phone"} &middot; {client.place || "N/A"}</span>
+              </div>
+
+              {daysRemaining !== null && (
+                <div className="mt-2">
+                  {daysRemaining < 15 ? (
+                    <span className="inline-block px-2.5 py-0.5 text-[11px] font-semibold tracking-wide rounded-full border bg-rose-50 border-rose-200 text-rose-800">Critical: {daysRemaining} days</span>
+                  ) : daysRemaining <= 30 ? (
+                    <span className="inline-block px-2.5 py-0.5 text-[11px] font-semibold tracking-wide rounded-full border bg-amber-50 border-amber-200 text-amber-800">Due Soon: {daysRemaining} days</span>
+                  ) : (
+                    <span className="inline-block px-2.5 py-0.5 text-[11px] font-semibold tracking-wide rounded-full border bg-emerald-50 border-emerald-200 text-emerald-800">Active: {daysRemaining} days</span>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-border">
+                {formattedPhone ? (
+                  <a
+                    href={`https://wa.me/${formattedPhone}?text=${getWhatsAppMessage(client, daysRemaining, outstanding)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center w-11 h-11 rounded-full text-emerald-600 active:scale-95 active:bg-emerald-50 transition-transform"
+                    title="Message on WhatsApp"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                  </a>
+                ) : (
+                  <span className="flex items-center justify-center w-11 h-11 rounded-full text-slate-300" title="No phone number">
+                    <MessageCircle className="w-5 h-5" />
+                  </span>
+                )}
+                <button className="flex items-center justify-center w-11 h-11 rounded-full text-primary active:scale-95 active:bg-primary/10 transition-transform" title="Edit Profile">
+                  <Edit className="w-5 h-5" />
+                </button>
+                <button className="flex items-center justify-center w-11 h-11 rounded-full text-rose-500 active:scale-95 active:bg-rose-50 transition-transform" title="Delete Client">
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop table view */}
+      <div className="hidden md:block bg-card border border-border rounded-xl shadow-sm overflow-hidden">
       <div className="overflow-x-auto whitespace-nowrap scrollbar-hide">
         <table className="w-full text-sm text-left">
           <thead className="text-[11px] font-bold tracking-wider uppercase bg-slate-50 text-slate-600 border-b border-border">
@@ -178,6 +263,7 @@ Greetings from Zyra Documents Clearance Services. How can our PRO operations tea
             )}
           </tbody>
         </table>
+      </div>
       </div>
     </div>
   );

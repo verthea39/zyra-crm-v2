@@ -31,9 +31,9 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center min-w-[4rem] h-full transition-colors relative ${
-                isActive 
-                  ? "bg-[#FDF8F0] text-[#98682E] font-semibold" 
+              className={`flex flex-col items-center justify-center min-w-[4rem] min-h-[44px] h-full transition-all active:scale-95 relative ${
+                isActive
+                  ? "bg-[#FDF8F0] text-[#98682E] font-semibold"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium"
               }`}
             >

@@ -19,7 +19,80 @@ const formatDate = (date: Date) => {
 
 export function LedgerTable({ transactions }: { transactions: Transaction[] }) {
   return (
-    <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden mt-6">
+    <div className="mt-6">
+      {/* Mobile card view */}
+      <div className="md:hidden space-y-3">
+        {transactions.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 space-y-3 bg-card border border-border rounded-xl">
+            <div className="w-12 h-12 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center">
+              <Edit2 className="w-5 h-5 text-slate-400" />
+            </div>
+            <p className="text-muted-foreground text-sm">No transactions found in the master ledger.</p>
+          </div>
+        )}
+        {transactions.map((tx) => {
+          const isIncome = tx.type === "INCOME";
+          const balance = tx.amountTotal - tx.amountPaid;
+          const isPaid = tx.status === "PAID" || balance <= 0;
+
+          return (
+            <div key={tx.id} className="bg-card border border-border rounded-xl shadow-sm p-4 active:scale-[0.99] transition-transform">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-semibold text-slate-600">{tx.reference}</span>
+                    <span className={`text-[10px] font-semibold tracking-wide px-2 py-0.5 rounded-full border ${
+                      isIncome ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-rose-50 border-rose-200 text-rose-800"
+                    }`}>
+                      {tx.type}
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium text-foreground mt-1 truncate">{tx.counterparty}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{formatDate(tx.date)}</p>
+                </div>
+                <div className={`text-right shrink-0 font-bold ${isIncome ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {isIncome ? "+" : "-"}{formatMoney(tx.amountTotal)}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+                <span className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-medium border border-slate-200">
+                  {tx.category}
+                </span>
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border
+                  ${tx.status === 'PAID' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
+                    tx.status === 'PENDING' ? 'bg-amber-50 border-amber-200 text-amber-800' :
+                    'bg-rose-50 border-rose-200 text-rose-800'}`}>
+                  {tx.status}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between mt-2 text-xs">
+                {isPaid ? (
+                  <span className="text-emerald-600 font-bold uppercase tracking-wider flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Fully Paid
+                  </span>
+                ) : (
+                  <span className="font-semibold text-slate-900 tabular-nums">Balance: {formatMoney(balance)}</span>
+                )}
+                {tx.dueDate && <span className="text-muted-foreground">Due {formatDate(tx.dueDate)}</span>}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 mt-3">
+                <button className="flex items-center justify-center w-11 h-11 rounded-full text-muted-foreground active:scale-95 active:bg-primary/10 hover:text-primary transition-transform">
+                  <Edit2 className="w-5 h-5" />
+                </button>
+                <button className="flex items-center justify-center w-11 h-11 rounded-full text-muted-foreground active:scale-95 active:bg-rose-50 hover:text-rose-600 transition-transform">
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop table view */}
+      <div className="hidden md:block bg-card rounded-xl border border-border shadow-sm overflow-hidden">
       <div className="overflow-x-auto whitespace-nowrap scrollbar-hide">
         <table className="w-full text-sm text-left">
           <thead className="text-[11px] font-semibold tracking-wider uppercase bg-slate-50 text-slate-500 border-b border-border">
@@ -120,6 +193,7 @@ export function LedgerTable({ transactions }: { transactions: Transaction[] }) {
             )}
           </tbody>
         </table>
+      </div>
       </div>
     </div>
   );
