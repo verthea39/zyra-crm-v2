@@ -17,7 +17,7 @@ const formatMoney = (minorUnits: number) =>
   new Intl.NumberFormat("en-AE", { style: "currency", currency: "AED", minimumFractionDigits: 2 }).format(minorUnits / 100);
 
 const formatTime = (date: string | Date) =>
-  new Intl.DateTimeFormat("en-AE", { hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(date));
+  `Today at ${new Intl.DateTimeFormat("en-AE", { hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(date))}`;
 
 export function DailyTransactionsFeed({
   inflowMinor,
@@ -94,7 +94,13 @@ export function DailyTransactionsFeed({
                   {formatMoney(item.amountMinor)}
                 </p>
                 {item.method && (
-                  <span className="inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded-full border border-slate-200 bg-white text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                  <span
+                    className={`inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded-full border bg-white text-[9px] font-semibold uppercase tracking-wide ${
+                      item.method.toLowerCase().includes("cash")
+                        ? "border-emerald-300 text-emerald-700"
+                        : "border-blue-300 text-blue-700"
+                    }`}
+                  >
                     <Receipt className="w-2.5 h-2.5" /> {item.method}
                   </span>
                 )}

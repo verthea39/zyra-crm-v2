@@ -5,6 +5,7 @@ import { ActionChecklist, ChecklistCase } from "@/components/dashboard/ActionChe
 import { ExpiryRadarWidget, RadarExpiry } from "@/components/dashboard/ExpiryRadarWidget";
 import { LiquiditySnapshot } from "@/components/dashboard/LiquiditySnapshot";
 import { DailyTransactionsFeed, type DailyFeedItem } from "@/components/dashboard/DailyTransactionsFeed";
+import { CashPositionWidget } from "@/components/dashboard/CashPositionWidget";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,9 @@ export default async function DashboardPage() {
     upcomingDocs,
     clients,
     todayPayments,
-    todayExpenses
+    todayExpenses,
+    allPayments,
+    allExpenses
   ] = await Promise.all([
     prisma.documentVault.count({
       where: {
@@ -75,6 +78,13 @@ export default async function DashboardPage() {
     prisma.transaction.findMany({
       where: { type: 'EXPENSE', date: { gte: startOfDay, lte: endOfDay } },
       orderBy: { date: 'desc' }
+    }),
+    prisma.transactionPayment.findMany({
+      select: { amountMinor: true, method: true }
+    }),
+    prisma.transaction.findMany({
+      where: { type: 'EXPENSE' },
+      select: { amountTotal: true, paymentMode: true }
     })
   ]);
 
@@ -117,6 +127,14 @@ export default async function DashboardPage() {
   const todayInflowMinor = todayPayments.reduce((sum: number, p: any) => sum + p.amountMinor, 0);
   const todayOutflowMinor = todayExpenses.reduce((sum: number, tx: any) => sum + tx.amountTotal, 0);
 
+  const isCashMethod = (method: string | null | undefined) => (method || "").toLowerCase().includes("cash");
+  const cashInHandMinor =
+    allPayments.filter((p: any) => isCashMethod(p.method)).reduce((sum: number, p: any) => sum + p.amountMinor, 0) -
+    allExpenses.filter((tx: any) => isCashMethod(tx.paymentMode)).reduce((sum: number, tx: any) => sum + tx.amountTotal, 0);
+  const bankCardMinor =
+    allPayments.filter((p: any) => !isCashMethod(p.method)).reduce((sum: number, p: any) => sum + p.amountMinor, 0) -
+    allExpenses.filter((tx: any) => !isCashMethod(tx.paymentMode)).reduce((sum: number, tx: any) => sum + tx.amountTotal, 0);
+
   const dailyFeedItems: DailyFeedItem[] = [
     ...todayPayments.map((p: any) => ({
       id: `pay-${p.id}`,
@@ -157,6 +175,10 @@ export default async function DashboardPage() {
         <DailyUrgencyStrip data={urgencyData} />
         
         <QuickActionsBar clients={clients} />
+
+        <div className="mb-6">
+          <CashPositionWidget cashInHandMinor={cashInHandMinor} bankCardMinor={bankCardMinor} />
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column: Action Checklist */}
