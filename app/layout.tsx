@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       className={`${plusJakartaSans.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans antialiased">
+      <body className="min-h-full w-full max-w-full overflow-x-hidden flex flex-col font-sans antialiased">
         {children}
         <Toaster />
       </body>

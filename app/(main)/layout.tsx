@@ -13,7 +13,7 @@ export default function MainLayout({
       <AppSidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <MobileTopBar />
-        <main className="flex-1 pb-16 md:pb-0 overflow-y-auto overflow-x-hidden">
+        <main className="flex-1 w-full max-w-full min-w-0 pb-16 md:pb-0 overflow-y-auto overflow-x-hidden">
           {children}
         </main>
       </div>

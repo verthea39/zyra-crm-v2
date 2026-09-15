@@ -22,7 +22,7 @@ export function DailyUrgencyStrip({ data }: { data: UrgencyData }) {
     <div className="mb-8 space-y-4">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-slate-900">
             Good Morning, Operations Team
           </h1>
           <p className="text-sm font-medium text-[#98682E] mt-1 uppercase tracking-widest">

@@ -39,7 +39,7 @@ export function CockpitHeader({
           <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
           AED Live Finance — Dubai PRO Standard
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+        <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-slate-900">
           Executive Cash Flow Cockpit
         </h1>
         <p className="text-sm text-slate-500 font-normal mt-1">
@@ -47,25 +47,25 @@ export function CockpitHeader({
         </p>
       </div>
 
-      <div className="flex items-center gap-3">
-        <button 
+      <div className="grid grid-cols-2 gap-2 w-full md:flex md:w-auto md:flex-wrap md:items-center md:gap-3">
+        <button
           onClick={() => {
             window.location.reload();
           }}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-md shadow-sm h-9">
+          className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-md shadow-sm h-11 md:h-9">
           <Lock className="w-4 h-4" />
           Lock Session
         </button>
 
-        <button 
+        <button
           onClick={onExport}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 rounded-md shadow-sm h-9">
+          className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 rounded-md shadow-sm h-11 md:h-9">
           <Download className="w-4 h-4" />
           Export Data
         </button>
 
         <DropdownMenu>
-          <DropdownMenuTrigger className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-[#EADBC8] bg-[#FDF8F0] text-[#98682E] hover:bg-[#F7EEDB] rounded-md shadow-sm h-9">
+          <DropdownMenuTrigger className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-[#EADBC8] bg-[#FDF8F0] text-[#98682E] hover:bg-[#F7EEDB] rounded-md shadow-sm h-11 md:h-9">
             <FileText className="w-4 h-4" />
             + Create Document
           </DropdownMenuTrigger>
@@ -85,21 +85,21 @@ export function CockpitHeader({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <button 
+        <button
           onClick={() => setShowClientModal(true)}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-[#98682E] text-white hover:bg-[#7D5321] shadow-sm rounded-md h-9">
+          className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-[#98682E] text-white hover:bg-[#7D5321] shadow-sm rounded-md h-11 md:h-9">
           <Plus className="w-4 h-4" />
           Add Client
         </button>
-        <button 
+        <button
           onClick={() => setShowIncomeModal(true)}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm rounded-md h-9">
+          className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm rounded-md h-11 md:h-9">
           <Plus className="w-4 h-4" />
           Add Income
         </button>
-        <button 
+        <button
           onClick={() => setShowExpenseModal(true)}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-rose-700 hover:bg-rose-800 text-white shadow-sm rounded-md h-9">
+          className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-rose-700 hover:bg-rose-800 text-white shadow-sm rounded-md h-11 md:h-9">
           <Plus className="w-4 h-4" />
           Add Expense
         </button>
