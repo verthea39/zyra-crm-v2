@@ -8,10 +8,12 @@ import { toast } from "sonner";
 import { downloadDocumentPDF, printViaIframe, LineItem, DEFAULT_QUOTATION_TERMS } from "@/lib/printUtils";
 import type { CompanyBranding } from "@/lib/companyBranding";
 import { getBranding } from "@/app/actions/branding";
-import { FileSignature, Plus, Trash2, X, ChevronRight, ArrowLeft } from "lucide-react";
+import { FileSignature, Plus, Trash2, X, ChevronRight, ArrowLeft, Zap } from "lucide-react";
 import { MobileStepTabs } from "@/components/ui/mobile-step-tabs";
 import { LineItemEditorSheet } from "./LineItemEditorSheet";
 import { QuickAddClientModal } from "./QuickAddClientModal";
+import { QuickPasteDialog } from "./QuickPasteDialog";
+import type { ParsedLineItem } from "@/lib/quickPasteParser";
 
 import { getServiceItems } from "@/app/actions/settings";
 import { useEffect } from "react";
@@ -31,7 +33,31 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
   const [branding, setBranding] = useState<CompanyBranding | null>(null);
   const [localClients, setLocalClients] = useState<Client[]>(clients);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickPasteOpen, setQuickPasteOpen] = useState(false);
   const [terms, setTerms] = useState(DEFAULT_QUOTATION_TERMS);
+
+  const handleQuickPasteInsert = (parsedItems: ParsedLineItem[], parsedClientName: string | null) => {
+    const newLineItems: LineItem[] = parsedItems.map((i) => ({ desc: i.description, govCost: 0, proFee: i.price }));
+    setItems((prev) => {
+      const cleaned = prev.filter((p) => p.desc.trim() !== "" || p.govCost > 0 || p.proFee > 0);
+      return [...cleaned, ...newLineItems];
+    });
+
+    if (parsedClientName && !clientId) {
+      const needle = parsedClientName.toLowerCase();
+      const match = localClients.find(
+        (c) => c.name.toLowerCase().includes(needle) || needle.includes(c.name.toLowerCase())
+      );
+      if (match) {
+        setClientId(match.id);
+        toast.success(`Matched client: ${match.name}`);
+      } else {
+        toast.info(`Extracted client "${parsedClientName}" -- no match found, please select manually.`);
+      }
+    }
+
+    toast.success(`Successfully imported ${parsedItems.length} items`);
+  };
 
   useEffect(() => {
     if (open) {
@@ -360,7 +386,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
             </div>
 
             {/* Desktop: inline add */}
-            <div className="hidden sm:flex p-3 bg-white border-t border-slate-100 justify-center">
+            <div className="hidden sm:flex p-3 bg-white border-t border-slate-100 justify-center gap-2">
               <button
                 type="button"
                 onClick={() => setItems([...items, { desc: "", govCost: 0, proFee: 0 }])}
@@ -368,10 +394,17 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
               >
                 <Plus className="w-3.5 h-3.5" /> Add Another Service
               </button>
+              <button
+                type="button"
+                onClick={() => setQuickPasteOpen(true)}
+                className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-medium text-xs rounded-xl py-2 px-3.5 flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <Zap className="w-3.5 h-3.5 text-[#98682E]" /> Quick Paste / Import from Text
+              </button>
             </div>
 
             {/* Mobile: add opens bottom sheet */}
-            <div className="sm:hidden p-2 pt-0">
+            <div className="sm:hidden p-2 pt-0 flex flex-col gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -381,6 +414,13 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
                 className="w-full h-11 bg-[#FDF8F0] border border-[#EADBC8] text-[#98682E] font-semibold text-sm rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
               >
                 <Plus className="w-4 h-4" /> Add Service Line
+              </button>
+              <button
+                type="button"
+                onClick={() => setQuickPasteOpen(true)}
+                className="w-full h-11 bg-white border border-slate-200 text-slate-700 font-semibold text-sm rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
+              >
+                <Zap className="w-4 h-4 text-[#98682E]" /> Quick Paste / Import from Text
               </button>
             </div>
           </div>
@@ -512,6 +552,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
           setClientId(client.id);
         }}
       />
+      <QuickPasteDialog open={quickPasteOpen} onOpenChange={setQuickPasteOpen} onInsert={handleQuickPasteInsert} />
     </Dialog>
   );
 }

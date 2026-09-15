@@ -9,9 +9,11 @@ import { MobileStepTabs } from "@/components/ui/mobile-step-tabs";
 import { LineItemSheet, DraftItem } from "./LineItemSheet";
 import { createDocument, updateDocument } from "@/app/actions/documents";
 import { calculateDocumentTotals, formatMoney, DEFAULT_VAT_RATE, minorToDisplay } from "@/lib/calculations";
-import { Plus, Trash2, ChevronRight, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, ChevronRight, ArrowLeft, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QuickAddClientModal } from "@/components/finance/modals/QuickAddClientModal";
+import { QuickPasteDialog } from "@/components/finance/modals/QuickPasteDialog";
+import type { ParsedLineItem } from "@/lib/quickPasteParser";
 
 const STEPS = ["Client Info", "Items & VAT", "Review"];
 
@@ -59,6 +61,35 @@ export function DocumentWizard({ clients, defaultType = "INVOICE", initialData }
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [localClients, setLocalClients] = useState<{ id: string; name: string }[]>(clients);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickPasteOpen, setQuickPasteOpen] = useState(false);
+
+  const handleQuickPasteInsert = (parsedItems: ParsedLineItem[], parsedClientName: string | null) => {
+    const newLineItems: DraftItem[] = parsedItems.map((i) => ({
+      description: i.description,
+      quantity: 1,
+      unitPrice: i.price,
+      vatExempt: false,
+    }));
+    setItems((prev) => {
+      const cleaned = prev.filter((p) => p.description.trim() !== "" || p.unitPrice > 0);
+      return [...cleaned, ...newLineItems];
+    });
+
+    if (parsedClientName && !clientId) {
+      const needle = parsedClientName.toLowerCase();
+      const match = localClients.find(
+        (c) => c.name.toLowerCase().includes(needle) || needle.includes(c.name.toLowerCase())
+      );
+      if (match) {
+        setClientId(match.id);
+        toast.success(`Matched client: ${match.name}`);
+      } else {
+        toast.info(`Extracted client "${parsedClientName}" -- no match found, please select manually.`);
+      }
+    }
+
+    toast.success(`Successfully imported ${parsedItems.length} items`);
+  };
 
   const goToStep = (s: number) => {
     setStep(s);
@@ -219,6 +250,13 @@ export function DocumentWizard({ clients, defaultType = "INVOICE", initialData }
               >
                 <Plus className="w-4 h-4" /> Add Line Item
               </button>
+              <button
+                type="button"
+                onClick={() => setQuickPasteOpen(true)}
+                className="w-full h-11 bg-white border border-slate-200 text-slate-700 font-semibold text-sm rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
+              >
+                <Zap className="w-4 h-4 text-[#98682E]" /> Quick Paste / Import from Text
+              </button>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -321,6 +359,7 @@ export function DocumentWizard({ clients, defaultType = "INVOICE", initialData }
           setClientId(client.id);
         }}
       />
+      <QuickPasteDialog open={quickPasteOpen} onOpenChange={setQuickPasteOpen} onInsert={handleQuickPasteInsert} />
     </div>
   );
 }
