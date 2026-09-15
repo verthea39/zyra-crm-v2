@@ -58,7 +58,7 @@ export function DocumentDetail({ document, branding }: { document: DocumentWithR
   };
 
   return (
-    <div className="max-w-3xl mx-auto w-full pb-8">
+    <div className="max-w-3xl mx-auto w-full pb-28 print:pb-8">
       {/* Action bar -- always visible on every viewport, never hidden behind md: */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
         <Link href="/documents" className="text-sm text-slate-500 hover:text-slate-800 w-fit">

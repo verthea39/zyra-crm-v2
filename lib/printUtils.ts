@@ -70,37 +70,59 @@ function buildDocumentContent(
   if (data.type === 'PAYMENT_RECEIPT') documentTitle = 'OFFICIAL PAYMENT ACKNOWLEDGMENT RECEIPT';
 
   // Real uploaded/default logos already contain the company name as a
-  // wordmark -- rendering it at its native aspect ratio (not squeezed into
-  // a square) and dropping the separate <h1> text avoids showing two
-  // different-looking brand names stacked together. The generated-initials
-  // SVG fallback has no text baked in, so it still pairs with the <h1>.
+  // wordmark, so the header never renders a separate text heading next to
+  // it -- that would just duplicate the brand name. The generated-initials
+  // SVG fallback has no text baked in, so it's paired with a small heading.
   const hasRealLogo = !!branding.logoUrl;
   const logoMarkup = hasRealLogo
-    ? `<img src="${branding.logoUrl}" alt="${branding.name}" style="height: 40px; width: auto; max-width: 200px; object-fit: contain; display: block;" />`
-    : companyLogoSvg(branding.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 3).toUpperCase(), 40);
+    ? `<img src="${branding.logoUrl}" alt="${branding.name}" style="height: 44px; width: auto; max-width: 210px; object-fit: contain; display: block;" />`
+    : companyLogoSvg(branding.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 3).toUpperCase(), 44);
 
-  const contactLine = [
-    branding.phone ? `Tel: ${branding.phone}` : null,
-    branding.email ? `Email: ${branding.email}` : null,
-    branding.website,
-  ].filter(Boolean).join(' &nbsp;|&nbsp; ');
+  // Compact circular icon badges for contact metadata, in place of plain
+  // text labels -- mirrors the app's own rounded icon-badge convention.
+  const ICON_PHONE = '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92Z"/>';
+  const ICON_PIN = '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>';
+  const ICON_GLOBE = '<circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z"/><path d="M2 12h20"/>';
+  const ICON_MAIL = '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>';
+
+  const iconBadge = (path: string) => `
+    <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #f1f5f9; flex-shrink: 0;">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="${ZYRA_BRONZE}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>
+    </span>
+  `;
+
+  const contactRow = (path: string, text: string) => `
+    <div style="display: flex; align-items: center; gap: 5px; justify-content: flex-end;">
+      <span style="white-space: nowrap;">${text}</span>
+      ${iconBadge(path)}
+    </div>
+  `;
+
+  const contactItems = [
+    branding.phone ? contactRow(ICON_PHONE, branding.phone) : null,
+    contactRow(ICON_PIN, branding.address),
+    branding.website ? contactRow(ICON_GLOBE, branding.website) : null,
+    branding.email ? contactRow(ICON_MAIL, branding.email) : null,
+  ].filter(Boolean).join('');
 
   const invoiceNoLine = data.reference
     ? `<p style="color: ${ZYRA_DARK}; margin: 2px 0 0 0; font-size: 12px; font-weight: 700;">Invoice No: ${data.reference}</p>`
     : '';
 
   const header = `
-    <div style="border-bottom: 2px solid ${ZYRA_BRONZE}; padding-bottom: 10px; margin-bottom: 14px;">
-      <div style="display: flex; align-items: flex-start; gap: 10px;">
-        <div style="flex-shrink: 0;">${logoMarkup}</div>
-        <div>
-          ${!hasRealLogo ? `<h1 style="color: ${ZYRA_DARK}; margin: 0; font-size: 16px; font-weight: 800; line-height: 1.15; letter-spacing: -0.3px; text-transform: uppercase;">${branding.name}</h1>` : ''}
-          <p style="color: #64748b; margin: 1px 0 0 0; font-size: 10px; line-height: 1.3;">${branding.address}${contactLine ? ` &nbsp;|&nbsp; ${contactLine}` : ''}</p>
-          ${branding.trn ? `<p style="color: ${ZYRA_DARK}; margin: 1px 0 0 0; font-size: 10px; font-weight: 700; line-height: 1.3;">Company TRN: ${branding.trn}</p>` : ''}
+    <div style="border-bottom: 2px solid ${ZYRA_BRONZE}; padding-bottom: 10px; margin-bottom: 14px; box-sizing: border-box;">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+        <div style="flex-shrink: 0; display: flex; align-items: center;">
+          ${logoMarkup}
+          ${!hasRealLogo ? `<h1 style="color: ${ZYRA_DARK}; margin: 0 0 0 8px; font-size: 15px; font-weight: 800; line-height: 1.15; letter-spacing: -0.3px; text-transform: uppercase;">${branding.name}</h1>` : ''}
+        </div>
+        <div style="text-align: right; font-size: 9.5px; color: #64748b; line-height: 1.6; display: flex; flex-direction: column; gap: 2px;">
+          ${contactItems}
+          ${branding.trn ? `<div style="color: ${ZYRA_DARK}; font-weight: 700; margin-top: 2px;">TRN: ${branding.trn}</div>` : ''}
         </div>
       </div>
 
-      <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+      <div style="display: flex; justify-content: space-between; margin-top: 12px;">
         <!-- Left Metadata -->
         <div style="width: 48%;">
           <h2 style="color: ${ZYRA_BRONZE}; margin: 0 0 2px 0; font-size: 16px; font-weight: 800; text-transform: uppercase;">${documentTitle}</h2>
