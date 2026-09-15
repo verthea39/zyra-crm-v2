@@ -52,7 +52,7 @@ type PrintData = QuotationData | TaxInvoiceData | PaymentReceiptData;
 const ZYRA_BRONZE = '#98682E';
 const ZYRA_DARK = '#0F172A';
 
-function generateHTML(data: PrintData): string {
+function buildDocumentContent(data: PrintData): { documentTitle: string; header: string; content: string; whatsappLink: string } {
   const formatCurrency = (amount: number) => `AED ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
   let documentTitle = "";
@@ -304,6 +304,13 @@ function generateHTML(data: PrintData): string {
   
   const whatsappLink = `https://wa.me/${waPhone}?text=${encodeURIComponent(waMessage)}`;
 
+  return { documentTitle, header, content, whatsappLink };
+}
+
+/** Full standalone HTML page (used for the print/iframe fallback) */
+function generateHTML(data: PrintData): string {
+  const { documentTitle, header, content, whatsappLink } = buildDocumentContent(data);
+
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -395,13 +402,130 @@ function generateHTML(data: PrintData): string {
   `;
 }
 
-export function printDocument(data: PrintData) {
+function getFilename(data: PrintData): string {
+  const ref =
+    data.reference ||
+    (data.type === 'TAX_INVOICE' ? data.caseRef : undefined) ||
+    (data.type === 'PAYMENT_RECEIPT' ? data.invoiceRef : undefined) ||
+    'document';
+  const safeRef = String(ref).replace(/[^a-zA-Z0-9-_]/g, '_');
+  return `Zyra_${data.type}_${safeRef}.pdf`;
+}
+
+/**
+ * Print via a hidden same-page iframe instead of window.open(). A new
+ * window/tab opened after an `await` (e.g. once createInvoice() resolves)
+ * falls outside the browser's "direct user gesture" window and gets
+ * silently popup-blocked on mobile Safari/Chrome and most modern desktop
+ * browsers -- that was the root cause of PDF export failing in production.
+ * An iframe never opens a new browsing context, so it isn't subject to
+ * that block at all.
+ */
+export function printViaIframe(data: PrintData): void {
   const html = generateHTML(data);
-  const printWindow = window.open('', '_blank');
-  if (printWindow) {
-    printWindow.document.write(html);
-    printWindow.document.close();
-  } else {
-    alert('Please allow popups to print documents.');
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+
+  const cleanup = () => {
+    if (iframe.parentNode) document.body.removeChild(iframe);
+  };
+
+  const doc = iframe.contentWindow?.document;
+  if (!doc) {
+    cleanup();
+    throw new Error('Unable to open print preview.');
   }
+
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  iframe.onload = () => {
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+    setTimeout(cleanup, 1000);
+  };
+}
+
+/**
+ * Generates a real PDF client-side (html2canvas -> jsPDF), formatted for
+ * A4, and triggers a direct download via Blob + temporary anchor. Runs
+ * entirely in the current tab -- no new window, no Chromium/Puppeteer,
+ * so it works the same on mobile and in Vercel's serverless environment.
+ */
+export async function downloadDocumentPDF(data: PrintData): Promise<void> {
+  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+    import('html2canvas'),
+    import('jspdf'),
+  ]);
+
+  const { header, content } = buildDocumentContent(data);
+
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.left = '-10000px';
+  container.style.top = '0';
+  container.style.width = '794px'; // A4 @ 96dpi
+  container.style.padding = '40px';
+  container.style.background = '#ffffff';
+  container.style.fontFamily =
+    "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+  container.style.color = '#334155';
+  container.innerHTML = header + content;
+  document.body.appendChild(container);
+
+  try {
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+    });
+
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const imgData = canvas.toDataURL('image/png');
+
+    if (imgHeight <= pageHeight) {
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+    } else {
+      // Content taller than one A4 page: paginate by shifting the same
+      // full-height image up on each subsequent page.
+      let heightLeft = imgHeight;
+      let position = 0;
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+    }
+
+    const blob = pdf.output('blob');
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = getFilename(data);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } finally {
+    document.body.removeChild(container);
+  }
+}
+
+/** Legacy name kept for existing call sites; now iframe-based (see printViaIframe). */
+export function printDocument(data: PrintData) {
+  printViaIframe(data);
 }

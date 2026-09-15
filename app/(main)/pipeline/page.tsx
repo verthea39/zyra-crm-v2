@@ -1,6 +1,7 @@
 import { getCases } from "@/app/actions/pipeline";
 import { getCorporateClients } from "@/app/actions/b2b"; // Using this to fetch clients for the dropdown, though we should probably fetch all clients.
 import prisma from "@/lib/prisma";
+import { Role } from "@prisma/client";
 import { PipelineClientView } from "@/components/pipeline/PipelineClientView";
 
 
@@ -13,9 +14,25 @@ async function getAllClients() {
 }
 
 async function getCoordinators() {
-  return await prisma.user.findMany({
-    where: { role: 'COORDINATOR' },
-    select: { id: true, name: true }
+  // "Coordinator" here means anyone eligible to be assigned a case, not
+  // literally role === COORDINATOR -- that filter left the dropdown empty
+  // whenever staff were seeded under ADMIN/PRO_SPECIALIST/etc, which made
+  // the Assigned PRO select look broken (nothing to pick, so nothing to
+  // click). Include every case-eligible role, and if for some reason none
+  // exist yet, fall back to every active user rather than an empty list.
+  const eligibleRoles: Role[] = ['ADMIN', 'SUPER_ADMIN', 'COORDINATOR', 'PRO_SPECIALIST'];
+
+  const eligible = await prisma.user.findMany({
+    where: { role: { in: eligibleRoles }, isActive: true },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  });
+
+  if (eligible.length > 0) return eligible;
+
+  return prisma.user.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
   });
 }
 

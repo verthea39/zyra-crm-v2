@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Client } from "@prisma/client";
 import { toast } from "sonner";
-import { printDocument } from "@/lib/printUtils";
+import { downloadDocumentPDF, printViaIframe } from "@/lib/printUtils";
 import { getPendingInvoices } from "@/app/actions/finance";
 import { Receipt, X } from "lucide-react";
 
@@ -17,7 +17,7 @@ interface InvoiceOption {
 }
 
 export function PaymentReceiptModal({ open, onOpenChange, clients }: { open: boolean; onOpenChange: (open: boolean) => void; clients: Client[] }) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<false | "saving" | "pdf">(false);
   const [clientId, setClientId] = useState("");
   const [invoiceRef, setInvoiceRef] = useState("");
   const [amount, setAmount] = useState("");
@@ -53,21 +53,17 @@ export function PaymentReceiptModal({ open, onOpenChange, clients }: { open: boo
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    
-    // Simulate generation delay
-    setTimeout(() => {
-      setLoading(false);
-      toast.success("Payment Receipt generated successfully!");
-      
+    setLoading("saving");
+
+    try {
       const selectedClient = clients.find(c => c.id === clientId);
       const clientName = selectedClient ? selectedClient.name : "Unknown Client";
       const clientPhone = selectedClient?.phone || undefined;
       const clientTRN = undefined;
       const clientDocumentRef = selectedClient?.type === 'CORPORATE' ? selectedClient?.tradeLicenseNo : selectedClient?.passportNo;
-      
+
       const inv = invoices.find(i => i.reference === invoiceRef);
       const previousTotal = inv ? (inv.amountTotal / 100) : undefined;
       const parsedAmount = parseFloat(amount || "0");
@@ -76,8 +72,8 @@ export function PaymentReceiptModal({ open, onOpenChange, clients }: { open: boo
         remainingBalance = ((inv.amountTotal - inv.amountPaid) / 100) - parsedAmount;
       }
 
-      printDocument({
-        type: 'PAYMENT_RECEIPT',
+      const printPayload = {
+        type: 'PAYMENT_RECEIPT' as const,
         clientName,
         clientPhone,
         clientTRN: clientTRN || undefined,
@@ -89,17 +85,34 @@ export function PaymentReceiptModal({ open, onOpenChange, clients }: { open: boo
         previousTotal,
         remainingBalance,
         transactionRef
-      });
+      };
 
+      toast.success("Payment Receipt generated successfully!");
+
+      setLoading("pdf");
+      try {
+        await downloadDocumentPDF(printPayload);
+      } catch (pdfErr) {
+        console.error("PDF generation failed:", pdfErr);
+        toast.error("Receipt generated, but PDF download failed. Use Print instead.", {
+          action: { label: "Print", onClick: () => printViaIframe(printPayload) },
+        });
+      }
+
+      setLoading(false);
       onOpenChange(false);
-      
+
       // Reset form
       setClientId("");
       setInvoiceRef("");
       setAmount("");
       setMethod("Bank Transfer");
       setTransactionRef("");
-    }, 1000);
+    } catch (err) {
+      console.error("Failed to generate payment receipt:", err);
+      setLoading(false);
+      toast.error("An error occurred");
+    }
   };
 
   return (
@@ -190,8 +203,8 @@ export function PaymentReceiptModal({ open, onOpenChange, clients }: { open: boo
           <div className="sticky bottom-0 -mx-4 -mb-4 sm:mx-0 sm:mb-0 p-5 bg-white border-t border-slate-200 mt-auto z-10 pb-safe sm:rounded-b-2xl">
             <div className="flex justify-end gap-3">
               <button type="button" className="px-5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors" onClick={() => onOpenChange(false)}>Cancel</button>
-              <button type="submit" disabled={loading} className="bg-[#007A55] hover:bg-[#006244] text-white font-semibold text-sm rounded-xl px-6 py-2.5 shadow-sm active:scale-95 transition-all">
-                {loading ? "Generating..." : "Save & Generate Receipt"}
+              <button type="submit" disabled={!!loading} className="bg-[#007A55] hover:bg-[#006244] text-white font-semibold text-sm rounded-xl px-6 py-2.5 shadow-sm active:scale-95 transition-all disabled:opacity-60">
+                {loading === "pdf" ? "Generating PDF..." : loading === "saving" ? "Saving..." : "Save & Generate Receipt"}
               </button>
             </div>
           </div>

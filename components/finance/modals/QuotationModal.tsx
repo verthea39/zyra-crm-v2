@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Client } from "@prisma/client";
 import { toast } from "sonner";
-import { printDocument, LineItem } from "@/lib/printUtils";
+import { downloadDocumentPDF, printViaIframe, LineItem } from "@/lib/printUtils";
 import { FileSignature, Plus, Trash2, X, ChevronRight, ArrowLeft } from "lucide-react";
 import { MobileStepTabs } from "@/components/ui/mobile-step-tabs";
 import { LineItemEditorSheet } from "./LineItemEditorSheet";
@@ -16,7 +16,7 @@ import { useEffect } from "react";
 const MOBILE_STEPS = ["Client & Dates", "Line Items", "Terms & Notes", "Summary"];
 
 export function QuotationModal({ open, onOpenChange, clients }: { open: boolean; onOpenChange: (open: boolean) => void; clients: Client[] }) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<false | "saving" | "pdf">(false);
   const [clientId, setClientId] = useState("");
   const [items, setItems] = useState<LineItem[]>([{ desc: "", govCost: 0, proFee: 0 }]);
   const [expiry, setExpiry] = useState("");
@@ -68,21 +68,17 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
     otherGroup.items.push({ name: "Custom / Other Service", gov: 0, pro: 0 });
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    
-    // Simulate generation delay
-    setTimeout(() => {
-      setLoading(false);
-      toast.success("Quotation generated successfully!");
-      
+    setLoading("saving");
+
+    try {
       const selectedClient = clients.find(c => c.id === clientId);
       const clientName = selectedClient ? selectedClient.name : "Unknown Client";
       const clientPhone = selectedClient?.phone || undefined;
       const clientTRN = undefined;
       const clientDocumentRef = selectedClient?.type === 'CORPORATE' ? selectedClient?.tradeLicenseNo : selectedClient?.passportNo;
-      
+
       const year = new Date().getFullYear();
       const randomSeq = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
       const qtReference = `QT-${year}-${randomSeq}`;
@@ -90,8 +86,8 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
       const govFeeNum = items.reduce((sum, item) => sum + item.govCost, 0);
       const proFeeNum = items.reduce((sum, item) => sum + item.proFee, 0);
 
-      printDocument({
-        type: 'QUOTATION',
+      const printPayload = {
+        type: 'QUOTATION' as const,
         clientName,
         clientPhone,
         clientTRN: clientTRN || undefined,
@@ -104,16 +100,33 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
         expiry,
         notes,
         lineItems: items
-      });
+      };
 
+      toast.success("Quotation generated successfully!");
+
+      setLoading("pdf");
+      try {
+        await downloadDocumentPDF(printPayload);
+      } catch (pdfErr) {
+        console.error("PDF generation failed:", pdfErr);
+        toast.error("Quotation generated, but PDF download failed. Use Print instead.", {
+          action: { label: "Print", onClick: () => printViaIframe(printPayload) },
+        });
+      }
+
+      setLoading(false);
       onOpenChange(false);
-      
+
       // Reset form
       setClientId("");
       setItems([{ desc: "", govCost: 0, proFee: 0 }]);
       setExpiry("");
       setNotes("");
-    }, 1000);
+    } catch (err) {
+      console.error("Failed to generate quotation:", err);
+      setLoading(false);
+      toast.error("An error occurred");
+    }
   };
 
   const govFeeNum = items.reduce((sum, item) => sum + item.govCost, 0);
@@ -421,8 +434,8 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
             {/* Desktop actions */}
             <div className="hidden sm:flex justify-end gap-3 pt-2">
               <button type="button" className="px-5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors" onClick={() => onOpenChange(false)}>Cancel</button>
-              <button type="submit" disabled={loading} className="bg-[#007A55] hover:bg-[#006244] text-white font-semibold text-sm rounded-xl px-6 py-2.5 shadow-sm active:scale-95 transition-all">
-                {loading ? "Generating..." : "Save & Generate PDF"}
+              <button type="submit" disabled={!!loading} className="bg-[#007A55] hover:bg-[#006244] text-white font-semibold text-sm rounded-xl px-6 py-2.5 shadow-sm active:scale-95 transition-all disabled:opacity-60">
+                {loading === "pdf" ? "Generating PDF..." : loading === "saving" ? "Saving..." : "Save & Generate PDF"}
               </button>
             </div>
 
@@ -449,10 +462,10 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
               ) : (
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={!!loading}
                   className="flex-1 h-12 rounded-xl bg-[#007A55] text-white font-semibold active:scale-95 transition-transform disabled:opacity-50"
                 >
-                  {loading ? "Generating..." : "Create Quotation"}
+                  {loading === "pdf" ? "Generating PDF..." : loading === "saving" ? "Saving..." : "Create Quotation"}
                 </button>
               )}
             </div>
