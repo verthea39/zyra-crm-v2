@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Client } from "@prisma/client";
 import { toast } from "sonner";
 import { downloadDocumentPDF, printViaIframe } from "@/lib/printUtils";
+import type { CompanyBranding } from "@/lib/companyBranding";
+import { getBranding } from "@/app/actions/branding";
 import { getPendingInvoices } from "@/app/actions/finance";
 import { Receipt, X } from "lucide-react";
 
@@ -25,6 +27,11 @@ export function PaymentReceiptModal({ open, onOpenChange, clients }: { open: boo
   const [transactionRef, setTransactionRef] = useState("");
   const [invoices, setInvoices] = useState<InvoiceOption[]>([]);
   const [fetchingInvoices, setFetchingInvoices] = useState(false);
+  const [branding, setBranding] = useState<CompanyBranding | null>(null);
+
+  useEffect(() => {
+    if (open) getBranding().then(setBranding);
+  }, [open]);
 
   useEffect(() => {
     if (clientId) {
@@ -91,11 +98,11 @@ export function PaymentReceiptModal({ open, onOpenChange, clients }: { open: boo
 
       setLoading("pdf");
       try {
-        await downloadDocumentPDF(printPayload);
+        await downloadDocumentPDF(printPayload, branding ?? undefined);
       } catch (pdfErr) {
         console.error("PDF generation failed:", pdfErr);
         toast.error("Receipt generated, but PDF download failed. Use Print instead.", {
-          action: { label: "Print", onClick: () => printViaIframe(printPayload) },
+          action: { label: "Print", onClick: () => printViaIframe(printPayload, branding ?? undefined) },
         });
       }
 

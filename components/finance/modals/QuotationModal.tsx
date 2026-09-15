@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Client } from "@prisma/client";
 import { toast } from "sonner";
 import { downloadDocumentPDF, printViaIframe, LineItem } from "@/lib/printUtils";
+import type { CompanyBranding } from "@/lib/companyBranding";
+import { getBranding } from "@/app/actions/branding";
 import { FileSignature, Plus, Trash2, X, ChevronRight, ArrowLeft } from "lucide-react";
 import { MobileStepTabs } from "@/components/ui/mobile-step-tabs";
 import { LineItemEditorSheet } from "./LineItemEditorSheet";
@@ -25,6 +27,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
   const [mobileStep, setMobileStep] = useState(0);
   const [furthestStep, setFurthestStep] = useState(0);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [branding, setBranding] = useState<CompanyBranding | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -41,6 +44,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
   useEffect(() => {
     if (open) {
       getServiceItems().then(data => setDbServices(data));
+      getBranding().then(setBranding);
     }
   }, [open]);
 
@@ -106,11 +110,11 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
 
       setLoading("pdf");
       try {
-        await downloadDocumentPDF(printPayload);
+        await downloadDocumentPDF(printPayload, branding ?? undefined);
       } catch (pdfErr) {
         console.error("PDF generation failed:", pdfErr);
         toast.error("Quotation generated, but PDF download failed. Use Print instead.", {
-          action: { label: "Print", onClick: () => printViaIframe(printPayload) },
+          action: { label: "Print", onClick: () => printViaIframe(printPayload, branding ?? undefined) },
         });
       }
 
@@ -189,7 +193,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
                   <tr>
                     <th className="px-3 py-2.5 font-medium">Service Description</th>
                     <th className="px-3 py-2.5 font-medium w-32 text-right">Gov Fee (AED)</th>
-                    <th className="px-3 py-2.5 font-medium w-32 text-right">Zyra Fee (AED)</th>
+                    <th className="px-3 py-2.5 font-medium w-32 text-right">Service Fee (AED)</th>
                     <th className="px-3 py-2.5 font-medium w-32 text-right">Subtotal</th>
                     <th className="px-2 py-2.5 font-medium w-10 text-center"></th>
                   </tr>
@@ -381,7 +385,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
               setEditingIdx(null);
             }}
             presetServices={PRESET_SERVICES}
-            proFeeLabel="Zyra Fee (AED)"
+            proFeeLabel="Service Fee (AED)"
             proFeeColorClass="text-blue-600"
             proFeeBorderClass="border-blue-200"
           />

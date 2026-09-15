@@ -337,6 +337,11 @@ model CompanySettings {
   swift           String?
   invoiceNotes    String?
   financePin      String?  // Store hashed or plain (depending on security reqs) - usually we'd hash, but for MVP plain/simple hash.
+  phone           String?
+  email           String?
+  website         String?
+  paymentTerms    String?
+  logoUrl         String?
   updatedAt       DateTime @updatedAt
 }
 

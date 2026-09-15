@@ -14,7 +14,7 @@ export function LineItemEditorSheet({
   item,
   onSave,
   presetServices,
-  proFeeLabel = "Zyra Fee (AED)",
+  proFeeLabel = "Service Fee (AED)",
   proFeeColorClass = "text-emerald-600",
   proFeeBorderClass = "border-emerald-200",
 }: {

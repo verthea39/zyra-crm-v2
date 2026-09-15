@@ -1,3 +1,6 @@
+import { companyLogoSvg, getDefaultCompanyBranding, type CompanyBranding } from "@/lib/companyBranding";
+import { getBranding } from "@/app/actions/branding";
+
 export type DocumentType = 'QUOTATION' | 'TAX_INVOICE' | 'PAYMENT_RECEIPT';
 
 export interface LineItem {
@@ -52,7 +55,10 @@ type PrintData = QuotationData | TaxInvoiceData | PaymentReceiptData;
 const ZYRA_BRONZE = '#98682E';
 const ZYRA_DARK = '#0F172A';
 
-function buildDocumentContent(data: PrintData): { documentTitle: string; header: string; content: string; whatsappLink: string } {
+function buildDocumentContent(
+  data: PrintData,
+  branding: CompanyBranding = getDefaultCompanyBranding()
+): { documentTitle: string; header: string; content: string; whatsappLink: string } {
   const formatCurrency = (amount: number) => `AED ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
   let documentTitle = "";
@@ -60,30 +66,47 @@ function buildDocumentContent(data: PrintData): { documentTitle: string; header:
   if (data.type === 'TAX_INVOICE') documentTitle = 'TAX INVOICE';
   if (data.type === 'PAYMENT_RECEIPT') documentTitle = 'OFFICIAL PAYMENT ACKNOWLEDGMENT RECEIPT';
 
+  const logoMarkup = branding.logoUrl
+    ? `<img src="${branding.logoUrl}" alt="${branding.name}" style="width: 36px; height: 36px; border-radius: 8px; object-fit: contain;" />`
+    : companyLogoSvg(branding.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 3).toUpperCase(), 36);
+
+  const contactLine = [
+    branding.phone ? `Phone: ${branding.phone}` : null,
+    branding.email ? `Email: ${branding.email}` : null,
+    branding.trn ? `TRN: ${branding.trn}` : null,
+    branding.website,
+  ].filter(Boolean).join(' &nbsp;|&nbsp; ');
+
   const header = `
-    <div style="border-bottom: 3px solid ${ZYRA_BRONZE}; padding-bottom: 25px; margin-bottom: 35px;">
-      <h1 style="color: ${ZYRA_DARK}; margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -0.5px;">ZYRA DOCUMENTS CLEARANCE SERVICES</h1>
-      <p style="color: #64748b; margin: 4px 0 0 0; font-size: 13px;">Corporate PRO & Government Transaction Solutions — Deira / Burj Nahar, Dubai, UAE</p>
-      
-      <div style="display: flex; justify-content: space-between; margin-top: 30px;">
+    <div style="border-bottom: 2px solid ${ZYRA_BRONZE}; padding-bottom: 10px; margin-bottom: 14px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 36px; height: 36px; flex-shrink: 0;">${logoMarkup}</div>
+        <div>
+          <h1 style="color: ${ZYRA_DARK}; margin: 0; font-size: 16px; font-weight: 800; line-height: 1.15; letter-spacing: -0.3px; text-transform: uppercase;">${branding.name}</h1>
+          <p style="color: #64748b; margin: 1px 0 0 0; font-size: 10px; line-height: 1.3;">${branding.address}${contactLine ? ` &nbsp;|&nbsp; ${contactLine}` : ''}</p>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; margin-top: 10px;">
         <!-- Left Metadata -->
         <div style="width: 48%;">
-          <h2 style="color: ${ZYRA_BRONZE}; margin: 0 0 10px 0; font-size: 22px; text-transform: uppercase;">${documentTitle}</h2>
-          <table style="width: 100%; font-size: 13px; color: #475569; border-spacing: 0;">
-            ${data.reference ? `<tr><td style="padding: 3px 0; width: 130px;"><strong>Reference Number:</strong></td><td>${data.reference}</td></tr>` : ''}
-            <tr><td style="padding: 3px 0; width: 130px;"><strong>Issue Date:</strong></td><td>${data.date}</td></tr>
-            ${data.dueDate ? `<tr><td style="padding: 3px 0;"><strong>Due Date:</strong></td><td>${data.dueDate}</td></tr>` : ''}
+          <h2 style="color: ${ZYRA_BRONZE}; margin: 0 0 4px 0; font-size: 16px; font-weight: 800; text-transform: uppercase;">${documentTitle}</h2>
+          <table style="width: 100%; font-size: 11px; color: #475569; border-spacing: 0; line-height: 1.3;">
+            ${data.reference ? `<tr><td style="padding: 1px 0; width: 110px;"><strong>Reference:</strong></td><td>${data.reference}</td></tr>` : ''}
+            <tr><td style="padding: 1px 0; width: 110px;"><strong>Issue Date:</strong></td><td>${data.date}</td></tr>
+            ${data.dueDate ? `<tr><td style="padding: 1px 0;"><strong>Due Date:</strong></td><td>${data.dueDate}</td></tr>` : ''}
+            <tr><td style="padding: 1px 0;"><strong>Currency:</strong></td><td>AED</td></tr>
           </table>
         </div>
-        
+
         <!-- Right Metadata -->
         <div style="width: 48%;">
-          <h3 style="color: ${ZYRA_DARK}; margin: 0 0 10px 0; font-size: 16px;">BILLED TO</h3>
-          <table style="width: 100%; font-size: 13px; color: #475569; border-spacing: 0;">
-            <tr><td style="padding: 3px 0; width: 130px;"><strong>Client Name:</strong></td><td><strong style="color: ${ZYRA_DARK};">${data.clientName}</strong></td></tr>
-            ${data.clientTRN ? `<tr><td style="padding: 3px 0;"><strong>Corporate TRN:</strong></td><td>${data.clientTRN}</td></tr>` : ''}
-            ${data.clientPhone ? `<tr><td style="padding: 3px 0;"><strong>Contact Phone:</strong></td><td>${data.clientPhone}</td></tr>` : ''}
-            ${data.clientDocumentRef ? `<tr><td style="padding: 3px 0;"><strong>EID / Passport / TL:</strong></td><td>${data.clientDocumentRef}</td></tr>` : ''}
+          <h3 style="color: ${ZYRA_DARK}; margin: 0 0 4px 0; font-size: 12px; text-transform: uppercase;">Billed To</h3>
+          <table style="width: 100%; font-size: 11px; color: #475569; border-spacing: 0; line-height: 1.3;">
+            <tr><td style="padding: 1px 0; width: 110px;"><strong>Client Name:</strong></td><td><strong style="color: ${ZYRA_DARK};">${data.clientName}</strong></td></tr>
+            ${data.clientTRN ? `<tr><td style="padding: 1px 0;"><strong>Corporate TRN:</strong></td><td>${data.clientTRN}</td></tr>` : ''}
+            ${data.clientPhone ? `<tr><td style="padding: 1px 0;"><strong>Contact Phone:</strong></td><td>${data.clientPhone}</td></tr>` : ''}
+            ${data.clientDocumentRef ? `<tr><td style="padding: 1px 0;"><strong>EID / Passport / TL:</strong></td><td>${data.clientDocumentRef}</td></tr>` : ''}
           </table>
         </div>
       </div>
@@ -102,7 +125,7 @@ function buildDocumentContent(data: PrintData): { documentTitle: string; header:
     const outstandingBalance = data.type === 'TAX_INVOICE' ? totalPayable - amountReceived : totalPayable;
     
     const items = (data as any).lineItems || [
-      { desc: isQuotation ? 'Guaranteed Zyra Professional Fee' : 'Zyra Professional PRO & Agency Fee', govCost, proFee }
+      { desc: isQuotation ? 'Professional Service Fee' : 'Professional PRO & Agency Fee', govCost, proFee }
     ];
 
     let govRows = '';
@@ -110,38 +133,37 @@ function buildDocumentContent(data: PrintData): { documentTitle: string; header:
     
     items.forEach((item: LineItem, i: number) => {
       govRows += `
-        <tr style="border-bottom: 1px solid #e2e8f0;">
-          <td style="padding: 10px; text-align: center;">${i + 1}</td>
-          <td style="padding: 10px;">${item.desc}</td>
-          <td style="padding: 10px; text-align: right;">${formatCurrency(item.govCost)}</td>
+        <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid;">
+          <td style="padding: 3px 6px; text-align: center;">${i + 1}</td>
+          <td style="padding: 3px 6px;">${item.desc}</td>
+          <td style="padding: 3px 6px; text-align: right;">${formatCurrency(item.govCost)}</td>
         </tr>
       `;
-      
+
       const itemVat = isQuotation ? 0 : item.proFee * 0.05;
       const itemTotal = item.proFee + itemVat;
-      
+
       proRows += `
-        <tr style="border-bottom: 1px solid #e2e8f0;">
-          <td style="padding: 10px; text-align: center;">${i + 1}</td>
-          <td style="padding: 10px;">${item.desc}</td>
-          <td style="padding: 10px; text-align: right;">${formatCurrency(item.proFee)}</td>
-          <td style="padding: 10px; text-align: right;">${isQuotation ? 'N/A' : formatCurrency(itemVat)}</td>
-          <td style="padding: 10px; text-align: right;">${formatCurrency(itemTotal)}</td>
+        <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid;">
+          <td style="padding: 3px 6px; text-align: center;">${i + 1}</td>
+          <td style="padding: 3px 6px;">${item.desc}</td>
+          <td style="padding: 3px 6px; text-align: right;">${formatCurrency(item.proFee)}</td>
+          <td style="padding: 3px 6px; text-align: right;">${isQuotation ? 'N/A' : formatCurrency(itemVat)}</td>
+          <td style="padding: 3px 6px; text-align: right;">${formatCurrency(itemTotal)}</td>
         </tr>
       `;
     });
 
     content = `
       <!-- Table 1: Government Fees -->
-      <div style="margin-bottom: 25px;">
-        <h3 style="color: ${ZYRA_DARK}; font-size: 15px; margin: 0 0 8px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">Table 1: Government Clearance Pass-Throughs (0% VAT / Non-Taxable)</h3>
-        <p style="font-size: 11px; color: #64748b; margin: 0 0 10px 0;">* Direct government disbursement fees charged at actual cost with 0% markup.</p>
-        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+      <div style="margin-bottom: 10px; page-break-inside: avoid;">
+        <h3 style="color: ${ZYRA_DARK}; font-size: 11px; margin: 0 0 3px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px;">Government Clearance Pass-Throughs (0% VAT)</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
           <thead>
             <tr style="background-color: #f8fafc; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
-              <th style="padding: 10px; text-align: center; width: 50px;">Sl No</th>
-              <th style="padding: 10px; text-align: left;">Government Entity & Service</th>
-              <th style="padding: 10px; text-align: right; width: 150px;">Portal Fee (AED)</th>
+              <th style="padding: 4px 6px; text-align: center; width: 36px;">#</th>
+              <th style="padding: 4px 6px; text-align: left;">Government Entity & Service</th>
+              <th style="padding: 4px 6px; text-align: right; width: 120px;">Portal Fee (AED)</th>
             </tr>
           </thead>
           <tbody>
@@ -149,25 +171,24 @@ function buildDocumentContent(data: PrintData): { documentTitle: string; header:
           </tbody>
           <tfoot>
             <tr>
-              <td colspan="2" style="padding: 10px; text-align: right; font-weight: bold;">Subtotal Government Fees:</td>
-              <td style="padding: 10px; text-align: right; font-weight: bold; background-color: #f8fafc;">${formatCurrency(govCost)}</td>
+              <td colspan="2" style="padding: 4px 6px; text-align: right; font-weight: bold;">Subtotal Government Fees:</td>
+              <td style="padding: 4px 6px; text-align: right; font-weight: bold; background-color: #f8fafc;">${formatCurrency(govCost)}</td>
             </tr>
           </tfoot>
         </table>
       </div>
 
       <!-- Table 2: Professional Fees -->
-      <div style="margin-bottom: 35px;">
-        <h3 style="color: ${ZYRA_DARK}; font-size: 15px; margin: 0 0 8px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">Table 2: Professional PRO & Agency Service Charges (Taxable)</h3>
-        <p style="font-size: 11px; color: #64748b; margin: 0 0 10px 0;">* Professional consultation, processing, and document clearance charges.</p>
-        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+      <div style="margin-bottom: 12px; page-break-inside: avoid;">
+        <h3 style="color: ${ZYRA_DARK}; font-size: 11px; margin: 0 0 3px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px;">Professional PRO & Agency Service Charges (Taxable)</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
           <thead>
             <tr style="background-color: #f8fafc; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
-              <th style="padding: 10px; text-align: center; width: 50px;">Sl No</th>
-              <th style="padding: 10px; text-align: left;">Service Description</th>
-              <th style="padding: 10px; text-align: right; width: 120px;">Fee (AED)</th>
-              <th style="padding: 10px; text-align: right; width: 100px;">VAT (5%)</th>
-              <th style="padding: 10px; text-align: right; width: 120px;">Total (AED)</th>
+              <th style="padding: 4px 6px; text-align: center; width: 36px;">#</th>
+              <th style="padding: 4px 6px; text-align: left;">Service Description</th>
+              <th style="padding: 4px 6px; text-align: right; width: 100px;">Fee (AED)</th>
+              <th style="padding: 4px 6px; text-align: right; width: 90px;">VAT (5%)</th>
+              <th style="padding: 4px 6px; text-align: right; width: 100px;">Total (AED)</th>
             </tr>
           </thead>
           <tbody>
@@ -175,35 +196,35 @@ function buildDocumentContent(data: PrintData): { documentTitle: string; header:
           </tbody>
           <tfoot>
             <tr>
-              <td colspan="4" style="padding: 10px; text-align: right; font-weight: bold;">Subtotal Agency Fees + VAT:</td>
-              <td style="padding: 10px; text-align: right; font-weight: bold; background-color: #f8fafc;">${formatCurrency(proFee + (isQuotation ? 0 : vatAmount))}</td>
+              <td colspan="4" style="padding: 4px 6px; text-align: right; font-weight: bold;">Subtotal Agency Fees + VAT:</td>
+              <td style="padding: 4px 6px; text-align: right; font-weight: bold; background-color: #f8fafc;">${formatCurrency(proFee + (isQuotation ? 0 : vatAmount))}</td>
             </tr>
           </tfoot>
         </table>
       </div>
 
       <!-- Grand Total Calculation Strip -->
-      <div style="display: flex; justify-content: flex-end; margin-bottom: 40px;">
-        <div style="width: 400px; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden;">
-          <div style="padding: 15px; background-color: #f8fafc;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; color: #475569;">
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 12px; page-break-inside: avoid;">
+        <div style="width: 300px; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden;">
+          <div style="padding: 8px 12px; background-color: #f8fafc;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 11px; color: #475569;">
               <span>Total Government Outflow:</span>
               <span>${formatCurrency(govCost)}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 13px; color: #475569;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px; color: #475569;">
               <span>Total Professional & VAT:</span>
               <span>${formatCurrency(proFee + (isQuotation ? 0 : vatAmount))}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 2px solid ${ZYRA_BRONZE}; font-size: 18px; font-weight: 900; color: ${ZYRA_DARK};">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 6px; border-top: 2px solid ${ZYRA_BRONZE}; font-size: 14px; font-weight: 900; color: ${ZYRA_DARK};">
               <span>TOTAL PAYABLE:</span>
               <span>${formatCurrency(totalPayable)}</span>
             </div>
             ${!isQuotation ? `
-              <div style="display: flex; justify-content: space-between; margin-top: 15px; font-size: 13px; color: #475569;">
+              <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: #475569;">
                 <span>Amount Received:</span>
                 <span>${formatCurrency(amountReceived)}</span>
               </div>
-              <div style="display: flex; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #cbd5e1; font-size: 14px; font-weight: bold; color: ${outstandingBalance > 0 ? '#dc2626' : '#059669'};">
+              <div style="display: flex; justify-content: space-between; margin-top: 3px; padding-top: 3px; border-top: 1px dashed #cbd5e1; font-size: 12px; font-weight: bold; color: ${outstandingBalance > 0 ? '#dc2626' : '#059669'};">
                 <span>OUTSTANDING BALANCE:</span>
                 <span>${formatCurrency(outstandingBalance)}</span>
               </div>
@@ -212,11 +233,32 @@ function buildDocumentContent(data: PrintData): { documentTitle: string; header:
         </div>
       </div>
       
-      <div style="margin-top: auto; padding-top: 20px; border-top: 1px dashed #cbd5e1; text-align: center; color: #64748b; font-size: 11px;">
-        ${isQuotation 
-          ? `<p><strong>Quotation validity:</strong> ${(data as QuotationData).expiry || '30 days from issuance'}. Government fees are billed strictly at official portal receipts.</p>
-             ${(data as QuotationData).notes ? `<p>Notes: ${(data as QuotationData).notes}</p>` : ''}` 
-          : `<p>Thank you for choosing Zyra Documents Clearance Services.</p><p>This is a system-generated official tax invoice.</p>`}
+      <!-- Terms & Conditions (kept to essentials so a 3-5 line item document stays on one A4 page) -->
+      <div style="page-break-inside: avoid; border: 1px solid #e2e8f0; border-radius: 5px; padding: 6px 10px; margin-bottom: 8px; font-size: 10px; color: #475569;">
+        <strong style="color: ${ZYRA_DARK}; text-transform: uppercase; letter-spacing: 0.3px;">Terms:</strong>
+        <ul style="margin: 2px 0 0 0; padding-left: 14px; line-height: 1.5;">
+          <li>${isQuotation
+            ? `Valid for ${(data as QuotationData).expiry || '30 days from issue date'}; prices subject to change after expiry.`
+            : `Payment due ${data.dueDate ? `by ${data.dueDate}` : (branding.paymentTerms || 'within 14 days of invoice date')}.`}</li>
+          <li>Government fees billed at official portal cost, no markup${!isQuotation ? '; amounts inclusive of 5% VAT on professional fees' : ''}.</li>
+          ${(branding.bankName || branding.iban) ? `<li>Bank Transfer:${branding.bankName ? ` ${branding.bankName}` : ''}${branding.iban ? ` &bull; IBAN: ${branding.iban}` : ''}${branding.swift ? ` &bull; SWIFT: ${branding.swift}` : ''}</li>` : ''}
+        </ul>
+        ${isQuotation && (data as QuotationData).notes ? `<p style="margin: 4px 0 0 0;"><strong>Notes:</strong> ${(data as QuotationData).notes}</p>` : ''}
+      </div>
+
+      <!-- Signatures + footer combined into one slim bar -->
+      <div style="page-break-inside: avoid; display: flex; justify-content: space-between; align-items: flex-end; gap: 20px;">
+        <div style="width: 40%; text-align: center;">
+          <div style="height: 24px;"></div>
+          <div style="border-top: 1px solid #94a3b8; padding-top: 3px; font-size: 9px; color: #64748b;">Authorized Signatory &mdash; ${branding.name}</div>
+        </div>
+        <div style="flex: 1; text-align: center; font-size: 9px; color: #94a3b8;">
+          Thank you for choosing ${branding.name}${branding.portalUrl ? ` &bull; ${branding.portalUrl}` : ''}
+        </div>
+        <div style="width: 40%; text-align: center;">
+          <div style="height: 24px;"></div>
+          <div style="border-top: 1px solid #94a3b8; padding-top: 3px; font-size: 9px; color: #64748b;">Client Acceptance / Stamp &mdash; ${data.clientName}</div>
+        </div>
       </div>
     `;
   } else if (data.type === 'PAYMENT_RECEIPT') {
@@ -307,9 +349,9 @@ function buildDocumentContent(data: PrintData): { documentTitle: string; header:
   return { documentTitle, header, content, whatsappLink };
 }
 
-/** Full standalone HTML page (used for the print/iframe fallback) */
-function generateHTML(data: PrintData): string {
-  const { documentTitle, header, content, whatsappLink } = buildDocumentContent(data);
+/** Pure/sync: assembles the full standalone HTML page once branding+content are known. */
+function assembleHTML(data: PrintData, branding: CompanyBranding): string {
+  const { documentTitle, header, content, whatsappLink } = buildDocumentContent(data, branding);
 
   return `
     <!DOCTYPE html>
@@ -321,13 +363,12 @@ function generateHTML(data: PrintData): string {
       <style>
         body {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-          line-height: 1.5;
+          line-height: 1.25;
           color: #334155;
-          margin: 0;
-          padding: 40px;
+          margin: 0 auto;
+          padding: 24px;
           background-color: white;
           max-width: 800px;
-          margin: 0 auto;
         }
         .action-bar {
           position: sticky;
@@ -372,12 +413,13 @@ function generateHTML(data: PrintData): string {
           }
           @page {
             size: A4;
-            margin: 20mm;
+            margin: 12mm;
           }
           body {
             padding: 0;
             margin: 0;
             max-width: none;
+            font-size: 12px;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -421,8 +463,18 @@ function getFilename(data: PrintData): string {
  * An iframe never opens a new browsing context, so it isn't subject to
  * that block at all.
  */
-export function printViaIframe(data: PrintData): void {
-  const html = generateHTML(data);
+export function printViaIframe(data: PrintData, branding?: CompanyBranding): void {
+  if (!branding) {
+    // No pre-fetched branding: resolve it first, but this reintroduces the
+    // gesture-timing gap the iframe approach otherwise avoids. Callers with
+    // a UI (the document modals) should always pass a pre-fetched branding.
+    getBranding()
+      .catch(() => getDefaultCompanyBranding())
+      .then((b) => printViaIframe(data, b));
+    return;
+  }
+
+  const html = assembleHTML(data, branding);
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
   iframe.style.right = '0';
@@ -459,13 +511,14 @@ export function printViaIframe(data: PrintData): void {
  * entirely in the current tab -- no new window, no Chromium/Puppeteer,
  * so it works the same on mobile and in Vercel's serverless environment.
  */
-export async function downloadDocumentPDF(data: PrintData): Promise<void> {
-  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+export async function downloadDocumentPDF(data: PrintData, branding?: CompanyBranding): Promise<void> {
+  const [{ default: html2canvas }, { jsPDF }, resolvedBranding] = await Promise.all([
     import('html2canvas'),
     import('jspdf'),
+    branding ? Promise.resolve(branding) : getBranding().catch(() => getDefaultCompanyBranding()),
   ]);
 
-  const { header, content } = buildDocumentContent(data);
+  const { header, content } = buildDocumentContent(data, resolvedBranding);
 
   const container = document.createElement('div');
   container.style.position = 'fixed';

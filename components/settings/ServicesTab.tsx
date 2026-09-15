@@ -101,7 +101,7 @@ export function ServicesTab({ initialServices }: { initialServices: any[] }) {
               <th className="px-6 py-4 font-semibold">Service Name</th>
               <th className="px-6 py-4 font-semibold">Category</th>
               <th className="px-6 py-4 font-semibold text-right">Gov Fee (AED)</th>
-              <th className="px-6 py-4 font-semibold text-right">Zyra Fee (AED)</th>
+              <th className="px-6 py-4 font-semibold text-right">Service Fee (AED)</th>
               <th className="px-6 py-4 font-semibold text-center">VAT Status</th>
               <th className="px-6 py-4 font-semibold text-right">Actions</th>
             </tr>
@@ -168,7 +168,7 @@ export function ServicesTab({ initialServices }: { initialServices: any[] }) {
                 <Input type="number" required min="0" step="0.01" value={newService.govFee} onChange={e => setNewService({...newService, govFee: e.target.value})} />
               </div>
               <div className="space-y-2">
-                <Label>Zyra Fee (AED)</Label>
+                <Label>Service Fee (AED)</Label>
                 <Input type="number" required min="0" step="0.01" value={newService.agencyFee} onChange={e => setNewService({...newService, agencyFee: e.target.value})} />
               </div>
             </div>
