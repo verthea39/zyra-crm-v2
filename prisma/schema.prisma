@@ -395,7 +395,7 @@ model QuotationLineItem {
   description    String
   type           String
   quantity       Int     @default(1)
-  unitPriceMinor BigInt
+  unitPriceMinor BigInt  @default(0)
   govReceiptRef  String?
 
   @@index([quotationId])
@@ -443,9 +443,9 @@ model InvoiceLineItem {
   description    String
   type           String
   quantity       Int     @default(1)
-  unitPriceMinor BigInt
+  unitPriceMinor BigInt  @default(0)
   vatRate        Decimal @default(0)
-  lineTotalMinor BigInt
+  lineTotalMinor BigInt  @default(0)
   govReceiptRef  String?
   govReceiptUrl  String?
 
