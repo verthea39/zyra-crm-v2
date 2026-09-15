@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,11 +27,9 @@ export function LineItemEditorSheet({
   proFeeColorClass?: string;
   proFeeBorderClass?: string;
 }) {
+  // Parent should pass a `key` that changes per-item so this remounts fresh
+  // instead of relying on an effect to sync state from a prop.
   const [draft, setDraft] = useState<LineItem>(item);
-
-  useEffect(() => {
-    if (open) setDraft(item);
-  }, [open, item]);
 
   const allPresets = presetServices.flatMap((g) => g.items);
   const isCustom = draft.desc !== "" && !allPresets.some((i) => i.name === draft.desc && i.name !== "Custom / Other Service");

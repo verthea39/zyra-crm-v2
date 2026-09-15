@@ -87,18 +87,28 @@ export async function createDocument(input: CreateDocumentInput) {
 }
 
 export async function getDocuments(type?: DocumentType) {
-  return prisma.document.findMany({
-    where: type ? { type } : undefined,
-    include: { client: true, items: true },
-    orderBy: { createdAt: "desc" },
-  });
+  try {
+    return await prisma.document.findMany({
+      where: type ? { type } : undefined,
+      include: { client: true, items: true },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (err) {
+    console.error("Failed to fetch documents:", err);
+    return [];
+  }
 }
 
 export async function getDocument(id: string) {
-  return prisma.document.findUnique({
-    where: { id },
-    include: { client: true, items: true, caseFile: true },
-  });
+  try {
+    return await prisma.document.findUnique({
+      where: { id },
+      include: { client: true, items: true, caseFile: true },
+    });
+  } catch (err) {
+    console.error("Failed to fetch document:", err);
+    return null;
+  }
 }
 
 export async function updateDocumentStatus(id: string, status: "DRAFT" | "SENT" | "PAID" | "OVERDUE" | "CANCELLED") {
@@ -107,6 +117,7 @@ export async function updateDocumentStatus(id: string, status: "DRAFT" | "SENT" 
     revalidatePath("/documents");
     return { success: true };
   } catch (err) {
+    console.error("Failed to update document status:", err);
     return { success: false, error: "Failed to update status" };
   }
 }
@@ -117,6 +128,7 @@ export async function deleteDocument(id: string) {
     revalidatePath("/documents");
     return { success: true };
   } catch (err) {
+    console.error("Failed to delete document:", err);
     return { success: false, error: "Failed to delete document" };
   }
 }

@@ -1,11 +1,31 @@
-import { MessageCircle, Edit, Trash2, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { MessageCircle, Edit, Trash2 } from "lucide-react";
 import { Client, Transaction } from "@prisma/client";
+import { deleteClient } from "@/app/actions/clients";
+import { toast } from "sonner";
 
 export type ClientWithTransactions = Client & {
   transactions: Transaction[];
 };
 
 export function ClientsTable({ clients }: { clients: ClientWithTransactions[] }) {
+  const router = useRouter();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Delete client "${name}"? This cannot be undone.`)) return;
+    setDeletingId(id);
+    const res = await deleteClient(id);
+    setDeletingId(null);
+    if (res.success) {
+      toast.success("Client deleted");
+      router.refresh();
+    } else {
+      toast.error(res.error || "Failed to delete client");
+    }
+  };
+
   const getDaysRemaining = (dateStr: string | Date | null) => {
     if (!dateStr) return null;
     const diff = new Date(dateStr).getTime() - new Date().getTime();
@@ -140,10 +160,15 @@ Greetings from Zyra Documents Clearance Services. How can our PRO operations tea
                     <MessageCircle className="w-5 h-5" />
                   </span>
                 )}
-                <button className="flex items-center justify-center w-11 h-11 rounded-full text-primary active:scale-95 active:bg-primary/10 transition-transform" title="Edit Profile">
-                  <Edit className="w-5 h-5" />
+                <button className="flex items-center justify-center w-11 h-11 rounded-full text-primary active:scale-95 active:bg-primary/10 transition-transform" title="Edit Profile (coming soon)" disabled>
+                  <Edit className="w-5 h-5 opacity-40" />
                 </button>
-                <button className="flex items-center justify-center w-11 h-11 rounded-full text-rose-500 active:scale-95 active:bg-rose-50 transition-transform" title="Delete Client">
+                <button
+                  onClick={() => handleDelete(client.id, client.name)}
+                  disabled={deletingId === client.id}
+                  className="flex items-center justify-center w-11 h-11 rounded-full text-rose-500 active:scale-95 active:bg-rose-50 transition-transform disabled:opacity-50"
+                  title="Delete Client"
+                >
                   <Trash2 className="w-5 h-5" />
                 </button>
               </div>
@@ -237,10 +262,15 @@ Greetings from Zyra Documents Clearance Services. How can our PRO operations tea
                       ) : (
                         <span className="text-slate-300 cursor-not-allowed" title="No phone number"><MessageCircle className="w-4 h-4" /></span>
                       )}
-                      <button className="text-primary hover:text-primary/80 transition-colors" title="Edit Profile">
+                      <button className="text-primary/40 cursor-not-allowed" title="Edit Profile (coming soon)" disabled>
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button className="text-rose-500 hover:text-rose-400 transition-colors" title="Delete Client">
+                      <button
+                        onClick={() => handleDelete(client.id, client.name)}
+                        disabled={deletingId === client.id}
+                        className="text-rose-500 hover:text-rose-400 transition-colors disabled:opacity-50"
+                        title="Delete Client"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>

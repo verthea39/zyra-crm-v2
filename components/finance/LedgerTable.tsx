@@ -1,5 +1,9 @@
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Transaction } from "@prisma/client";
 import { Edit2, Trash2 } from "lucide-react";
+import { deleteTransaction } from "@/app/actions/finance";
+import { toast } from "sonner";
 
 const formatMoney = (minorUnits: number) => {
   return new Intl.NumberFormat("en-AE", {
@@ -18,6 +22,22 @@ const formatDate = (date: Date) => {
 };
 
 export function LedgerTable({ transactions }: { transactions: Transaction[] }) {
+  const router = useRouter();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (id: string, reference: string) => {
+    if (!confirm(`Delete transaction "${reference}"? This cannot be undone.`)) return;
+    setDeletingId(id);
+    const res = await deleteTransaction(id);
+    setDeletingId(null);
+    if (res.success) {
+      toast.success("Transaction deleted");
+      router.refresh();
+    } else {
+      toast.error(res.error || "Failed to delete transaction");
+    }
+  };
+
   return (
     <div className="mt-6">
       {/* Mobile card view */}
@@ -79,10 +99,14 @@ export function LedgerTable({ transactions }: { transactions: Transaction[] }) {
               </div>
 
               <div className="flex items-center justify-end gap-2 mt-3">
-                <button className="flex items-center justify-center w-11 h-11 rounded-full text-muted-foreground active:scale-95 active:bg-primary/10 hover:text-primary transition-transform">
+                <button disabled title="Edit (coming soon)" className="flex items-center justify-center w-11 h-11 rounded-full text-muted-foreground/40 cursor-not-allowed">
                   <Edit2 className="w-5 h-5" />
                 </button>
-                <button className="flex items-center justify-center w-11 h-11 rounded-full text-muted-foreground active:scale-95 active:bg-rose-50 hover:text-rose-600 transition-transform">
+                <button
+                  onClick={() => handleDelete(tx.id, tx.reference)}
+                  disabled={deletingId === tx.id}
+                  className="flex items-center justify-center w-11 h-11 rounded-full text-muted-foreground active:scale-95 active:bg-rose-50 hover:text-rose-600 transition-transform disabled:opacity-50"
+                >
                   <Trash2 className="w-5 h-5" />
                 </button>
               </div>
@@ -167,10 +191,14 @@ export function LedgerTable({ transactions }: { transactions: Transaction[] }) {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right">
                     <div className="flex items-center justify-end gap-3 text-muted-foreground">
-                      <button className="hover:text-primary transition-colors">
+                      <button disabled title="Edit (coming soon)" className="text-muted-foreground/40 cursor-not-allowed">
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button className="hover:text-rose-600 transition-colors">
+                      <button
+                        onClick={() => handleDelete(tx.id, tx.reference)}
+                        disabled={deletingId === tx.id}
+                        className="hover:text-rose-600 transition-colors disabled:opacity-50"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>

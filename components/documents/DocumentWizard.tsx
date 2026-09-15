@@ -183,6 +183,7 @@ export function DocumentWizard({ clients, defaultType = "INVOICE" }: {
             </div>
 
             <LineItemSheet
+              key={editingIdx ?? "none"}
               open={editingIdx !== null}
               onClose={() => {
                 if (editingIdx !== null && items[editingIdx] && !items[editingIdx].description.trim()) {

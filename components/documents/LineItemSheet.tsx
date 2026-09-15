@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,11 +24,9 @@ export function LineItemSheet({
   item: DraftItem;
   onSave: (item: DraftItem) => void;
 }) {
+  // Parent should pass a `key` that changes per-item so this remounts fresh
+  // instead of relying on an effect to sync state from a prop.
   const [draft, setDraft] = useState<DraftItem>(item);
-
-  useEffect(() => {
-    if (open) setDraft(item);
-  }, [open, item]);
 
   const subtotal = lineTotalMinor({ quantity: draft.quantity, unitPriceMinor: Math.round(draft.unitPrice * 100) });
 

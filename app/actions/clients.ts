@@ -30,3 +30,14 @@ export async function createClient(data: any) {
     return { success: false, error: "Failed to create client profile." };
   }
 }
+
+export async function deleteClient(id: string) {
+  try {
+    await prisma.client.delete({ where: { id } });
+    revalidatePath("/finance/cockpit");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting client:", error);
+    return { success: false, error: "Failed to delete client. They may have linked cases or transactions." };
+  }
+}

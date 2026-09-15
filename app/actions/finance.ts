@@ -132,6 +132,17 @@ export async function createExpense(data: any) {
   }
 }
 
+export async function deleteTransaction(id: string) {
+  try {
+    await prisma.transaction.delete({ where: { id } });
+    revalidatePath("/finance/cockpit");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting transaction:", error);
+    return { success: false, error: "Failed to delete transaction." };
+  }
+}
+
 export async function getPendingInvoices(clientId: string) {
   try {
     const invoices = await prisma.transaction.findMany({

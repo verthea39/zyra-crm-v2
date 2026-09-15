@@ -358,6 +358,7 @@ export function TaxInvoiceModal({ open, onOpenChange, clients }: { open: boolean
           </div>
 
           <LineItemEditorSheet
+            key={editingIdx ?? "none"}
             open={editingIdx !== null}
             onClose={() => {
               if (editingIdx !== null && items[editingIdx] && !items[editingIdx].desc) {

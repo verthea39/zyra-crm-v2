@@ -181,9 +181,15 @@ export function VaultView({ initialDocuments, clients }: { initialDocuments: any
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="p-2 text-slate-400 hover:text-[#98682E] bg-white border border-slate-200 rounded-md shadow-sm transition" title="Download / View">
-                          <Download className="w-4 h-4" />
-                        </button>
+                        {doc.fileUrl ? (
+                          <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="p-2 text-slate-400 hover:text-[#98682E] bg-white border border-slate-200 rounded-md shadow-sm transition" title="Download / View">
+                            <Download className="w-4 h-4" />
+                          </a>
+                        ) : (
+                          <span className="p-2 text-slate-200 bg-white border border-slate-200 rounded-md shadow-sm cursor-not-allowed" title="No file attached">
+                            <Download className="w-4 h-4" />
+                          </span>
+                        )}
                         <button onClick={() => sendWhatsAppAlert(doc)} className="p-2 text-slate-400 hover:text-[#25D366] bg-white border border-slate-200 rounded-md shadow-sm transition" title="WhatsApp Alert">
                           <MessageCircle className="w-4 h-4" />
                         </button>
@@ -230,9 +236,15 @@ export function VaultView({ initialDocuments, clients }: { initialDocuments: any
                 </div>
                 
                 <div className="flex gap-2 mt-2 pt-3 border-t border-slate-100">
-                  <button className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold uppercase">
-                    <Download className="w-3.5 h-3.5" /> View
-                  </button>
+                  {doc.fileUrl ? (
+                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="flex-1 flex justify-center items-center gap-1.5 py-2 min-h-[44px] bg-slate-100 text-slate-600 rounded-lg text-xs font-bold uppercase active:scale-95 transition-transform">
+                      <Download className="w-3.5 h-3.5" /> View
+                    </a>
+                  ) : (
+                    <span className="flex-1 flex justify-center items-center gap-1.5 py-2 min-h-[44px] bg-slate-50 text-slate-300 rounded-lg text-xs font-bold uppercase cursor-not-allowed">
+                      <Download className="w-3.5 h-3.5" /> No File
+                    </span>
+                  )}
                   <button onClick={() => sendWhatsAppAlert(doc)} className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-colors rounded-lg text-xs font-bold uppercase">
                     <MessageCircle className="w-3.5 h-3.5" /> Alert
                   </button>
