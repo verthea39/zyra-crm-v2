@@ -85,6 +85,8 @@ export function NewCaseModal({ onClose, clients, coordinators }: { onClose: () =
                 <option value="Visa Cancellation">Visa Cancellation</option>
                 <option value="Family Visa">Family Visa</option>
                 <option value="Freelance Permit">Freelance Permit</option>
+                <option value="Trade License Renewal">Trade License Renewal</option>
+                <option value="Business Setup">Business Setup</option>
               </select>
             </div>
 

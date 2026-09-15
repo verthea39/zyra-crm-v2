@@ -1,26 +1,107 @@
 "use client";
 
 import { useState } from "react";
-import { Send, FileSignature, FileText, Activity, CheckCircle, AlertTriangle, Receipt } from "lucide-react";
+import { Send, FileSignature, FileText, Activity, CheckCircle, ClipboardCheck, Wallet, ShieldCheck, BadgeCheck } from "lucide-react";
 import { logWhatsAppDispatch } from "@/app/actions/client-hub";
 import { toast } from "sonner";
 
-const MILESTONES = [
-  { id: "OFFER_LETTER", label: "Offer Letter Signed", icon: FileSignature, color: "bg-blue-100 text-blue-700" },
-  { id: "ENTRY_PERMIT", label: "Entry Permit Issued", icon: FileText, color: "bg-purple-100 text-purple-700" },
-  { id: "MEDICAL_PASSED", label: "Medical Fitness Passed", icon: Activity, color: "bg-emerald-100 text-emerald-700" },
-  { id: "VISA_STAMPED", label: "Visa Stamped / EID", icon: CheckCircle, color: "bg-[#98682E]/20 text-[#98682E]" },
-  { id: "RENEWAL_WARNING", label: "Renewal Warning", icon: AlertTriangle, color: "bg-amber-100 text-amber-700" },
-  { id: "PAYMENT_RECEIPT", label: "Balance Statement", icon: Receipt, color: "bg-slate-200 text-slate-700" },
+type Milestone = {
+  id: string;
+  label: string;
+  icon: typeof FileSignature;
+  color: string;
+  message: (ctx: { clientName: string; reference: string; serviceType: string }) => string;
+};
+
+const VISA_MILESTONES: Milestone[] = [
+  {
+    id: "OFFER_LETTER",
+    label: "Offer Letter Signed",
+    icon: FileSignature,
+    color: "bg-blue-100 text-blue-700",
+    message: ({ serviceType }) =>
+      `We have successfully initiated your MOHRE application for ${serviceType}. Your offer letter is signed and submitted.\n`,
+  },
+  {
+    id: "ENTRY_PERMIT",
+    label: "Entry Permit Issued",
+    icon: FileText,
+    color: "bg-purple-100 text-purple-700",
+    message: ({ reference }) => `Good news! Your Entry Permit (e-Visa) has been issued for Case Ref: ${reference}.\n`,
+  },
+  {
+    id: "MEDICAL_PASSED",
+    label: "Medical Fitness Passed",
+    icon: Activity,
+    color: "bg-emerald-100 text-emerald-700",
+    message: () => `Your Medical Fitness test has been passed successfully. We are now proceeding with the final visa stamping.\n`,
+  },
+  {
+    id: "VISA_STAMPED",
+    label: "Visa Stamped / EID",
+    icon: CheckCircle,
+    color: "bg-[#98682E]/20 text-[#98682E]",
+    message: ({ reference }) =>
+      `Congratulations! Your Residence Visa has been stamped and your Emirates ID is being processed. Your file (${reference}) is complete.\n`,
+  },
 ];
+
+const LICENSE_MILESTONES: Milestone[] = [
+  {
+    id: "EJARI_SUBMITTED",
+    label: "Ejari / Lease Renewal Submitted",
+    icon: ClipboardCheck,
+    color: "bg-blue-100 text-blue-700",
+    message: ({ clientName }) =>
+      `Your Ejari / lease renewal has been submitted on behalf of ${clientName}. We will notify you once the payment voucher is issued.\n`,
+  },
+  {
+    id: "PAYMENT_VOUCHER",
+    label: "Payment Voucher Issued",
+    icon: Wallet,
+    color: "bg-amber-100 text-amber-700",
+    message: ({ clientName, reference }) =>
+      `A payment voucher has been issued by DED / the Freezone Authority for ${clientName}'s trade license renewal (Ref: ${reference}). Please arrange payment to proceed.\n`,
+  },
+  {
+    id: "EXTERNAL_CLEARANCES",
+    label: "External Clearances Approved",
+    icon: ShieldCheck,
+    color: "bg-purple-100 text-purple-700",
+    message: ({ clientName }) =>
+      `External clearances (Civil Defense / Municipality) for ${clientName} have been approved. Your trade license renewal is in its final stage.\n`,
+  },
+  {
+    id: "LICENSE_RENEWED",
+    label: "Trade License Renewed & Delivered",
+    icon: BadgeCheck,
+    color: "bg-emerald-100 text-emerald-700",
+    message: ({ clientName, reference }) =>
+      `Congratulations! ${clientName}'s trade license has been renewed and delivered. Your file (${reference}) is now complete.\n`,
+  },
+];
+
+const LICENSE_KEYWORDS = ["license", "licence", "trade license", "business setup", "renewal"];
+
+function getMilestonesForCase(serviceType: string | undefined): Milestone[] {
+  const s = (serviceType || "").toLowerCase();
+  // "Visa Renewal" contains "renewal" too, so exclude explicit visa/employment
+  // service types before falling back to the renewal/license keyword match.
+  const isVisaType = s.includes("visa") || s.includes("employment") || s.includes("permit");
+  if (!isVisaType && LICENSE_KEYWORDS.some((k) => s.includes(k))) {
+    return LICENSE_MILESTONES;
+  }
+  return VISA_MILESTONES;
+}
 
 export function WhatsAppDispatcher({ cases }: { cases: any[] }) {
   const [selectedCaseId, setSelectedCaseId] = useState("");
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const selectedCase = cases.find(c => c.id === selectedCaseId);
+  const milestones = getMilestonesForCase(selectedCase?.serviceType);
 
-  const handleDispatch = async (templateId: string, label: string) => {
+  const handleDispatch = async (milestone: Milestone) => {
     if (!selectedCase) {
       toast.error("Please select a case first");
       return;
@@ -32,39 +113,17 @@ export function WhatsAppDispatcher({ cases }: { cases: any[] }) {
       return;
     }
 
-    setLoadingId(templateId);
+    setLoadingId(milestone.id);
 
-    // Build the dynamic message
     const baseUrl = window.location.origin;
     const trackingLink = `${baseUrl}/track/${selectedCase.trackingToken}`;
-    
-    let text = `Dear ${selectedCase.client?.name || 'Client'},\n\nGreetings from Zyra Documents Clearance Services.\n\n`;
-    
-    switch (templateId) {
-      case "OFFER_LETTER":
-        text += `We have successfully initiated your MOHRE application for ${selectedCase.serviceType}. Your offer letter is signed and submitted.\n`;
-        break;
-      case "ENTRY_PERMIT":
-        text += `Good news! Your Entry Permit (e-Visa) has been issued for Case Ref: ${selectedCase.reference}.\n`;
-        break;
-      case "MEDICAL_PASSED":
-        text += `Your Medical Fitness test has been passed successfully. We are now proceeding with the final visa stamping.\n`;
-        break;
-      case "VISA_STAMPED":
-        text += `Congratulations! Your Residence Visa has been stamped and your Emirates ID is being processed. Your file (${selectedCase.reference}) is complete.\n`;
-        break;
-      case "RENEWAL_WARNING":
-        text += `This is a courtesy reminder that your documents for ${selectedCase.serviceType} are due for renewal soon. Please let us know if you'd like our PRO team to assist.\n`;
-        break;
-      case "PAYMENT_RECEIPT":
-        text += `This is an update regarding your balance for Case Ref: ${selectedCase.reference}. Please check your portal for the latest statement.\n`;
-        break;
-    }
+    const clientName = selectedCase.client?.name || "Client";
 
+    let text = `Dear ${clientName},\n\nGreetings from Zyra Documents Clearance Services.\n\n`;
+    text += milestone.message({ clientName, reference: selectedCase.reference, serviceType: selectedCase.serviceType });
     text += `\nYou can track your live application status and download approved documents securely here:\n${trackingLink}\n\nBest Regards,\nZyra Operations Team, Dubai`;
 
-    // Log the dispatch
-    const res = await logWhatsAppDispatch(selectedCase.id, selectedCase.clientId, label, phone);
+    const res = await logWhatsAppDispatch(selectedCase.id, selectedCase.clientId, milestone.label, phone);
     setLoadingId(null);
 
     if (res.success) {
@@ -92,7 +151,7 @@ export function WhatsAppDispatcher({ cases }: { cases: any[] }) {
             </option>
           ))}
         </select>
-        
+
         {selectedCase && (
           <div className="mt-4 p-4 bg-slate-50  rounded-lg border border-slate-100 ">
             <div className="flex justify-between items-center">
@@ -106,20 +165,27 @@ export function WhatsAppDispatcher({ cases }: { cases: any[] }) {
       </div>
 
       <div className="p-6 flex-1 overflow-y-auto">
-        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">2. Dispatch WhatsApp Milestone</label>
-        
+        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">
+          2. Dispatch WhatsApp Milestone
+          {selectedCase && (
+            <span className="ml-2 normal-case font-normal text-slate-400">
+              ({milestones === LICENSE_MILESTONES ? "Trade License Renewal workflow" : "Visa / Employment workflow"})
+            </span>
+          )}
+        </label>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {MILESTONES.map(m => {
+          {milestones.map(m => {
             const Icon = m.icon;
             const isLoading = loadingId === m.id;
             return (
               <button
                 key={m.id}
                 disabled={!selectedCase || isLoading}
-                onClick={() => handleDispatch(m.id, m.label)}
+                onClick={() => handleDispatch(m)}
                 className={`p-4 rounded-xl border flex flex-col items-start gap-3 transition-all text-left ${
-                  selectedCase 
-                    ? 'border-slate-200  hover:border-[#25D366] hover:shadow-md bg-white  cursor-pointer group' 
+                  selectedCase
+                    ? 'border-slate-200  hover:border-[#25D366] hover:shadow-md bg-white  cursor-pointer group'
                     : 'border-slate-100  bg-slate-50  opacity-60 cursor-not-allowed'
                 }`}
               >
