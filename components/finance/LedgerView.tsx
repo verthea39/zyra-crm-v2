@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Transaction } from "@prisma/client";
 import { FilterStrip } from "./FilterStrip";
 import { LedgerTable } from "./LedgerTable";
@@ -21,12 +22,27 @@ export function LedgerView({
   totalClients: number;
 }) {
   const [activeTab, setActiveTab] = useState<'ledger' | 'clients'>('ledger');
+  const searchParams = useSearchParams();
 
   // Ledger Filter State
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("Type: All");
   const [statusFilter, setStatusFilter] = useState("Status: All");
   const [sortOrder, setSortOrder] = useState("Latest / Newest");
+
+  // Allow the dashboard metric cards to deep-link into a pre-filtered ledger view
+  useEffect(() => {
+    const type = searchParams.get("type");
+    const status = searchParams.get("status");
+    if (type === "Income" || type === "Expense") {
+      setTypeFilter(type);
+      setActiveTab("ledger");
+    }
+    if (status === "Pending" || status === "Overdue" || status === "Paid" || status === "Partially Paid") {
+      setStatusFilter(status);
+      setActiveTab("ledger");
+    }
+  }, [searchParams]);
 
   // Clients Filter State
   const [clientSearch, setClientSearch] = useState("");

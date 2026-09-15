@@ -114,7 +114,7 @@ export default async function DashboardPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8">
+    <div className="min-h-screen bg-[#F8FAFC] p-4 pb-24 md:p-8 md:pb-8 overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
         <DailyUrgencyStrip data={urgencyData} />
         
