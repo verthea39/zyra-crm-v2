@@ -4,6 +4,13 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { calculateDocumentTotals, lineTotalMinor, DEFAULT_VAT_RATE } from "@/lib/calculations";
 import type { DocumentType } from "@prisma/client";
+import { logActivity } from "@/lib/activity";
+
+const ACTION_BY_TYPE: Record<DocumentType, string> = {
+  INVOICE: "INVOICE_ISSUED",
+  QUOTATION: "QUOTATION_CREATED",
+  RECEIPT: "RECEIPT_CREATED",
+};
 
 export type DocumentItemInput = {
   description: string;
@@ -77,11 +84,20 @@ export async function createDocument(input: CreateDocumentInput) {
           })),
         },
       },
-      include: { items: true },
+      include: { items: true, client: true },
     });
 
     revalidatePath("/documents");
     revalidatePath("/dashboard");
+
+    await logActivity({
+      action: ACTION_BY_TYPE[input.type],
+      title: `${input.type.charAt(0) + input.type.slice(1).toLowerCase()} #${doc.reference} created for ${doc.client.name}`,
+      details: { documentId: doc.id, totalMinor: doc.totalMinor, clientId: doc.clientId },
+      entityType: input.type,
+      entityId: doc.id,
+    });
+
     return { success: true, document: doc };
   } catch (err) {
     console.error("Failed to create document:", err);
@@ -126,12 +142,21 @@ export async function updateDocument(id: string, input: UpdateDocumentInput) {
             })),
           },
         },
-        include: { items: true },
+        include: { items: true, client: true },
       });
     });
 
     revalidatePath("/documents");
     revalidatePath(`/documents/${id}`);
+
+    await logActivity({
+      action: `${doc.type}_UPDATED`,
+      title: `${doc.type.charAt(0) + doc.type.slice(1).toLowerCase()} #${doc.reference} updated for ${doc.client.name}`,
+      details: { documentId: doc.id, totalMinor: doc.totalMinor },
+      entityType: doc.type,
+      entityId: doc.id,
+    });
+
     return { success: true, document: doc };
   } catch (err) {
     console.error("Failed to update document:", err);
@@ -166,8 +191,20 @@ export async function getDocument(id: string) {
 
 export async function updateDocumentStatus(id: string, status: "DRAFT" | "SENT" | "PAID" | "OVERDUE" | "CANCELLED") {
   try {
+    const existing = await prisma.document.findUnique({ where: { id }, select: { status: true, type: true, reference: true } });
     await prisma.document.update({ where: { id }, data: { status } });
     revalidatePath("/documents");
+
+    if (existing) {
+      await logActivity({
+        action: "STATUS_UPDATED",
+        title: `${existing.type.charAt(0) + existing.type.slice(1).toLowerCase()} #${existing.reference} status changed to ${status}`,
+        details: { documentId: id, previousStatus: existing.status, newStatus: status },
+        entityType: existing.type,
+        entityId: id,
+      });
+    }
+
     return { success: true };
   } catch (err) {
     console.error("Failed to update document status:", err);

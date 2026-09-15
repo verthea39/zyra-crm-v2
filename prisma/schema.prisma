@@ -378,3 +378,17 @@ model AuditLog {
 
   @@index([userId])
 }
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  action     String   // e.g. "QUOTATION_CREATED", "INVOICE_ISSUED", "PAYMENT_RECORDED", "STATUS_UPDATED", "CLIENT_ADDED"
+  title      String   // e.g. "Quotation #QT-2026-004 created for Look line Technical service Co LLC"
+  details    Json?    // flexible metadata: amount, previousStatus, newStatus, documentId, etc.
+  entityType String   // e.g. "QUOTATION", "INVOICE", "PAYMENT", "CLIENT", "CASE", "WALLET"
+  entityId   String?
+  actorName  String   @default("Admin User")
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}

@@ -7,8 +7,17 @@ import { toast } from "sonner";
 import { formatMoney } from "@/lib/calculations";
 import { deleteDocument } from "@/app/actions/documents";
 import type { CompanyBranding } from "@/lib/companyBranding";
-import { Pencil, Printer, Trash2, FileText, FileSignature, Receipt } from "lucide-react";
+import { Pencil, Printer, Trash2, FileText, FileSignature, Receipt, History } from "lucide-react";
 import { ZYRA_LOGO_GOLD_PATH } from "@/lib/brandAssets";
+import { formatDistanceToNow } from "date-fns";
+
+type ActivityEntry = {
+  id: string;
+  action: string;
+  title: string;
+  actorName: string;
+  createdAt: string | Date;
+};
 
 const TYPE_ICON = { INVOICE: FileText, QUOTATION: FileSignature, RECEIPT: Receipt };
 
@@ -38,7 +47,7 @@ type DocumentWithRelations = {
   items: { id: string; description: string; quantity: number; unitPriceMinor: number; lineTotalMinor: number; vatExempt: boolean }[];
 };
 
-export function DocumentDetail({ document, branding }: { document: DocumentWithRelations; branding: CompanyBranding }) {
+export function DocumentDetail({ document, branding, activity = [] }: { document: DocumentWithRelations; branding: CompanyBranding; activity?: ActivityEntry[] }) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
   const typeLabel = document.type.charAt(0) + document.type.slice(1).toLowerCase();
@@ -213,6 +222,34 @@ export function DocumentDetail({ document, branding }: { document: DocumentWithR
             <div className="border-t border-slate-400 pt-1 text-[9px] text-muted-foreground">Client Acceptance / Stamp &mdash; {document.client.name}</div>
           </div>
         </div>
+      </div>
+
+      {/* Audit History -- never shown on print */}
+      <div className="print:hidden mt-4 bg-card border border-border rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <History className="w-4 h-4 text-muted-foreground" />
+          <h3 className="text-sm font-bold text-foreground">Audit History</h3>
+        </div>
+        {activity.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No recorded activity for this document yet.</p>
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            {activity.map((entry) => (
+              <div key={entry.id} className="flex items-start justify-between gap-3 text-xs">
+                <p className="text-foreground leading-snug">{entry.title}</p>
+                <span className="text-muted-foreground shrink-0 whitespace-nowrap">
+                  {(() => {
+                    try {
+                      return formatDistanceToNow(new Date(entry.createdAt), { addSuffix: true });
+                    } catch {
+                      return "";
+                    }
+                  })()}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

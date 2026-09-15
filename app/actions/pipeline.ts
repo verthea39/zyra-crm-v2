@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { logActivity } from "@/lib/activity";
 
 export async function getCases() {
   try {
@@ -27,14 +28,31 @@ export async function getCases() {
 
 export async function advanceCaseStage(caseId: string, newStage: string) {
   try {
+    const existing = await prisma.caseFile.findUnique({
+      where: { id: caseId },
+      select: { stage: true, reference: true, client: { select: { name: true } } },
+    });
+
     const updatedCase = await prisma.caseFile.update({
       where: { id: caseId },
-      data: { 
+      data: {
         stage: newStage as any,
         stageUpdatedAt: new Date()
       }
     });
     revalidatePath("/pipeline");
+    revalidatePath("/dashboard");
+
+    if (existing) {
+      await logActivity({
+        action: "STATUS_UPDATED",
+        title: `Case ${existing.reference} (${existing.client?.name || "Unknown Client"}) moved to ${newStage}`,
+        details: { caseId, previousStage: existing.stage, newStage },
+        entityType: "CASE",
+        entityId: caseId,
+      });
+    }
+
     return { success: true, case: updatedCase };
   } catch (error) {
     console.error("Error updating case stage:", error);

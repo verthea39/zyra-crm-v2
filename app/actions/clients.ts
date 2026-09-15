@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { logActivity } from "@/lib/activity";
 
 export async function createClient(data: any) {
   try {
@@ -25,6 +26,15 @@ export async function createClient(data: any) {
     });
 
     revalidatePath("/finance/cockpit");
+
+    await logActivity({
+      action: "CLIENT_ADDED",
+      title: `Client "${client.name}" added`,
+      details: { clientId: client.id, type: client.type },
+      entityType: "CLIENT",
+      entityId: client.id,
+    });
+
     return { success: true, client };
   } catch (error) {
     console.error("Error creating client:", error);

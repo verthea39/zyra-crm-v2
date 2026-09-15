@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { computeTransactionStatus } from "@/lib/calculations";
+import { logActivity } from "@/lib/activity";
 
 export async function createIncome(data: any) {
   try {
@@ -210,6 +211,21 @@ export async function recordPayment(input: RecordPaymentInput) {
     });
 
     revalidatePath("/finance/cockpit");
+    revalidatePath("/dashboard");
+
+    await logActivity({
+      action: "PAYMENT_RECORDED",
+      title: `Payment of AED ${(amountMinor / 100).toFixed(2)} recorded against ${result.transaction.reference}`,
+      details: {
+        transactionId: input.transactionId,
+        amountMinor,
+        method: input.method,
+        remainingBalance: result.transaction.amountTotal - result.transaction.amountPaid,
+      },
+      entityType: "PAYMENT",
+      entityId: result.payment.id,
+    });
+
     return {
       success: true,
       payment: result.payment,

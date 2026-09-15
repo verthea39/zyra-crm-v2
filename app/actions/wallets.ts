@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { logActivity } from "@/lib/activity";
 
 const DEFAULT_PORTALS = ["MOHRE", "Amer / GDRFA", "ICP Smart Services", "DED / Dubai Economy"];
 
@@ -93,12 +94,21 @@ export async function topUpWallet({ walletId, amount, receiptRef, description, d
         }
       });
 
-      return transaction;
+      return { transaction, entityName: wallet.entityName };
     });
 
     revalidatePath("/portal-wallets");
     revalidatePath("/finance/cockpit");
-    return { success: true, transaction: result };
+
+    await logActivity({
+      action: "WALLET_TOPUP",
+      title: `${result.entityName} wallet topped up by AED ${amount.toFixed(2)}`,
+      details: { walletId, amount, receiptRef },
+      entityType: "WALLET",
+      entityId: walletId,
+    });
+
+    return { success: true, transaction: result.transaction };
   } catch (error: any) {
     console.error("Error topping up wallet:", error);
     return { success: false, error: error.message || "Failed to top up wallet" };
@@ -155,12 +165,21 @@ export async function deductWallet({
         data: dataPayload
       });
 
-      return transaction;
+      return { transaction, entityName: wallet.entityName };
     });
 
     revalidatePath("/portal-wallets");
     revalidatePath("/finance/cockpit");
-    return { success: true, transaction: result };
+
+    await logActivity({
+      action: "WALLET_DEDUCTION",
+      title: `AED ${amount.toFixed(2)} deducted from ${result.entityName} wallet`,
+      details: { walletId, amount, description, receiptRef },
+      entityType: "WALLET",
+      entityId: walletId,
+    });
+
+    return { success: true, transaction: result.transaction };
   } catch (error: any) {
     console.error("Error deducting from wallet:", error);
     return { success: false, error: error.message || "Failed to log deduction" };
