@@ -143,83 +143,40 @@ function buildDocumentContent(
       { desc: isQuotation ? 'Professional Service Fee' : 'Professional PRO & Agency Fee', govCost, proFee }
     ];
 
-    let govRows = '';
-    let proRows = '';
-    
+    const subtotal = govCost + proFee;
+
+    let itemRows = '';
     items.forEach((item: LineItem, i: number) => {
-      govRows += `
+      const lineTotal = item.govCost + item.proFee;
+      itemRows += `
         <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid;">
           <td style="padding: 3px 6px; text-align: center;">${i + 1}</td>
           <td style="padding: 3px 6px;">${item.desc}</td>
-          <td style="padding: 3px 6px; text-align: right;">${formatCurrency(item.govCost)}</td>
-        </tr>
-      `;
-
-      const itemVat = isQuotation ? 0 : item.proFee * 0.05;
-      const itemTotal = item.proFee + itemVat;
-
-      proRows += `
-        <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid;">
-          <td style="padding: 3px 6px; text-align: center;">${i + 1}</td>
-          <td style="padding: 3px 6px;">${item.desc}</td>
-          <td style="padding: 3px 6px; text-align: right;">${formatCurrency(item.proFee)}</td>
-          <td style="padding: 3px 6px; text-align: right;">${isQuotation ? 'N/A' : formatCurrency(itemVat)}</td>
-          <td style="padding: 3px 6px; text-align: right;">${formatCurrency(itemTotal)}</td>
+          <td style="padding: 3px 6px; text-align: center;">1</td>
+          <td style="padding: 3px 6px; text-align: right;">${formatCurrency(lineTotal)}</td>
+          <td style="padding: 3px 6px; text-align: right;">${formatCurrency(lineTotal)}</td>
         </tr>
       `;
     });
 
-    // Skip rendering an entire table when it has no billable amount at all,
-    // rather than showing a clutter row of AED 0.00.
-    const govTableHtml = govCost > 0 ? `
-      <div style="margin-bottom: 10px; page-break-inside: avoid;">
-        <h3 style="color: ${ZYRA_DARK}; font-size: 11px; margin: 0 0 3px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px;">Government Clearance Pass-Throughs (0% VAT)</h3>
-        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-          <thead>
-            <tr style="background-color: #f8fafc; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
-              <th style="padding: 4px 6px; text-align: center; width: 36px;">#</th>
-              <th style="padding: 4px 6px; text-align: left;">Government Entity & Service</th>
-              <th style="padding: 4px 6px; text-align: right; width: 120px;">Portal Fee (AED)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${govRows}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colspan="2" style="padding: 4px 6px; text-align: right; font-weight: bold;">Subtotal Government Fees:</td>
-              <td style="padding: 4px 6px; text-align: right; font-weight: bold; background-color: #f8fafc;">${formatCurrency(govCost)}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    ` : '';
-
-    const proTableHtml = proFee > 0 ? `
+    const itemsTableHtml = `
       <div style="margin-bottom: 12px; page-break-inside: avoid;">
-        <h3 style="color: ${ZYRA_DARK}; font-size: 11px; margin: 0 0 3px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px;">Professional PRO & Agency Service Charges (Taxable)</h3>
         <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
           <thead>
             <tr style="background-color: #f8fafc; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
               <th style="padding: 4px 6px; text-align: center; width: 36px;">#</th>
-              <th style="padding: 4px 6px; text-align: left;">Service Description</th>
-              <th style="padding: 4px 6px; text-align: right; width: 100px;">Fee (AED)</th>
-              <th style="padding: 4px 6px; text-align: right; width: 90px;">VAT (5%)</th>
-              <th style="padding: 4px 6px; text-align: right; width: 100px;">Total (AED)</th>
+              <th style="padding: 4px 6px; text-align: left;">Description / Service Details</th>
+              <th style="padding: 4px 6px; text-align: center; width: 50px;">Qty</th>
+              <th style="padding: 4px 6px; text-align: right; width: 110px;">Unit Price (AED)</th>
+              <th style="padding: 4px 6px; text-align: right; width: 110px;">Total (AED)</th>
             </tr>
           </thead>
           <tbody>
-            ${proRows}
+            ${itemRows}
           </tbody>
-          <tfoot>
-            <tr>
-              <td colspan="4" style="padding: 4px 6px; text-align: right; font-weight: bold;">Subtotal Agency Fees + VAT:</td>
-              <td style="padding: 4px 6px; text-align: right; font-weight: bold; background-color: #f8fafc;">${formatCurrency(proFee + (isQuotation ? 0 : vatAmount))}</td>
-            </tr>
-          </tfoot>
         </table>
       </div>
-    ` : '';
+    `;
 
     const paidBadge = !isQuotation
       ? amountReceived <= 0
@@ -230,25 +187,20 @@ function buildDocumentContent(
       : '';
 
     content = `
-      ${govTableHtml}
-      ${proTableHtml}
+      ${itemsTableHtml}
 
-      <!-- Grand Total Calculation Strip -->
+      <!-- Clean Financial Summary -->
       <div style="display: flex; justify-content: flex-end; margin-bottom: 12px; page-break-inside: avoid;">
         <div style="width: 300px; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden;">
           <div style="padding: 8px 12px; background-color: #f8fafc;">
-            ${govCost > 0 ? `
-              <div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 11px; color: #475569;">
-                <span>Total Government Outflow:</span>
-                <span>${formatCurrency(govCost)}</span>
-              </div>
-            ` : ''}
-            ${proFee > 0 ? `
-              <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px; color: #475569;">
-                <span>Total Professional & VAT:</span>
-                <span>${formatCurrency(proFee + (isQuotation ? 0 : vatAmount))}</span>
-              </div>
-            ` : ''}
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 11px; color: #475569;">
+              <span>Subtotal:</span>
+              <span>${formatCurrency(subtotal)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px; color: #475569;">
+              <span>VAT (5%):</span>
+              <span>${formatCurrency(isQuotation ? 0 : vatAmount)}</span>
+            </div>
             <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 6px; border-top: 2px solid ${ZYRA_BRONZE}; font-size: 14px; font-weight: 900; color: ${ZYRA_DARK};">
               <span>TOTAL PAYABLE: ${paidBadge}</span>
               <span>${formatCurrency(totalPayable)}</span>
