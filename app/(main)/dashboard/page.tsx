@@ -15,68 +15,86 @@ export default async function DashboardPage() {
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
   const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-  // Fetch all necessary data in parallel
-  const [
-    criticalDocs,
-    medicalCases,
-    pendingCases,
-    wallets,
-    activeCases,
-    upcomingDocs,
-    clients,
-    todayPayments,
-    todayExpenses
-  ] = await Promise.all([
-    prisma.documentVault.count({
-      where: {
-        expiryDate: { lte: next48h, gte: now }
-      }
-    }),
-    prisma.caseFile.count({
-      where: { stage: "MEDICAL_BIOMETRICS" }
-    }),
-    prisma.caseFile.count({
-      where: { stage: "SUBMITTED" }
-    }),
-    prisma.portalWallet.findMany(),
-    prisma.caseFile.findMany({
-      where: {
-        stage: { notIn: ["COMPLETED", "COMPLETED_HANDOVER"] }
-      },
-      include: {
-        client: true
-      },
-      orderBy: {
-        stageUpdatedAt: 'desc'
-      },
-      take: 10
-    }),
-    prisma.documentVault.findMany({
-      where: {
-        expiryDate: { lte: next30d, gte: now }
-      },
-      include: {
-        client: true,
-        employee: true
-      },
-      orderBy: {
-        expiryDate: 'asc'
-      },
-      take: 15
-    }),
-    prisma.client.findMany({
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.transactionPayment.findMany({
-      where: { paidAt: { gte: startOfDay, lte: endOfDay } },
-      include: { transaction: true },
-      orderBy: { paidAt: 'desc' }
-    }),
-    prisma.transaction.findMany({
-      where: { type: 'EXPENSE', date: { gte: startOfDay, lte: endOfDay } },
-      orderBy: { date: 'desc' }
-    })
-  ]);
+  // Fetch all necessary data in parallel. If the database is unreachable
+  // (cold pooler, network blip, project paused) fall back to empty/zeroed
+  // data instead of letting the whole page crash with a 500 overlay.
+  let dbError = false;
+  let criticalDocs = 0;
+  let medicalCases = 0;
+  let pendingCases = 0;
+  let wallets: any[] = [];
+  let activeCases: any[] = [];
+  let upcomingDocs: any[] = [];
+  let clients: any[] = [];
+  let todayPayments: any[] = [];
+  let todayExpenses: any[] = [];
+
+  try {
+    [
+      criticalDocs,
+      medicalCases,
+      pendingCases,
+      wallets,
+      activeCases,
+      upcomingDocs,
+      clients,
+      todayPayments,
+      todayExpenses
+    ] = await Promise.all([
+      prisma.documentVault.count({
+        where: {
+          expiryDate: { lte: next48h, gte: now }
+        }
+      }),
+      prisma.caseFile.count({
+        where: { stage: "MEDICAL_BIOMETRICS" }
+      }),
+      prisma.caseFile.count({
+        where: { stage: "SUBMITTED" }
+      }),
+      prisma.portalWallet.findMany(),
+      prisma.caseFile.findMany({
+        where: {
+          stage: { notIn: ["COMPLETED", "COMPLETED_HANDOVER"] }
+        },
+        include: {
+          client: true
+        },
+        orderBy: {
+          stageUpdatedAt: 'desc'
+        },
+        take: 10
+      }),
+      prisma.documentVault.findMany({
+        where: {
+          expiryDate: { lte: next30d, gte: now }
+        },
+        include: {
+          client: true,
+          employee: true
+        },
+        orderBy: {
+          expiryDate: 'asc'
+        },
+        take: 15
+      }),
+      prisma.client.findMany({
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.transactionPayment.findMany({
+        where: { paidAt: { gte: startOfDay, lte: endOfDay } },
+        include: { transaction: true },
+        orderBy: { paidAt: 'desc' }
+      }),
+      prisma.transaction.findMany({
+        where: { type: 'EXPENSE', date: { gte: startOfDay, lte: endOfDay } },
+        orderBy: { date: 'desc' }
+      })
+    ]);
+  } catch (error) {
+    console.error("Dashboard: database unreachable, rendering with empty data:", error);
+    dbError = true;
+  }
 
   const lowBalanceWallets = wallets.filter((w: any) => w.balance < 2000).length;
 
@@ -154,6 +172,11 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-4 pb-24 md:p-8 md:pb-8 overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
+        {dbError && (
+          <div className="mb-4 px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-sm font-medium">
+            Couldn't reach the database right now, so this page is showing empty data. It should recover automatically — refresh in a moment.
+          </div>
+        )}
         <DailyUrgencyStrip data={urgencyData} />
         
         <QuickActionsBar clients={clients} />
