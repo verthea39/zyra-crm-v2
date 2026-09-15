@@ -54,6 +54,71 @@ enum TransactionStatus {
   OVERDUE
 }
 
+enum DocumentType {
+  INVOICE
+  QUOTATION
+  RECEIPT
+}
+
+enum DocumentStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model Document {
+  id            String         @id @default(cuid())
+  reference     String         @unique
+  type          DocumentType
+  status        DocumentStatus @default(DRAFT)
+
+  clientId      String
+  client        Client         @relation(fields: [clientId], references: [id])
+
+  caseFileId    String?
+  caseFile      CaseFile?      @relation(fields: [caseFileId], references: [id], onDelete: SetNull)
+
+  items         DocumentItem[]
+
+  subtotalMinor   Int          @default(0)
+  discountMinor   Int          @default(0)
+  vatRate         Float        @default(5)
+  vatMinor        Int          @default(0)
+  totalMinor      Int          @default(0)
+  paidMinor       Int          @default(0)
+
+  issueDate     DateTime       @default(now())
+  dueDate       DateTime?
+  expiryDate    DateTime?
+  notes         String?
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([clientId])
+  @@index([caseFileId])
+  @@index([type])
+  @@index([status])
+}
+
+model DocumentItem {
+  id             String   @id @default(cuid())
+  documentId     String
+  document       Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  description    String
+  quantity       Int      @default(1)
+  unitPriceMinor Int      @default(0)
+  lineTotalMinor Int      @default(0)
+  vatExempt      Boolean  @default(false)
+
+  createdAt      DateTime @default(now())
+
+  @@index([documentId])
+}
+
 model User {
   id           String        @id @default(cuid())
   name         String
@@ -90,6 +155,7 @@ model Client {
   vaultDocuments      DocumentVault[]
   portalTransactions  PortalTransaction[]
   whatsappLogs        WhatsAppLog[]
+  documents           Document[]
 
   @@index([type])
   @@index([expiryDate])
@@ -110,6 +176,7 @@ model CaseFile {
   coordinatorId  String
   coordinator    User                @relation(fields: [coordinatorId], references: [id])
   documents      DocumentChecklist[]
+  billingDocuments Document[]
   transactions   Transaction[]
   whatsappLogs   WhatsAppLog[]
   trackingToken  String?             @unique @default(uuid())

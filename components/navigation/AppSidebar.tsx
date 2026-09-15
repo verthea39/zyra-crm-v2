@@ -7,15 +7,17 @@ import {
   GitMerge, 
   ShieldAlert, 
   Building2, 
-  Landmark, 
+  Landmark,
   MessageSquare,
   Lock,
-  Settings
+  Settings,
+  FileText
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { name: "Daily Operations", href: "/dashboard", icon: LayoutDashboard },
   { name: "Application Pipeline", href: "/pipeline", icon: GitMerge },
+  { name: "Documents", href: "/documents", icon: FileText },
   { name: "Document Vault", href: "/vault", icon: ShieldAlert },
   { name: "B2B Registry", href: "/b2b-registry", icon: Building2 },
   { name: "Portal Wallets", href: "/portal-wallets", icon: Landmark },
