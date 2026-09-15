@@ -29,6 +29,7 @@ interface QuotationData extends BasePrintData {
   notes: string;
   total: number;
   lineItems?: LineItem[];
+  terms?: string;
 }
 
 interface TaxInvoiceData extends BasePrintData {
@@ -40,7 +41,18 @@ interface TaxInvoiceData extends BasePrintData {
   totalPayable: number;
   amountReceived?: number;
   lineItems?: LineItem[];
+  terms?: string;
 }
+
+export const DEFAULT_QUOTATION_TERMS = `1. Quotation Validity: Valid for 14 days from the date of issue.
+2. Government Fees: Estimated based on current portal tariffs and billed at actual cost; revisions by authorities will be reflected in final billing.
+3. Payment Structure: 100% government fees and 50% service charge required in advance to initiate document clearance.
+4. Documentation: Client is fully responsible for the authenticity and validity of all submitted documents.`;
+
+export const DEFAULT_TAX_INVOICE_TERMS = `1. Payment Due: Full settlement required within 7 days of invoice date.
+2. Government Pass-Throughs: Government portal fees are strictly non-refundable once processed.
+3. Payment Reference: Please mention the invoice number in bank transfers and share payment receipt.
+4. VAT: 5% VAT applies only to professional service charges as per UAE FTA guidelines.`;
 
 interface PaymentReceiptData extends BasePrintData {
   type: 'PAYMENT_RECEIPT';
@@ -241,16 +253,18 @@ function buildDocumentContent(
         </div>
       </div>
 
-      <!-- Terms & Conditions (kept to essentials so a 3-5 line item document stays on one A4 page) -->
+      <!-- Terms & Conditions -- context-specific defaults, user-editable at creation time -->
       <div style="page-break-inside: avoid; border: 1px solid #e2e8f0; border-radius: 5px; padding: 6px 10px; margin-bottom: 8px; font-size: 10px; color: #475569;">
-        <strong style="color: ${ZYRA_DARK}; text-transform: uppercase; letter-spacing: 0.3px;">Terms:</strong>
-        <ul style="margin: 2px 0 0 0; padding-left: 14px; line-height: 1.5;">
-          <li>${isQuotation
-            ? `Valid for ${(data as QuotationData).expiry || '30 days from issue date'}; prices subject to change after expiry.`
-            : `Payment due ${data.dueDate ? `by ${data.dueDate}` : (branding.paymentTerms || 'within 14 days of invoice date')}.`}</li>
-          <li>Government fees billed at official portal cost, no markup${!isQuotation ? '; amounts inclusive of 5% VAT on professional fees' : ''}.</li>
+        <strong style="color: ${ZYRA_DARK}; text-transform: uppercase; letter-spacing: 0.3px;">Terms & Conditions:</strong>
+        <ol style="margin: 2px 0 0 0; padding-left: 16px; line-height: 1.5;">
+          ${(((data as QuotationData | TaxInvoiceData).terms) || (isQuotation ? DEFAULT_QUOTATION_TERMS : DEFAULT_TAX_INVOICE_TERMS))
+            .split('\n')
+            .map((line) => line.replace(/^\s*\d+[.)]\s*/, '').trim())
+            .filter(Boolean)
+            .map((line) => `<li>${line}</li>`)
+            .join('')}
           ${(branding.bankName || branding.iban) ? `<li>Bank Transfer:${branding.bankName ? ` ${branding.bankName}` : ''}${branding.iban ? ` &bull; IBAN: ${branding.iban}` : ''}${branding.swift ? ` &bull; SWIFT: ${branding.swift}` : ''}</li>` : ''}
-        </ul>
+        </ol>
         ${isQuotation && (data as QuotationData).notes ? `<p style="margin: 4px 0 0 0;"><strong>Notes:</strong> ${(data as QuotationData).notes}</p>` : ''}
       </div>
 

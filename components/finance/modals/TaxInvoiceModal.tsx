@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Client } from "@prisma/client";
 import { toast } from "sonner";
-import { downloadDocumentPDF, printViaIframe, LineItem } from "@/lib/printUtils";
+import { downloadDocumentPDF, printViaIframe, LineItem, DEFAULT_TAX_INVOICE_TERMS } from "@/lib/printUtils";
 import type { CompanyBranding } from "@/lib/companyBranding";
 import { getBranding } from "@/app/actions/branding";
 import { createInvoice } from "@/app/actions/finance";
@@ -32,6 +32,7 @@ export function TaxInvoiceModal({ open, onOpenChange, clients }: { open: boolean
   const [branding, setBranding] = useState<CompanyBranding | null>(null);
   const [localClients, setLocalClients] = useState<Client[]>(clients);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [terms, setTerms] = useState(DEFAULT_TAX_INVOICE_TERMS);
 
   useEffect(() => {
     if (open) {
@@ -125,7 +126,8 @@ export function TaxInvoiceModal({ open, onOpenChange, clients }: { open: boolean
         vatAmount,
         totalPayable: govFeeNum + proFeeNum + vatAmount,
         amountReceived: 0,
-        lineItems: items
+        lineItems: items,
+        terms
       };
 
       setLoading("pdf");
@@ -144,6 +146,7 @@ export function TaxInvoiceModal({ open, onOpenChange, clients }: { open: boolean
       setItems([{ desc: "", govCost: 0, proFee: 0 }]);
       setEnableVat(true);
       setCaseRef("");
+      setTerms(DEFAULT_TAX_INVOICE_TERMS);
     } catch (err) {
       console.error("Failed to create invoice:", err);
       setLoading(false);
@@ -433,6 +436,16 @@ export function TaxInvoiceModal({ open, onOpenChange, clients }: { open: boolean
               Review the totals below, then continue to Summary.
             </div>
           )}
+
+          <div className={`${mobileStep === 2 ? "block" : "hidden"} sm:block space-y-2`}>
+            <Label>Terms & Conditions</Label>
+            <textarea
+              value={terms}
+              onChange={(e) => setTerms(e.target.value)}
+              rows={5}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+          </div>
 
           {/* Sticky Footer for Totals & Action */}
           <div className="sticky bottom-0 -mx-4 -mb-4 sm:mx-0 sm:mb-0 p-5 bg-white border-t border-slate-200 space-y-4 z-10 pb-safe sm:rounded-b-2xl">

@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Client } from "@prisma/client";
 import { toast } from "sonner";
-import { downloadDocumentPDF, printViaIframe, LineItem } from "@/lib/printUtils";
+import { downloadDocumentPDF, printViaIframe, LineItem, DEFAULT_QUOTATION_TERMS } from "@/lib/printUtils";
 import type { CompanyBranding } from "@/lib/companyBranding";
 import { getBranding } from "@/app/actions/branding";
 import { FileSignature, Plus, Trash2, X, ChevronRight, ArrowLeft } from "lucide-react";
@@ -31,6 +31,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
   const [branding, setBranding] = useState<CompanyBranding | null>(null);
   const [localClients, setLocalClients] = useState<Client[]>(clients);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [terms, setTerms] = useState(DEFAULT_QUOTATION_TERMS);
 
   useEffect(() => {
     if (open) {
@@ -109,7 +110,8 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
         total: govFeeNum + proFeeNum,
         expiry,
         notes,
-        lineItems: items
+        lineItems: items,
+        terms
       };
 
       toast.success("Quotation generated successfully!");
@@ -132,6 +134,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
       setItems([{ desc: "", govCost: 0, proFee: 0 }]);
       setExpiry("");
       setNotes("");
+      setTerms(DEFAULT_QUOTATION_TERMS);
     } catch (err) {
       console.error("Failed to generate quotation:", err);
       setLoading(false);
@@ -414,6 +417,16 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
               <Label>Internal Notes</Label>
               <Input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional remarks" />
             </div>
+          </div>
+
+          <div className={`${mobileStep === 2 ? "block" : "hidden"} sm:block space-y-2`}>
+            <Label>Terms & Conditions</Label>
+            <textarea
+              value={terms}
+              onChange={(e) => setTerms(e.target.value)}
+              rows={5}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
           </div>
 
           {/* Mobile Step 3 "Terms & Notes" */}
