@@ -18,9 +18,10 @@ export default async function DashboardPage() {
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
   const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-  // Fetch all necessary data in parallel. If the database is unreachable
-  // (cold pooler, network blip, project paused) fall back to empty/zeroed
-  // data instead of letting the whole page crash with a 500 overlay.
+  // Fetch all necessary data in a single parallel batch (one round trip to
+  // the pooler instead of three sequential ones). If the database is
+  // unreachable (cold pooler, network blip, project paused) fall back to
+  // empty/zeroed data instead of letting the whole page crash with a 500.
   let dbError = false;
   let wallets: any[] = [];
   let activeCases: any[] = [];
@@ -36,31 +37,17 @@ export default async function DashboardPage() {
   let urgencyData = { criticalExpiries: 0, casesInMedical: 0, pendingApprovals: 0, lowBalanceWallets: 0 };
 
   try {
-    const counts = await getDashboardCounts();
-    urgencyData = {
-      criticalExpiries: counts.criticalDocs,
-      casesInMedical: counts.medicalCases,
-      pendingApprovals: counts.pendingCases,
-      lowBalanceWallets: counts.lowBalanceWallets,
-    };
-  } catch (error) {
-    console.error("Dashboard: getDashboardCounts failed:", {
-      message: error instanceof Error ? error.message : String(error),
-      code: (error as any)?.code,
-      error,
-    });
-    dbError = true;
-  }
-
-  try {
-    [
-      wallets,
-      activeCases,
-      upcomingDocs,
-      clients,
-      todayPayments,
-      todayExpenses
+    const [
+      counts,
+      walletsResult,
+      activeCasesResult,
+      upcomingDocsResult,
+      clientsResult,
+      todayPaymentsResult,
+      todayExpensesResult,
+      recentActivityResult
     ] = await Promise.all([
+      getDashboardCounts(),
       prisma.portalWallet.findMany(),
       prisma.caseFile.findMany({
         where: {
@@ -98,8 +85,23 @@ export default async function DashboardPage() {
       prisma.transaction.findMany({
         where: { type: 'EXPENSE', date: { gte: startOfDay, lte: endOfDay } },
         orderBy: { date: 'desc' }
-      })
+      }),
+      getRecentActivity(10)
     ]);
+
+    urgencyData = {
+      criticalExpiries: counts.criticalDocs,
+      casesInMedical: counts.medicalCases,
+      pendingApprovals: counts.pendingCases,
+      lowBalanceWallets: counts.lowBalanceWallets,
+    };
+    wallets = walletsResult;
+    activeCases = activeCasesResult;
+    upcomingDocs = upcomingDocsResult;
+    clients = clientsResult;
+    todayPayments = todayPaymentsResult;
+    todayExpenses = todayExpensesResult;
+    recentActivity = recentActivityResult;
   } catch (error) {
     console.error("Dashboard: database unreachable, rendering with empty data:", {
       message: error instanceof Error ? error.message : String(error),
@@ -108,8 +110,6 @@ export default async function DashboardPage() {
     });
     dbError = true;
   }
-
-  recentActivity = await getRecentActivity(10);
 
   const checklistCases: ChecklistCase[] = activeCases.map((c: any) => {
     // Simple SLA logic based on stageUpdatedAt
