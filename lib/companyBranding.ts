@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { ZYRA_LOGO_GOLD_DATA_URI } from "@/lib/brandAssets";
 
 export type CompanyBranding = {
   name: string;
@@ -26,7 +27,7 @@ const DEFAULT_BRANDING: CompanyBranding = {
   portalUrl: "crm.zyrabusinesshub.com",
   trn: null,
   tradeLicenseNo: null,
-  logoUrl: null,
+  logoUrl: ZYRA_LOGO_GOLD_DATA_URI,
   bankName: null,
   accountName: null,
   iban: null,

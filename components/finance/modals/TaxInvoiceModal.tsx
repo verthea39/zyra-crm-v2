@@ -83,6 +83,7 @@ export function TaxInvoiceModal({ open, onOpenChange, clients }: { open: boolean
       const clientPhone = selectedClient?.phone || undefined;
       const clientTRN = undefined;
       const clientDocumentRef = selectedClient?.type === 'CORPORATE' ? selectedClient?.tradeLicenseNo : selectedClient?.passportNo;
+      const clientEmail = selectedClient?.email || undefined;
 
       const govFeeNum = items.reduce((sum, item) => sum + item.govCost, 0);
       const proFeeNum = items.reduce((sum, item) => sum + item.proFee, 0);
@@ -110,6 +111,7 @@ export function TaxInvoiceModal({ open, onOpenChange, clients }: { open: boolean
         type: 'TAX_INVOICE' as const,
         clientName,
         clientPhone,
+        clientEmail,
         clientTRN: clientTRN || undefined,
         clientDocumentRef: clientDocumentRef || undefined,
         date: new Date().toISOString().split('T')[0],

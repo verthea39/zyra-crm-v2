@@ -82,6 +82,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
       const clientPhone = selectedClient?.phone || undefined;
       const clientTRN = undefined;
       const clientDocumentRef = selectedClient?.type === 'CORPORATE' ? selectedClient?.tradeLicenseNo : selectedClient?.passportNo;
+      const clientEmail = selectedClient?.email || undefined;
 
       const year = new Date().getFullYear();
       const randomSeq = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
@@ -94,6 +95,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
         type: 'QUOTATION' as const,
         clientName,
         clientPhone,
+        clientEmail,
         clientTRN: clientTRN || undefined,
         clientDocumentRef: clientDocumentRef || undefined,
         reference: qtReference,

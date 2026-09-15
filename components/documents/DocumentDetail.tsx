@@ -8,6 +8,7 @@ import { formatMoney } from "@/lib/calculations";
 import { deleteDocument } from "@/app/actions/documents";
 import type { CompanyBranding } from "@/lib/companyBranding";
 import { Pencil, Printer, Trash2, FileText, FileSignature, Receipt } from "lucide-react";
+import { ZYRA_LOGO_GOLD_PATH } from "@/lib/brandAssets";
 
 const TYPE_ICON = { INVOICE: FileText, QUOTATION: FileSignature, RECEIPT: Receipt };
 
@@ -40,7 +41,6 @@ type DocumentWithRelations = {
 export function DocumentDetail({ document, branding }: { document: DocumentWithRelations; branding: CompanyBranding }) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
-  const Icon = TYPE_ICON[document.type];
   const typeLabel = document.type.charAt(0) + document.type.slice(1).toLowerCase();
 
   const handleDelete = async () => {
@@ -93,9 +93,11 @@ export function DocumentDetail({ document, branding }: { document: DocumentWithR
       <div data-print-area className="bg-white border border-border rounded-xl p-4 sm:p-6 text-sm print:text-[11px] print:leading-tight">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between border-b-2 border-[#98682E] pb-2 mb-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-[#FDF8F0] text-[#98682E] flex items-center justify-center shrink-0 print:w-8 print:h-8">
-              <Icon className="w-4 h-4" />
-            </div>
+            <img
+              src={ZYRA_LOGO_GOLD_PATH}
+              alt="Zyra"
+              className="h-9 w-auto object-contain shrink-0 print:h-8"
+            />
             <div>
               <h1 className="text-sm font-extrabold uppercase tracking-tight text-foreground leading-tight">{branding.name}</h1>
               <p className="text-[11px] text-muted-foreground leading-snug">

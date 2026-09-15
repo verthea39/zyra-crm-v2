@@ -13,6 +13,7 @@ import {
   Settings,
   FileText
 } from "lucide-react";
+import { ZYRA_LOGO_GOLD_PATH } from "@/lib/brandAssets";
 
 const NAV_ITEMS = [
   { name: "Daily Operations", href: "/dashboard", icon: LayoutDashboard },
@@ -30,7 +31,7 @@ export function AppSidebar() {
   return (
     <aside className="hidden md:flex flex-col w-64 bg-background border-r border-border h-screen sticky top-0 shrink-0 shadow-sm">
       <div className="p-6 border-b border-border flex flex-col gap-1">
-        <h1 className="text-lg font-bold tracking-tight text-slate-900 uppercase">ZYRA CRM</h1>
+        <img src={ZYRA_LOGO_GOLD_PATH} alt="Zyra" className="h-10 w-auto object-contain" />
         <span className="text-[10px] tracking-widest text-[#98682E] font-bold uppercase">PRO Operations</span>
       </div>
 

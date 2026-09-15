@@ -100,6 +100,7 @@ export function PaymentReceiptModal({ open, onOpenChange, clients }: { open: boo
       const clientPhone = selectedClient?.phone || undefined;
       const clientTRN = undefined;
       const clientDocumentRef = selectedClient?.type === 'CORPORATE' ? selectedClient?.tradeLicenseNo : selectedClient?.passportNo;
+      const clientEmail = selectedClient?.email || undefined;
 
       const previousTotal = selectedInvoice ? (selectedInvoice.amountTotal / 100) : undefined;
 
@@ -107,6 +108,7 @@ export function PaymentReceiptModal({ open, onOpenChange, clients }: { open: boo
         type: 'PAYMENT_RECEIPT' as const,
         clientName,
         clientPhone,
+        clientEmail,
         clientTRN: clientTRN || undefined,
         clientDocumentRef: clientDocumentRef || undefined,
         date: new Date().toISOString().split('T')[0],

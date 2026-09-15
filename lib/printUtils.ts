@@ -15,6 +15,8 @@ interface BasePrintData {
   reference?: string;
   dueDate?: string;
   clientPhone?: string;
+  clientEmail?: string;
+  clientCompanyName?: string;
   clientTRN?: string;
   clientDocumentRef?: string;
 }
@@ -59,40 +61,51 @@ function buildDocumentContent(
   data: PrintData,
   branding: CompanyBranding = getDefaultCompanyBranding()
 ): { documentTitle: string; header: string; content: string; whatsappLink: string } {
-  const formatCurrency = (amount: number) => `AED ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  const formatCurrency = (amount: number) =>
+    `AED ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   let documentTitle = "";
   if (data.type === 'QUOTATION') documentTitle = 'OFFICIAL QUOTATION';
   if (data.type === 'TAX_INVOICE') documentTitle = 'TAX INVOICE';
   if (data.type === 'PAYMENT_RECEIPT') documentTitle = 'OFFICIAL PAYMENT ACKNOWLEDGMENT RECEIPT';
 
-  const logoMarkup = branding.logoUrl
-    ? `<img src="${branding.logoUrl}" alt="${branding.name}" style="width: 36px; height: 36px; border-radius: 8px; object-fit: contain;" />`
-    : companyLogoSvg(branding.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 3).toUpperCase(), 36);
+  // Real uploaded/default logos already contain the company name as a
+  // wordmark -- rendering it at its native aspect ratio (not squeezed into
+  // a square) and dropping the separate <h1> text avoids showing two
+  // different-looking brand names stacked together. The generated-initials
+  // SVG fallback has no text baked in, so it still pairs with the <h1>.
+  const hasRealLogo = !!branding.logoUrl;
+  const logoMarkup = hasRealLogo
+    ? `<img src="${branding.logoUrl}" alt="${branding.name}" style="height: 40px; width: auto; max-width: 200px; object-fit: contain; display: block;" />`
+    : companyLogoSvg(branding.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 3).toUpperCase(), 40);
 
   const contactLine = [
-    branding.phone ? `Phone: ${branding.phone}` : null,
+    branding.phone ? `Tel: ${branding.phone}` : null,
     branding.email ? `Email: ${branding.email}` : null,
-    branding.trn ? `TRN: ${branding.trn}` : null,
     branding.website,
   ].filter(Boolean).join(' &nbsp;|&nbsp; ');
 
+  const invoiceNoLine = data.reference
+    ? `<p style="color: ${ZYRA_DARK}; margin: 2px 0 0 0; font-size: 12px; font-weight: 700;">Invoice No: ${data.reference}</p>`
+    : '';
+
   const header = `
     <div style="border-bottom: 2px solid ${ZYRA_BRONZE}; padding-bottom: 10px; margin-bottom: 14px;">
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <div style="width: 36px; height: 36px; flex-shrink: 0;">${logoMarkup}</div>
+      <div style="display: flex; align-items: flex-start; gap: 10px;">
+        <div style="flex-shrink: 0;">${logoMarkup}</div>
         <div>
-          <h1 style="color: ${ZYRA_DARK}; margin: 0; font-size: 16px; font-weight: 800; line-height: 1.15; letter-spacing: -0.3px; text-transform: uppercase;">${branding.name}</h1>
+          ${!hasRealLogo ? `<h1 style="color: ${ZYRA_DARK}; margin: 0; font-size: 16px; font-weight: 800; line-height: 1.15; letter-spacing: -0.3px; text-transform: uppercase;">${branding.name}</h1>` : ''}
           <p style="color: #64748b; margin: 1px 0 0 0; font-size: 10px; line-height: 1.3;">${branding.address}${contactLine ? ` &nbsp;|&nbsp; ${contactLine}` : ''}</p>
+          ${branding.trn ? `<p style="color: ${ZYRA_DARK}; margin: 1px 0 0 0; font-size: 10px; font-weight: 700; line-height: 1.3;">Company TRN: ${branding.trn}</p>` : ''}
         </div>
       </div>
 
       <div style="display: flex; justify-content: space-between; margin-top: 10px;">
         <!-- Left Metadata -->
         <div style="width: 48%;">
-          <h2 style="color: ${ZYRA_BRONZE}; margin: 0 0 4px 0; font-size: 16px; font-weight: 800; text-transform: uppercase;">${documentTitle}</h2>
-          <table style="width: 100%; font-size: 11px; color: #475569; border-spacing: 0; line-height: 1.3;">
-            ${data.reference ? `<tr><td style="padding: 1px 0; width: 110px;"><strong>Reference:</strong></td><td>${data.reference}</td></tr>` : ''}
+          <h2 style="color: ${ZYRA_BRONZE}; margin: 0 0 2px 0; font-size: 16px; font-weight: 800; text-transform: uppercase;">${documentTitle}</h2>
+          ${invoiceNoLine}
+          <table style="width: 100%; font-size: 11px; color: #475569; border-spacing: 0; line-height: 1.3; margin-top: 4px;">
             <tr><td style="padding: 1px 0; width: 110px;"><strong>Issue Date:</strong></td><td>${data.date}</td></tr>
             ${data.dueDate ? `<tr><td style="padding: 1px 0;"><strong>Due Date:</strong></td><td>${data.dueDate}</td></tr>` : ''}
             <tr><td style="padding: 1px 0;"><strong>Currency:</strong></td><td>AED</td></tr>
@@ -104,8 +117,10 @@ function buildDocumentContent(
           <h3 style="color: ${ZYRA_DARK}; margin: 0 0 4px 0; font-size: 12px; text-transform: uppercase;">Billed To</h3>
           <table style="width: 100%; font-size: 11px; color: #475569; border-spacing: 0; line-height: 1.3;">
             <tr><td style="padding: 1px 0; width: 110px;"><strong>Client Name:</strong></td><td><strong style="color: ${ZYRA_DARK};">${data.clientName}</strong></td></tr>
+            ${data.clientCompanyName ? `<tr><td style="padding: 1px 0;"><strong>Company:</strong></td><td>${data.clientCompanyName}</td></tr>` : ''}
+            ${data.clientPhone ? `<tr><td style="padding: 1px 0;"><strong>Phone:</strong></td><td>${data.clientPhone}</td></tr>` : ''}
+            ${data.clientEmail ? `<tr><td style="padding: 1px 0;"><strong>Email:</strong></td><td>${data.clientEmail}</td></tr>` : ''}
             ${data.clientTRN ? `<tr><td style="padding: 1px 0;"><strong>Corporate TRN:</strong></td><td>${data.clientTRN}</td></tr>` : ''}
-            ${data.clientPhone ? `<tr><td style="padding: 1px 0;"><strong>Contact Phone:</strong></td><td>${data.clientPhone}</td></tr>` : ''}
             ${data.clientDocumentRef ? `<tr><td style="padding: 1px 0;"><strong>EID / Passport / TL:</strong></td><td>${data.clientDocumentRef}</td></tr>` : ''}
           </table>
         </div>
@@ -154,8 +169,9 @@ function buildDocumentContent(
       `;
     });
 
-    content = `
-      <!-- Table 1: Government Fees -->
+    // Skip rendering an entire table when it has no billable amount at all,
+    // rather than showing a clutter row of AED 0.00.
+    const govTableHtml = govCost > 0 ? `
       <div style="margin-bottom: 10px; page-break-inside: avoid;">
         <h3 style="color: ${ZYRA_DARK}; font-size: 11px; margin: 0 0 3px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px;">Government Clearance Pass-Throughs (0% VAT)</h3>
         <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
@@ -177,8 +193,9 @@ function buildDocumentContent(
           </tfoot>
         </table>
       </div>
+    ` : '';
 
-      <!-- Table 2: Professional Fees -->
+    const proTableHtml = proFee > 0 ? `
       <div style="margin-bottom: 12px; page-break-inside: avoid;">
         <h3 style="color: ${ZYRA_DARK}; font-size: 11px; margin: 0 0 3px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px;">Professional PRO & Agency Service Charges (Taxable)</h3>
         <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
@@ -202,21 +219,38 @@ function buildDocumentContent(
           </tfoot>
         </table>
       </div>
+    ` : '';
+
+    const paidBadge = !isQuotation
+      ? amountReceived <= 0
+        ? `<span style="font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 10px; background: #f1f5f9; color: #64748b;">UNPAID</span>`
+        : outstandingBalance > 0
+          ? `<span style="font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 10px; background: #fee2e2; color: #dc2626;">PARTIALLY PAID</span>`
+          : `<span style="font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 10px; background: #dcfce7; color: #059669;">PAID</span>`
+      : '';
+
+    content = `
+      ${govTableHtml}
+      ${proTableHtml}
 
       <!-- Grand Total Calculation Strip -->
       <div style="display: flex; justify-content: flex-end; margin-bottom: 12px; page-break-inside: avoid;">
         <div style="width: 300px; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden;">
           <div style="padding: 8px 12px; background-color: #f8fafc;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 11px; color: #475569;">
-              <span>Total Government Outflow:</span>
-              <span>${formatCurrency(govCost)}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px; color: #475569;">
-              <span>Total Professional & VAT:</span>
-              <span>${formatCurrency(proFee + (isQuotation ? 0 : vatAmount))}</span>
-            </div>
+            ${govCost > 0 ? `
+              <div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 11px; color: #475569;">
+                <span>Total Government Outflow:</span>
+                <span>${formatCurrency(govCost)}</span>
+              </div>
+            ` : ''}
+            ${proFee > 0 ? `
+              <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px; color: #475569;">
+                <span>Total Professional & VAT:</span>
+                <span>${formatCurrency(proFee + (isQuotation ? 0 : vatAmount))}</span>
+              </div>
+            ` : ''}
             <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 6px; border-top: 2px solid ${ZYRA_BRONZE}; font-size: 14px; font-weight: 900; color: ${ZYRA_DARK};">
-              <span>TOTAL PAYABLE:</span>
+              <span>TOTAL PAYABLE: ${paidBadge}</span>
               <span>${formatCurrency(totalPayable)}</span>
             </div>
             ${!isQuotation ? `
@@ -232,7 +266,7 @@ function buildDocumentContent(
           </div>
         </div>
       </div>
-      
+
       <!-- Terms & Conditions (kept to essentials so a 3-5 line item document stays on one A4 page) -->
       <div style="page-break-inside: avoid; border: 1px solid #e2e8f0; border-radius: 5px; padding: 6px 10px; margin-bottom: 8px; font-size: 10px; color: #475569;">
         <strong style="color: ${ZYRA_DARK}; text-transform: uppercase; letter-spacing: 0.3px;">Terms:</strong>
