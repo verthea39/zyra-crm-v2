@@ -3,6 +3,8 @@ import { WhatsAppDispatcher } from "@/components/client-hub/WhatsAppDispatcher";
 import { MessageCircle, History } from "lucide-react";
 import { format } from "date-fns";
 
+
+export const dynamic = "force-dynamic";
 export default async function ClientHubPage() {
   const activeCases = await getActiveCasesForHub();
   const dispatchHistory = await getDispatchHistory();

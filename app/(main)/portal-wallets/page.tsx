@@ -3,6 +3,8 @@ import prisma from "@/lib/prisma";
 import { WalletLedger } from "@/components/wallets/WalletLedger";
 import { Landmark, AlertCircle, ArrowUpRight, ArrowDownRight, Wallet } from "lucide-react";
 
+
+export const dynamic = "force-dynamic";
 async function getClients() {
   return await prisma.client.findMany({
     select: { id: true, name: true, type: true },

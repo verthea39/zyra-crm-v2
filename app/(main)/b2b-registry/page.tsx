@@ -1,6 +1,8 @@
 import { getCorporateClients } from "@/app/actions/b2b";
 import { CorporateList } from "@/components/b2b-registry/CorporateList";
 
+
+export const dynamic = "force-dynamic";
 export default async function B2BRegistryPage() {
   const corporates = await getCorporateClients();
 

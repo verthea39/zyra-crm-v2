@@ -1,6 +1,8 @@
 import { getServiceItems, getCompanySettings, getTeamUsers } from "@/app/actions/settings";
 import { SettingsClientView } from "@/components/settings/SettingsClientView";
 
+
+export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Settings - Zyra CRM",
 };

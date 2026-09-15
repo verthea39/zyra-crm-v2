@@ -3,6 +3,8 @@ import prisma from "@/lib/prisma";
 import { VaultView } from "@/components/vault/VaultView";
 import { ShieldAlert, ShieldCheck, Files } from "lucide-react";
 
+
+export const dynamic = "force-dynamic";
 async function getClientsForUpload() {
   return await prisma.client.findMany({
     select: { id: true, name: true, type: true },

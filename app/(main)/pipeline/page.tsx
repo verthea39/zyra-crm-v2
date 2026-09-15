@@ -3,6 +3,8 @@ import { getCorporateClients } from "@/app/actions/b2b"; // Using this to fetch 
 import prisma from "@/lib/prisma";
 import { PipelineClientView } from "@/components/pipeline/PipelineClientView";
 
+
+export const dynamic = "force-dynamic";
 async function getAllClients() {
   return await prisma.client.findMany({
     select: { id: true, name: true, type: true },
