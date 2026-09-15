@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { getDashboardCounts } from "@/lib/dashboardStats";
 import { DailyUrgencyStrip } from "@/components/dashboard/DailyUrgencyStrip";
 import { QuickActionsBar } from "@/components/dashboard/QuickActionsBar";
 import { ActionChecklist, ChecklistCase } from "@/components/dashboard/ActionChecklist";
@@ -19,9 +20,6 @@ export default async function DashboardPage() {
   // (cold pooler, network blip, project paused) fall back to empty/zeroed
   // data instead of letting the whole page crash with a 500 overlay.
   let dbError = false;
-  let criticalDocs = 0;
-  let medicalCases = 0;
-  let pendingCases = 0;
   let wallets: any[] = [];
   let activeCases: any[] = [];
   let upcomingDocs: any[] = [];
@@ -29,11 +27,30 @@ export default async function DashboardPage() {
   let todayPayments: any[] = [];
   let todayExpenses: any[] = [];
 
+  // The 4 summary counts are cached for 60s (lib/dashboardStats.ts) via a
+  // route also exposed at /api/dashboard/stats, so navigating between pages
+  // doesn't re-run these on every render and add extra load to the pooler.
+  let urgencyData = { criticalExpiries: 0, casesInMedical: 0, pendingApprovals: 0, lowBalanceWallets: 0 };
+
+  try {
+    const counts = await getDashboardCounts();
+    urgencyData = {
+      criticalExpiries: counts.criticalDocs,
+      casesInMedical: counts.medicalCases,
+      pendingApprovals: counts.pendingCases,
+      lowBalanceWallets: counts.lowBalanceWallets,
+    };
+  } catch (error) {
+    console.error("Dashboard: getDashboardCounts failed:", {
+      message: error instanceof Error ? error.message : String(error),
+      code: (error as any)?.code,
+      error,
+    });
+    dbError = true;
+  }
+
   try {
     [
-      criticalDocs,
-      medicalCases,
-      pendingCases,
       wallets,
       activeCases,
       upcomingDocs,
@@ -41,17 +58,6 @@ export default async function DashboardPage() {
       todayPayments,
       todayExpenses
     ] = await Promise.all([
-      prisma.documentVault.count({
-        where: {
-          expiryDate: { lte: next48h, gte: now }
-        }
-      }),
-      prisma.caseFile.count({
-        where: { stage: "MEDICAL_BIOMETRICS" }
-      }),
-      prisma.caseFile.count({
-        where: { stage: "SUBMITTED" }
-      }),
       prisma.portalWallet.findMany(),
       prisma.caseFile.findMany({
         where: {
@@ -92,18 +98,13 @@ export default async function DashboardPage() {
       })
     ]);
   } catch (error) {
-    console.error("Dashboard: database unreachable, rendering with empty data:", error);
+    console.error("Dashboard: database unreachable, rendering with empty data:", {
+      message: error instanceof Error ? error.message : String(error),
+      code: (error as any)?.code,
+      error,
+    });
     dbError = true;
   }
-
-  const lowBalanceWallets = wallets.filter((w: any) => w.balance < 2000).length;
-
-  const urgencyData = {
-    criticalExpiries: criticalDocs,
-    casesInMedical: medicalCases,
-    pendingApprovals: pendingCases,
-    lowBalanceWallets
-  };
 
   const checklistCases: ChecklistCase[] = activeCases.map((c: any) => {
     // Simple SLA logic based on stageUpdatedAt
