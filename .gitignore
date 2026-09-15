@@ -38,6 +38,7 @@ yarn-error.log*
 
 # database backups (contain real client PII -- never commit)
 /backups/
+scripts/seed-clean-data.json
 
 # typescript
 *.tsbuildinfo
