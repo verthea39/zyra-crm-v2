@@ -9,6 +9,7 @@ export async function createClient(data: any) {
       data: {
         type: data.type,
         name: data.name,
+        email: data.email,
         leadSource: data.leadSource,
         place: data.place,
         phone: data.phone,

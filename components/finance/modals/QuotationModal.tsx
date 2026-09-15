@@ -11,6 +11,7 @@ import { getBranding } from "@/app/actions/branding";
 import { FileSignature, Plus, Trash2, X, ChevronRight, ArrowLeft } from "lucide-react";
 import { MobileStepTabs } from "@/components/ui/mobile-step-tabs";
 import { LineItemEditorSheet } from "./LineItemEditorSheet";
+import { QuickAddClientModal } from "./QuickAddClientModal";
 
 import { getServiceItems } from "@/app/actions/settings";
 import { useEffect } from "react";
@@ -28,13 +29,16 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
   const [furthestStep, setFurthestStep] = useState(0);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [branding, setBranding] = useState<CompanyBranding | null>(null);
+  const [localClients, setLocalClients] = useState<Client[]>(clients);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
       setMobileStep(0);
       setFurthestStep(0);
+      setLocalClients(clients);
     }
-  }, [open]);
+  }, [open, clients]);
 
   const goToStep = (step: number) => {
     setMobileStep(step);
@@ -77,7 +81,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
     setLoading("saving");
 
     try {
-      const selectedClient = clients.find(c => c.id === clientId);
+      const selectedClient = localClients.find(c => c.id === clientId);
       const clientName = selectedClient ? selectedClient.name : "Unknown Client";
       const clientPhone = selectedClient?.phone || undefined;
       const clientTRN = undefined;
@@ -164,17 +168,28 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:px-2 flex flex-col gap-5">
           <div className={`${mobileStep === 0 ? "block" : "hidden"} sm:block space-y-2`}>
             <Label>Select Client *</Label>
-            <select
-              required
-              className="w-full flex h-9 rounded-md border border-input bg-background px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-            >
-              <option value="">-- Choose Client --</option>
-              {clients.map(c => (
-                <option key={c.id} value={c.id}>{c.name} {c.type === 'CORPORATE' ? '(B2B)' : '(B2C)'}</option>
-              ))}
-            </select>
+            <div className="flex gap-2">
+              <select
+                required
+                className="w-full flex h-9 rounded-md border border-input bg-background px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+              >
+                <option value="">-- Choose Client --</option>
+                {localClients.map(c => (
+                  <option key={c.id} value={c.id}>{c.name} {c.type === 'CORPORATE' ? '(B2B)' : '(B2C)'}</option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                variant="outline"
+                className="shrink-0 px-3"
+                onClick={() => setQuickAddOpen(true)}
+              >
+                <Plus className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">Add Client</span>
+              </Button>
+            </div>
           </div>
 
           {/* Expiry moved up for mobile Step 1 "Client & Dates" */}
@@ -476,6 +491,14 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
           </div>
         </form>
       </DialogContent>
+      <QuickAddClientModal
+        open={quickAddOpen}
+        onOpenChange={setQuickAddOpen}
+        onCreated={(client) => {
+          setLocalClients((prev) => [...prev, client]);
+          setClientId(client.id);
+        }}
+      />
     </Dialog>
   );
 }

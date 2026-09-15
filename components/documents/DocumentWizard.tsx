@@ -10,6 +10,8 @@ import { LineItemSheet, DraftItem } from "./LineItemSheet";
 import { createDocument, updateDocument } from "@/app/actions/documents";
 import { calculateDocumentTotals, formatMoney, DEFAULT_VAT_RATE, minorToDisplay } from "@/lib/calculations";
 import { Plus, Trash2, ChevronRight, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { QuickAddClientModal } from "@/components/finance/modals/QuickAddClientModal";
 
 const STEPS = ["Client Info", "Items & VAT", "Review"];
 
@@ -55,6 +57,8 @@ export function DocumentWizard({ clients, defaultType = "INVOICE", initialData }
   const [vatRate, setVatRate] = useState(initialData?.vatRate ?? DEFAULT_VAT_RATE);
   const [notes, setNotes] = useState(initialData?.notes ?? "");
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [localClients, setLocalClients] = useState<{ id: string; name: string }[]>(clients);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
 
   const goToStep = (s: number) => {
     setStep(s);
@@ -136,17 +140,28 @@ export function DocumentWizard({ clients, defaultType = "INVOICE", initialData }
           <div className="flex flex-col gap-4">
             <div className="space-y-2 w-full">
               <Label>Select Client *</Label>
-              <select
-                required
-                className="w-full h-11 rounded-md border border-input bg-background px-3 text-base"
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-              >
-                <option value="">-- Choose Client --</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              <div className="flex gap-2">
+                <select
+                  required
+                  className="w-full h-11 rounded-md border border-input bg-background px-3 text-base"
+                  value={clientId}
+                  onChange={(e) => setClientId(e.target.value)}
+                >
+                  <option value="">-- Choose Client --</option>
+                  {localClients.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="shrink-0 h-11 px-3"
+                  onClick={() => setQuickAddOpen(true)}
+                >
+                  <Plus className="w-4 h-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Add Client</span>
+                </Button>
+              </div>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <div className="space-y-2 w-full">
@@ -297,6 +312,15 @@ export function DocumentWizard({ clients, defaultType = "INVOICE", initialData }
           </div>
         </div>
       </div>
+
+      <QuickAddClientModal
+        open={quickAddOpen}
+        onOpenChange={setQuickAddOpen}
+        onCreated={(client) => {
+          setLocalClients((prev) => [...prev, { id: client.id, name: client.name }]);
+          setClientId(client.id);
+        }}
+      />
     </div>
   );
 }
