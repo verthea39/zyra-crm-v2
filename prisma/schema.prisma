@@ -285,10 +285,14 @@ model DocumentVault {
 }
 
 model PortalWallet {
-  id           String   @id @default(cuid())
-  entityName   String   @unique // Tas-heel, Amer, ICP, DED
-  balance      Float    @default(0)
-  lastUpdated  DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  entityName          String   @unique // Tas-heel, Amer, ICP, DED
+  balance             Float    @default(0)
+  portalType          String?  // IMMIGRATION, LABOUR, ECONOMIC, GENERAL
+  accountNumber       String?  // Portal login ref / account number
+  lowBalanceThreshold Float    @default(500)
+  lastTopUpDate       DateTime?
+  lastUpdated         DateTime @updatedAt
   transactions PortalTransaction[]
 }
 

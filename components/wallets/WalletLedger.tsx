@@ -4,15 +4,17 @@ import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { TopUpModal } from "./TopUpModal";
 import { DeductModal } from "./DeductModal";
-import { ArrowDownRight, ArrowUpRight, Search, Filter, Plus, Minus } from "lucide-react";
+import { AddWalletModal } from "./AddWalletModal";
+import { ArrowDownRight, ArrowUpRight, Search, Filter, Plus, Minus, Landmark } from "lucide-react";
 
 export function WalletLedger({ wallets, clients }: { wallets: any[], clients: any[] }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterPortal, setFilterPortal] = useState("All");
   const [filterType, setFilterType] = useState("All");
-  
+
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
   const [isDeductOpen, setIsDeductOpen] = useState(false);
+  const [isAddWalletOpen, setIsAddWalletOpen] = useState(false);
   const [selectedWalletId, setSelectedWalletId] = useState(wallets[0]?.id);
 
   // Flatten all transactions from all wallets
@@ -75,7 +77,13 @@ export function WalletLedger({ wallets, clients }: { wallets: any[], clients: an
         </div>
         
         <div className="flex gap-2 shrink-0">
-          <button 
+          <button
+            onClick={() => setIsAddWalletOpen(true)}
+            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 bg-[#FDF8F0] hover:bg-[#F7EEDB] text-[#98682E] px-4 py-2 rounded-lg text-sm font-semibold transition shadow-sm whitespace-nowrap"
+          >
+            <Landmark className="w-4 h-4" /> Add Wallet
+          </button>
+          <button
             onClick={() => setIsDeductOpen(true)}
             className="flex-1 md:flex-none flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 px-4 py-2 rounded-lg text-sm font-semibold transition shadow-sm whitespace-nowrap"
           >
@@ -197,6 +205,7 @@ export function WalletLedger({ wallets, clients }: { wallets: any[], clients: an
 
       {isTopUpOpen && <TopUpModal onClose={() => setIsTopUpOpen(false)} wallets={wallets} defaultWalletId={selectedWalletId} />}
       {isDeductOpen && <DeductModal onClose={() => setIsDeductOpen(false)} wallets={wallets} clients={clients} defaultWalletId={selectedWalletId} />}
+      {isAddWalletOpen && <AddWalletModal onClose={() => setIsAddWalletOpen(false)} />}
     </div>
   );
 }

@@ -36,6 +36,38 @@ export async function getWalletStats() {
   }
 }
 
+export async function createPortalWallet({
+  entityName,
+  portalType,
+  openingBalance,
+  lowBalanceThreshold,
+  accountNumber,
+}: {
+  entityName: string;
+  portalType?: string;
+  openingBalance?: number;
+  lowBalanceThreshold?: number;
+  accountNumber?: string;
+}) {
+  try {
+    const wallet = await prisma.portalWallet.create({
+      data: {
+        entityName,
+        portalType: portalType || null,
+        balance: openingBalance || 0,
+        lowBalanceThreshold: lowBalanceThreshold ?? 500,
+        accountNumber: accountNumber || null,
+      },
+    });
+    revalidatePath("/portal-wallets");
+    revalidatePath("/finance/cockpit");
+    return { success: true, wallet };
+  } catch (error: any) {
+    console.error("Error creating portal wallet:", error);
+    return { success: false, error: error.message || "Failed to create portal wallet" };
+  }
+}
+
 export async function topUpWallet({ walletId, amount, receiptRef, description, date }: { walletId: string, amount: number, receiptRef?: string | null, description?: string, date?: string }) {
   try {
     const result = await prisma.$transaction(async (tx: any) => {
@@ -46,7 +78,7 @@ export async function topUpWallet({ walletId, amount, receiptRef, description, d
 
       await tx.portalWallet.update({
         where: { id: walletId },
-        data: { balance: newBalance }
+        data: { balance: newBalance, lastTopUpDate: date ? new Date(date) : new Date() }
       });
 
       const transaction = await tx.portalTransaction.create({
@@ -65,6 +97,7 @@ export async function topUpWallet({ walletId, amount, receiptRef, description, d
     });
 
     revalidatePath("/portal-wallets");
+    revalidatePath("/finance/cockpit");
     return { success: true, transaction: result };
   } catch (error: any) {
     console.error("Error topping up wallet:", error);
@@ -126,6 +159,7 @@ export async function deductWallet({
     });
 
     revalidatePath("/portal-wallets");
+    revalidatePath("/finance/cockpit");
     return { success: true, transaction: result };
   } catch (error: any) {
     console.error("Error deducting from wallet:", error);

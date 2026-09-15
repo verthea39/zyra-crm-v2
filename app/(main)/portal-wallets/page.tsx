@@ -37,7 +37,7 @@ export default async function PortalWalletsPage() {
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {wallets.map((w: any) => {
-            const isLow = w.balance < 2000;
+            const isLow = w.balance <= (w.lowBalanceThreshold ?? 500);
             return (
               <div key={w.id} className={`border rounded-xl p-4 flex flex-col justify-between shadow-sm transition-colors ${isLow ? 'bg-rose-50 border-rose-200' : 'bg-white border-slate-200'}`}>
                 <div className="flex justify-between items-start mb-4">

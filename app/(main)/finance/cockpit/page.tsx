@@ -2,6 +2,9 @@ import prisma from "@/lib/prisma";
 import { MetricTiles } from "@/components/finance/MetricTiles";
 import { LedgerView } from "@/components/finance/LedgerView";
 import { PinLockGuard } from "@/components/finance/PinLockGuard";
+import { CashPositionWidget } from "@/components/dashboard/CashPositionWidget";
+import { PortalWalletsSection } from "@/components/wallets/PortalWalletsSection";
+import { getWalletStats } from "@/app/actions/wallets";
 
 export const dynamic = "force-dynamic";
 
@@ -48,12 +51,28 @@ export default async function FinanceCockpitPage() {
 
   const clientCount = clients.length;
 
+  const [allPayments, allExpenses, wallets] = await Promise.all([
+    prisma.transactionPayment.findMany({ select: { amountMinor: true, method: true } }),
+    prisma.transaction.findMany({ where: { type: 'EXPENSE' }, select: { amountTotal: true, paymentMode: true } }),
+    getWalletStats(),
+  ]);
+
+  const isCashMethod = (method: string | null | undefined) => (method || "").toLowerCase().includes("cash");
+  const cashInHandMinor =
+    allPayments.filter((p) => isCashMethod(p.method)).reduce((sum, p) => sum + p.amountMinor, 0) -
+    allExpenses.filter((tx) => isCashMethod(tx.paymentMode)).reduce((sum, tx) => sum + tx.amountTotal, 0);
+  const bankCardMinor =
+    allPayments.filter((p) => !isCashMethod(p.method)).reduce((sum, p) => sum + p.amountMinor, 0) -
+    allExpenses.filter((tx) => !isCashMethod(tx.paymentMode)).reduce((sum, tx) => sum + tx.amountTotal, 0);
+
   return (
     <PinLockGuard>
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 md:p-8">
         <div className="max-w-[1600px] mx-auto space-y-8">
+          <CashPositionWidget cashInHandMinor={cashInHandMinor} bankCardMinor={bankCardMinor} />
+          <PortalWalletsSection wallets={wallets} />
           <MetricTiles metrics={metrics} />
-          <LedgerView 
+          <LedgerView
             transactions={transactions} 
             clients={clients}
             totalTransactions={transactions.length}
