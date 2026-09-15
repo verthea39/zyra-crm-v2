@@ -4,6 +4,7 @@ import { QuickActionsBar } from "@/components/dashboard/QuickActionsBar";
 import { ActionChecklist, ChecklistCase } from "@/components/dashboard/ActionChecklist";
 import { ExpiryRadarWidget, RadarExpiry } from "@/components/dashboard/ExpiryRadarWidget";
 import { LiquiditySnapshot } from "@/components/dashboard/LiquiditySnapshot";
+import { DailyTransactionsFeed, type DailyFeedItem } from "@/components/dashboard/DailyTransactionsFeed";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,8 @@ export default async function DashboardPage() {
   const now = new Date();
   const next48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
   const next30d = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
   // Fetch all necessary data in parallel
   const [
@@ -20,7 +23,9 @@ export default async function DashboardPage() {
     wallets,
     activeCases,
     upcomingDocs,
-    clients
+    clients,
+    todayPayments,
+    todayExpenses
   ] = await Promise.all([
     prisma.documentVault.count({
       where: {
@@ -61,6 +66,15 @@ export default async function DashboardPage() {
     }),
     prisma.client.findMany({
       orderBy: { createdAt: 'desc' }
+    }),
+    prisma.transactionPayment.findMany({
+      where: { paidAt: { gte: startOfDay, lte: endOfDay } },
+      include: { transaction: true },
+      orderBy: { paidAt: 'desc' }
+    }),
+    prisma.transaction.findMany({
+      where: { type: 'EXPENSE', date: { gte: startOfDay, lte: endOfDay } },
+      orderBy: { date: 'desc' }
     })
   ]);
 
@@ -100,6 +114,30 @@ export default async function DashboardPage() {
     };
   });
 
+  const todayInflowMinor = todayPayments.reduce((sum: number, p: any) => sum + p.amountMinor, 0);
+  const todayOutflowMinor = todayExpenses.reduce((sum: number, tx: any) => sum + tx.amountTotal, 0);
+
+  const dailyFeedItems: DailyFeedItem[] = [
+    ...todayPayments.map((p: any) => ({
+      id: `pay-${p.id}`,
+      transactionId: p.transactionId,
+      kind: "INCOME" as const,
+      title: p.transaction?.counterparty || "Payment Received",
+      method: p.method,
+      time: p.paidAt,
+      amountMinor: p.amountMinor,
+    })),
+    ...todayExpenses.map((tx: any) => ({
+      id: `exp-${tx.id}`,
+      transactionId: tx.id,
+      kind: "EXPENSE" as const,
+      title: tx.counterparty,
+      method: tx.paymentMode,
+      time: tx.date,
+      amountMinor: tx.amountTotal,
+    })),
+  ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+
   const radarExpiries: RadarExpiry[] = upcomingDocs.map((d: any) => {
     const daysRemaining = Math.ceil((new Date(d.expiryDate!).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     return {
@@ -128,6 +166,11 @@ export default async function DashboardPage() {
 
           {/* Right Column: Widgets */}
           <div className="flex flex-col gap-6">
+            <DailyTransactionsFeed
+              inflowMinor={todayInflowMinor}
+              outflowMinor={todayOutflowMinor}
+              items={dailyFeedItems}
+            />
             <div className="flex-1">
               <ExpiryRadarWidget expiries={radarExpiries} />
             </div>
