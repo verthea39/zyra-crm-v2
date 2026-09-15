@@ -18,9 +18,21 @@ interface InvoiceOption {
   amountPaid: number;
 }
 
-export function PaymentReceiptModal({ open, onOpenChange, clients }: { open: boolean; onOpenChange: (open: boolean) => void; clients: Client[] }) {
+export function PaymentReceiptModal({
+  open,
+  onOpenChange,
+  clients,
+  defaultClientId,
+  defaultInvoiceRef,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  clients: Client[];
+  defaultClientId?: string;
+  defaultInvoiceRef?: string;
+}) {
   const [loading, setLoading] = useState<false | "saving" | "pdf">(false);
-  const [clientId, setClientId] = useState("");
+  const [clientId, setClientId] = useState(defaultClientId || "");
   const [invoiceRef, setInvoiceRef] = useState("");
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("Bank Transfer");
@@ -34,12 +46,22 @@ export function PaymentReceiptModal({ open, onOpenChange, clients }: { open: boo
   }, [open]);
 
   useEffect(() => {
+    if (open) {
+      setClientId(defaultClientId || "");
+    }
+  }, [open, defaultClientId]);
+
+  useEffect(() => {
     if (clientId) {
       setFetchingInvoices(true);
       getPendingInvoices(clientId).then(data => {
         setInvoices(data);
-        setInvoiceRef("");
-        setAmount("");
+        if (defaultInvoiceRef && data.some(i => i.reference === defaultInvoiceRef)) {
+          handleInvoiceChange(defaultInvoiceRef);
+        } else {
+          setInvoiceRef("");
+          setAmount("");
+        }
         setFetchingInvoices(false);
       });
     } else {

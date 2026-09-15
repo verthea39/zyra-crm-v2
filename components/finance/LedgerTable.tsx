@@ -1,8 +1,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Transaction } from "@prisma/client";
-import { Edit2, Trash2 } from "lucide-react";
+import { Edit2, Trash2, MoreVertical, Eye, Printer } from "lucide-react";
 import { deleteTransaction } from "@/app/actions/finance";
+import { downloadDocumentPDF, printViaIframe, type LineItem } from "@/lib/printUtils";
+import { getBranding } from "@/app/actions/branding";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
 const formatMoney = (minorUnits: number) => {
@@ -38,6 +46,34 @@ export function LedgerTable({ transactions }: { transactions: Transaction[] }) {
     }
   };
 
+  const handleDownloadPDF = async (tx: Transaction) => {
+    const branding = await getBranding().catch(() => undefined);
+    const items: LineItem[] = (tx.lineItems as any) || [
+      { desc: tx.category, govCost: (tx.govFeePart || 0) / 100, proFee: (tx.serviceFeePart || 0) / 100 },
+    ];
+    const payload = {
+      type: "TAX_INVOICE" as const,
+      clientName: tx.counterparty,
+      date: formatDate(tx.date),
+      dueDate: tx.dueDate ? formatDate(tx.dueDate) : undefined,
+      reference: tx.reference,
+      caseRef: tx.reference,
+      govCost: (tx.govFeePart || 0) / 100,
+      proFee: (tx.serviceFeePart || 0) / 100,
+      vatAmount: 0,
+      totalPayable: tx.amountTotal / 100,
+      amountReceived: tx.amountPaid / 100,
+      lineItems: items,
+    };
+    try {
+      await downloadDocumentPDF(payload, branding);
+    } catch {
+      toast.error("PDF download failed. Use Print instead.", {
+        action: { label: "Print", onClick: () => printViaIframe(payload, branding) },
+      });
+    }
+  };
+
   return (
     <div className="mt-6">
       {/* Mobile card view */}
@@ -56,7 +92,11 @@ export function LedgerTable({ transactions }: { transactions: Transaction[] }) {
           const isPaid = tx.status === "PAID" || balance <= 0;
 
           return (
-            <div key={tx.id} className="bg-card border border-border rounded-xl shadow-sm p-4 active:scale-[0.99] transition-transform">
+            <div
+              key={tx.id}
+              onClick={() => router.push(`/finance/transactions/${tx.id}`)}
+              className="bg-card border border-border rounded-xl shadow-sm p-4 cursor-pointer hover:border-primary/50 active:scale-[0.99] transition-transform"
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
@@ -99,17 +139,26 @@ export function LedgerTable({ transactions }: { transactions: Transaction[] }) {
                 {tx.dueDate && <span className="text-muted-foreground">Due {formatDate(tx.dueDate)}</span>}
               </div>
 
-              <div className="flex items-center justify-end gap-2 mt-3">
-                <button disabled title="Edit (coming soon)" className="flex items-center justify-center w-11 h-11 rounded-full text-muted-foreground/40 cursor-not-allowed">
-                  <Edit2 className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => handleDelete(tx.id, tx.reference)}
-                  disabled={deletingId === tx.id}
-                  className="flex items-center justify-center w-11 h-11 rounded-full text-muted-foreground active:scale-95 active:bg-rose-50 hover:text-rose-600 transition-transform disabled:opacity-50"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
+              <div className="flex items-center justify-end mt-3" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="flex items-center justify-center w-11 h-11 rounded-full text-muted-foreground active:scale-95 active:bg-slate-100 transition-transform">
+                    <MoreVertical className="w-5 h-5" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuItem onClick={() => router.push(`/finance/transactions/${tx.id}`)} className="cursor-pointer">
+                      <Eye className="w-4 h-4 mr-2" /> View
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push(`/finance/transactions/${tx.id}/edit`)} className="cursor-pointer">
+                      <Edit2 className="w-4 h-4 mr-2" /> Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDownloadPDF(tx)} className="cursor-pointer">
+                      <Printer className="w-4 h-4 mr-2" /> Download PDF
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDelete(tx.id, tx.reference)} disabled={deletingId === tx.id} className="cursor-pointer text-rose-600">
+                      <Trash2 className="w-4 h-4 mr-2" /> Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           );
@@ -141,7 +190,11 @@ export function LedgerTable({ transactions }: { transactions: Transaction[] }) {
               const isPaid = tx.status === "PAID" || balance <= 0;
               
               return (
-                <tr key={tx.id} className="hover:bg-slate-50 transition-colors group bg-card text-sm font-medium text-slate-800">
+                <tr
+                  key={tx.id}
+                  onClick={() => router.push(`/finance/transactions/${tx.id}`)}
+                  className="hover:bg-slate-50 transition-colors group bg-card text-sm font-medium text-slate-800 cursor-pointer"
+                >
                   <td className="px-6 py-4 whitespace-nowrap sticky left-0 z-10 bg-card group-hover:bg-slate-50 border-r border-border shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                     <div className="flex flex-col gap-1">
                       <span className="font-mono text-xs font-semibold text-slate-600">{tx.reference}</span>
@@ -191,18 +244,27 @@ export function LedgerTable({ transactions }: { transactions: Transaction[] }) {
                   <td className="px-6 py-4 whitespace-nowrap text-muted-foreground text-xs">
                     {tx.dueDate ? formatDate(tx.dueDate) : "N/A"}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <div className="flex items-center justify-end gap-3 text-muted-foreground">
-                      <button disabled title="Edit (coming soon)" className="text-muted-foreground/40 cursor-not-allowed">
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(tx.id, tx.reference)}
-                        disabled={deletingId === tx.id}
-                        className="hover:text-rose-600 transition-colors disabled:opacity-50"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                  <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end text-muted-foreground">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger className="p-1.5 rounded-md hover:bg-slate-100 transition-colors">
+                          <MoreVertical className="w-4 h-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          <DropdownMenuItem onClick={() => router.push(`/finance/transactions/${tx.id}`)} className="cursor-pointer">
+                            <Eye className="w-4 h-4 mr-2" /> View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push(`/finance/transactions/${tx.id}/edit`)} className="cursor-pointer">
+                            <Edit2 className="w-4 h-4 mr-2" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDownloadPDF(tx)} className="cursor-pointer">
+                            <Printer className="w-4 h-4 mr-2" /> Download PDF
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDelete(tx.id, tx.reference)} disabled={deletingId === tx.id} className="cursor-pointer text-rose-600">
+                            <Trash2 className="w-4 h-4 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </td>
                 </tr>

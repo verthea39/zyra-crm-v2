@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createClient } from "@/app/actions/clients";
+import { createClient, updateClient } from "@/app/actions/clients";
+import { Client } from "@prisma/client";
 import { toast } from "sonner"; // Assuming sonner is used, if not, we can remove it or use native alert for now
 
 const clientSchema = z.object({
@@ -29,8 +30,9 @@ const clientSchema = z.object({
 
 type ClientFormValues = z.infer<typeof clientSchema>;
 
-export function AddClientModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function AddClientModal({ open, onOpenChange, client }: { open: boolean; onOpenChange: (open: boolean) => void; client?: Client }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isEditMode = !!client;
 
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
@@ -50,19 +52,53 @@ export function AddClientModal({ open, onOpenChange }: { open: boolean; onOpenCh
     },
   });
 
+  useEffect(() => {
+    if (open && client) {
+      form.reset({
+        type: client.type,
+        leadSource: client.leadSource || "",
+        name: client.name,
+        place: client.place || "",
+        phone: client.phone || "",
+        nationality: client.nationality || "",
+        visaType: client.visaType || "",
+        passportNo: client.passportNo || "",
+        passportExpiry: client.passportExpiry ? new Date(client.passportExpiry).toISOString().slice(0, 10) : "",
+        emiratesIdNo: client.emiratesIdNo || "",
+        tradeLicenseNo: client.tradeLicenseNo || "",
+        tradeLicenseExpiry: client.expiryDate ? new Date(client.expiryDate).toISOString().slice(0, 10) : "",
+      });
+    } else if (open && !client) {
+      form.reset({
+        type: "INDIVIDUAL",
+        leadSource: "",
+        name: "",
+        place: "",
+        phone: "",
+        nationality: "",
+        visaType: "",
+        passportNo: "",
+        passportExpiry: "",
+        emiratesIdNo: "",
+        tradeLicenseNo: "",
+        tradeLicenseExpiry: "",
+      });
+    }
+  }, [open, client]);
+
   const clientType = form.watch("type");
 
   async function onSubmit(data: ClientFormValues) {
     setIsSubmitting(true);
-    const result = await createClient(data);
+    const result = isEditMode ? await updateClient(client!.id, data) : await createClient(data);
     setIsSubmitting(false);
 
     if (result.success) {
-      toast.success("Client Profile Created Successfully");
+      toast.success(isEditMode ? "Client Profile Updated" : "Client Profile Created Successfully");
       form.reset();
       onOpenChange(false);
     } else {
-      toast.error(result.error || "Failed to create client");
+      toast.error(result.error || `Failed to ${isEditMode ? "update" : "create"} client`);
     }
   }
 
@@ -72,7 +108,7 @@ export function AddClientModal({ open, onOpenChange }: { open: boolean; onOpenCh
         <DialogHeader className="bg-slate-50 border-b border-border text-foreground -mx-6 -mt-6 p-6 rounded-t-lg">
           <DialogTitle className="flex items-center gap-2 text-xl">
             <User className="w-5 h-5 text-blue-400" />
-            Add Client Profile
+            {isEditMode ? "Edit Client Profile" : "Add Client Profile"}
           </DialogTitle>
           <DialogDescription className="text-slate-400">
             Separate client registry with full identification, UAE visa, and contact records
@@ -336,7 +372,7 @@ export function AddClientModal({ open, onOpenChange }: { open: boolean; onOpenCh
                 disabled={isSubmitting}
               >
                 {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                Save Client Profile
+                {isEditMode ? "Save Changes" : "Save Client Profile"}
               </button>
             </div>
           </form>

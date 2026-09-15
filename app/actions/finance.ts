@@ -244,10 +244,55 @@ export async function getTransaction(transactionId: string) {
   try {
     return await prisma.transaction.findUnique({
       where: { id: transactionId },
-      include: { payments: { orderBy: { paidAt: "desc" } } },
+      include: {
+        payments: { orderBy: { paidAt: "desc" } },
+        client: true,
+      },
     });
   } catch (error) {
     console.error("Error fetching transaction:", error);
     return null;
+  }
+}
+
+export type UpdateTransactionInput = {
+  category: string;
+  paymentMode?: string;
+  description?: string;
+  dueDate?: string;
+  lineItems: { desc: string; govCost: number; proFee: number }[];
+};
+
+export async function updateTransaction(id: string, data: UpdateTransactionInput) {
+  try {
+    const govFee = Math.round(data.lineItems.reduce((sum, i) => sum + i.govCost, 0) * 100);
+    const serviceFee = Math.round(data.lineItems.reduce((sum, i) => sum + i.proFee, 0) * 100);
+    const amountTotal = govFee + serviceFee;
+
+    const existing = await prisma.transaction.findUnique({ where: { id } });
+    if (!existing) return { success: false, error: "Transaction not found." };
+
+    const status = computeTransactionStatus(amountTotal, existing.amountPaid, data.dueDate ? new Date(data.dueDate) : existing.dueDate);
+
+    const tx = await prisma.transaction.update({
+      where: { id },
+      data: {
+        category: data.category,
+        paymentMode: data.paymentMode,
+        description: data.description,
+        dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        amountTotal,
+        govFeePart: govFee,
+        serviceFeePart: serviceFee,
+        lineItems: data.lineItems,
+        status,
+      },
+    });
+
+    revalidatePath("/finance/cockpit");
+    return { success: true, tx };
+  } catch (error) {
+    console.error("Error updating transaction:", error);
+    return { success: false, error: "Failed to update transaction." };
   }
 }

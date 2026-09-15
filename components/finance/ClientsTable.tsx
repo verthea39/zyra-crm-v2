@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { MessageCircle, Edit, Trash2 } from "lucide-react";
 import { Client, Transaction } from "@prisma/client";
 import { deleteClient } from "@/app/actions/clients";
+import { AddClientModal } from "./AddClientModal";
 import { toast } from "sonner";
 
 export type ClientWithTransactions = Client & {
@@ -12,6 +13,7 @@ export type ClientWithTransactions = Client & {
 export function ClientsTable({ clients }: { clients: ClientWithTransactions[] }) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingClient, setEditingClient] = useState<ClientWithTransactions | null>(null);
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Delete client "${name}"? This cannot be undone.`)) return;
@@ -105,7 +107,11 @@ Greetings from Zyra Documents Clearance Services. How can our PRO operations tea
           const formattedPhone = client.phone?.replace(/[^0-9]/g, '');
 
           return (
-            <div key={client.id} className="bg-card border border-border rounded-xl shadow-sm p-4 active:scale-[0.99] transition-transform">
+            <div
+              key={client.id}
+              onClick={() => setEditingClient(client)}
+              className="bg-card border border-border rounded-xl shadow-sm p-4 cursor-pointer hover:border-primary/50 active:scale-[0.99] transition-transform"
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h3 className="font-semibold text-foreground truncate">{client.name}</h3>
@@ -144,7 +150,7 @@ Greetings from Zyra Documents Clearance Services. How can our PRO operations tea
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-border">
+              <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-border" onClick={(e) => e.stopPropagation()}>
                 {formattedPhone ? (
                   <a
                     href={`https://wa.me/${formattedPhone}?text=${getWhatsAppMessage(client, daysRemaining, outstanding)}`}
@@ -160,8 +166,12 @@ Greetings from Zyra Documents Clearance Services. How can our PRO operations tea
                     <MessageCircle className="w-5 h-5" />
                   </span>
                 )}
-                <button className="flex items-center justify-center w-11 h-11 rounded-full text-primary active:scale-95 active:bg-primary/10 transition-transform" title="Edit Profile (coming soon)" disabled>
-                  <Edit className="w-5 h-5 opacity-40" />
+                <button
+                  onClick={() => setEditingClient(client)}
+                  className="flex items-center justify-center w-11 h-11 rounded-full text-primary active:scale-95 active:bg-primary/10 transition-transform"
+                  title="Edit Profile"
+                >
+                  <Edit className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => handleDelete(client.id, client.name)}
@@ -200,7 +210,11 @@ Greetings from Zyra Documents Clearance Services. How can our PRO operations tea
               const formattedPhone = client.phone?.replace(/[^0-9]/g, '');
 
               return (
-                <tr key={client.id} className="hover:bg-slate-50 transition-colors group bg-card text-sm font-medium text-slate-800">
+                <tr
+                  key={client.id}
+                  onClick={() => setEditingClient(client)}
+                  className="hover:bg-slate-50 transition-colors group bg-card text-sm font-medium text-slate-800 cursor-pointer"
+                >
                   <td className="px-4 py-3 align-top font-semibold text-foreground sticky left-0 z-10 bg-card group-hover:bg-slate-50 border-r border-border shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                     {client.name}
                   </td>
@@ -253,7 +267,7 @@ Greetings from Zyra Documents Clearance Services. How can our PRO operations tea
                       <span className="text-emerald-600 text-xs font-bold uppercase tracking-wider">Clear</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 align-top text-center">
+                  <td className="px-4 py-3 align-top text-center" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-3">
                       {formattedPhone ? (
                         <a href={`https://wa.me/${formattedPhone}?text=${getWhatsAppMessage(client, daysRemaining, outstanding)}`} target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:text-emerald-500 transition-colors" title="Message on WhatsApp">
@@ -262,7 +276,7 @@ Greetings from Zyra Documents Clearance Services. How can our PRO operations tea
                       ) : (
                         <span className="text-slate-300 cursor-not-allowed" title="No phone number"><MessageCircle className="w-4 h-4" /></span>
                       )}
-                      <button className="text-primary/40 cursor-not-allowed" title="Edit Profile (coming soon)" disabled>
+                      <button onClick={() => setEditingClient(client)} className="text-primary hover:text-primary/70 transition-colors" title="Edit Profile">
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
@@ -295,6 +309,14 @@ Greetings from Zyra Documents Clearance Services. How can our PRO operations tea
         </table>
       </div>
       </div>
+
+      {editingClient && (
+        <AddClientModal
+          open={!!editingClient}
+          onOpenChange={(o) => { if (!o) setEditingClient(null); }}
+          client={editingClient}
+        />
+      )}
     </div>
   );
 }
