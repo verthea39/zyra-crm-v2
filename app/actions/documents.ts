@@ -24,6 +24,8 @@ export type CreateDocumentInput = {
   notes?: string;
 };
 
+export type UpdateDocumentInput = Omit<CreateDocumentInput, "type">;
+
 const TYPE_PREFIX: Record<DocumentType, string> = {
   INVOICE: "INV",
   QUOTATION: "QT",
@@ -83,6 +85,56 @@ export async function createDocument(input: CreateDocumentInput) {
   } catch (err) {
     console.error("Failed to create document:", err);
     return { success: false, error: "Failed to create document" };
+  }
+}
+
+export async function updateDocument(id: string, input: UpdateDocumentInput) {
+  try {
+    const items = input.items.filter((i) => i.description.trim());
+    if (items.length === 0) {
+      return { success: false, error: "At least one line item is required" };
+    }
+
+    const totals = calculateDocumentTotals(items, {
+      discountMinor: input.discountMinor,
+      vatRate: input.vatRate,
+    });
+
+    const doc = await prisma.$transaction(async (tx) => {
+      await tx.documentItem.deleteMany({ where: { documentId: id } });
+      return tx.document.update({
+        where: { id },
+        data: {
+          clientId: input.clientId,
+          caseFileId: input.caseFileId || undefined,
+          subtotalMinor: totals.subtotalMinor,
+          discountMinor: totals.discountMinor,
+          vatRate: input.vatRate ?? DEFAULT_VAT_RATE,
+          vatMinor: totals.vatMinor,
+          totalMinor: totals.totalMinor,
+          dueDate: input.dueDate ? new Date(input.dueDate) : null,
+          expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
+          notes: input.notes,
+          items: {
+            create: items.map((item) => ({
+              description: item.description,
+              quantity: item.quantity,
+              unitPriceMinor: item.unitPriceMinor,
+              lineTotalMinor: lineTotalMinor(item),
+              vatExempt: item.vatExempt ?? false,
+            })),
+          },
+        },
+        include: { items: true },
+      });
+    });
+
+    revalidatePath("/documents");
+    revalidatePath(`/documents/${id}`);
+    return { success: true, document: doc };
+  } catch (err) {
+    console.error("Failed to update document:", err);
+    return { success: false, error: "Failed to update document" };
   }
 }
 

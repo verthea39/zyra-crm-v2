@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useMemo } from "react";
 import { formatMoney } from "@/lib/calculations";
 import { FileText, FileSignature, Receipt, Plus, ChevronRight } from "lucide-react";
@@ -26,6 +27,7 @@ const STATUS_STYLE: Record<string, string> = {
 };
 
 export function DocumentList({ documents }: { documents: DocumentRow[] }) {
+  const router = useRouter();
   const [typeFilter, setTypeFilter] = useState<"ALL" | "INVOICE" | "QUOTATION" | "RECEIPT">("ALL");
 
   const filtered = useMemo(
@@ -74,8 +76,9 @@ export function DocumentList({ documents }: { documents: DocumentRow[] }) {
             {filtered.map((doc) => {
               const Icon = TYPE_ICON[doc.type];
               return (
-                <div
+                <Link
                   key={doc.id}
+                  href={`/documents/${doc.id}`}
                   className="flex items-center justify-between gap-3 bg-card border border-border rounded-xl p-4 min-h-[44px] active:scale-[0.99] transition-transform"
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -93,7 +96,7 @@ export function DocumentList({ documents }: { documents: DocumentRow[] }) {
                       {doc.status}
                     </span>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
@@ -114,7 +117,11 @@ export function DocumentList({ documents }: { documents: DocumentRow[] }) {
               </thead>
               <tbody className="divide-y divide-border">
                 {filtered.map((doc) => (
-                  <tr key={doc.id} className="hover:bg-slate-50 transition-colors">
+                  <tr
+                    key={doc.id}
+                    onClick={() => router.push(`/documents/${doc.id}`)}
+                    className="hover:bg-slate-50 transition-colors cursor-pointer"
+                  >
                     <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-600">{doc.reference}</td>
                     <td className="px-4 py-3 font-medium text-foreground">{doc.client.name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{doc.type.charAt(0) + doc.type.slice(1).toLowerCase()}</td>

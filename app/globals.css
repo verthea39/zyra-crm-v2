@@ -155,3 +155,28 @@
 .pt-safe {
   padding-top: env(safe-area-inset-top, 0px);
 }
+
+/*
+ * Native print support: any page can wrap its printable content in
+ * <div data-print-area> and it will be the only thing visible when the
+ * user prints (sidebar, top bar, bottom nav, FAB are all stripped).
+ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  [data-print-area],
+  [data-print-area] * {
+    visibility: visible;
+  }
+  [data-print-area] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+}

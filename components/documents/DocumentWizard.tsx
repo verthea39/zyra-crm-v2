@@ -7,30 +7,53 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { MobileStepTabs } from "@/components/ui/mobile-step-tabs";
 import { LineItemSheet, DraftItem } from "./LineItemSheet";
-import { createDocument } from "@/app/actions/documents";
-import { calculateDocumentTotals, formatMoney, DEFAULT_VAT_RATE } from "@/lib/calculations";
+import { createDocument, updateDocument } from "@/app/actions/documents";
+import { calculateDocumentTotals, formatMoney, DEFAULT_VAT_RATE, minorToDisplay } from "@/lib/calculations";
 import { Plus, Trash2, ChevronRight, ArrowLeft } from "lucide-react";
 
 const STEPS = ["Client Info", "Items & VAT", "Review"];
 
-export function DocumentWizard({ clients, defaultType = "INVOICE" }: {
+export type DocumentWizardInitialData = {
+  id: string;
+  type: "INVOICE" | "QUOTATION" | "RECEIPT";
+  clientId: string;
+  dueDate?: string | null;
+  expiryDate?: string | null;
+  discountMinor: number;
+  vatRate: number;
+  notes?: string | null;
+  items: { description: string; quantity: number; unitPriceMinor: number; vatExempt: boolean }[];
+};
+
+export function DocumentWizard({ clients, defaultType = "INVOICE", initialData }: {
   clients: { id: string; name: string }[];
   defaultType?: "INVOICE" | "QUOTATION" | "RECEIPT";
+  initialData?: DocumentWizardInitialData;
 }) {
   const router = useRouter();
+  const isEditMode = !!initialData;
   const [step, setStep] = useState(0);
   const [furthestStep, setFurthestStep] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const [type, setType] = useState<"INVOICE" | "QUOTATION" | "RECEIPT">(defaultType);
-  const [clientId, setClientId] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [expiryDate, setExpiryDate] = useState("");
+  const [type, setType] = useState<"INVOICE" | "QUOTATION" | "RECEIPT">(initialData?.type ?? defaultType);
+  const [clientId, setClientId] = useState(initialData?.clientId ?? "");
+  const [dueDate, setDueDate] = useState(initialData?.dueDate ? initialData.dueDate.slice(0, 10) : "");
+  const [expiryDate, setExpiryDate] = useState(initialData?.expiryDate ? initialData.expiryDate.slice(0, 10) : "");
 
-  const [items, setItems] = useState<DraftItem[]>([{ description: "", quantity: 1, unitPrice: 0, vatExempt: false }]);
-  const [discount, setDiscount] = useState(0);
-  const [vatRate, setVatRate] = useState(DEFAULT_VAT_RATE);
-  const [notes, setNotes] = useState("");
+  const [items, setItems] = useState<DraftItem[]>(
+    initialData?.items.length
+      ? initialData.items.map((i) => ({
+          description: i.description,
+          quantity: i.quantity,
+          unitPrice: minorToDisplay(i.unitPriceMinor),
+          vatExempt: i.vatExempt,
+        }))
+      : [{ description: "", quantity: 1, unitPrice: 0, vatExempt: false }]
+  );
+  const [discount, setDiscount] = useState(initialData ? minorToDisplay(initialData.discountMinor) : 0);
+  const [vatRate, setVatRate] = useState(initialData?.vatRate ?? DEFAULT_VAT_RATE);
+  const [notes, setNotes] = useState(initialData?.notes ?? "");
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
 
   const goToStep = (s: number) => {
@@ -45,8 +68,7 @@ export function DocumentWizard({ clients, defaultType = "INVOICE" }: {
 
   const handleSubmit = async () => {
     setLoading(true);
-    const res = await createDocument({
-      type,
+    const payload = {
       clientId,
       items: items
         .filter((i) => i.description.trim())
@@ -56,30 +78,43 @@ export function DocumentWizard({ clients, defaultType = "INVOICE" }: {
       dueDate: dueDate || undefined,
       expiryDate: expiryDate || undefined,
       notes,
-    });
+    };
+
+    const res = isEditMode
+      ? await updateDocument(initialData!.id, payload)
+      : await createDocument({ ...payload, type });
     setLoading(false);
 
     if (res.success) {
-      toast.success(`${type.charAt(0) + type.slice(1).toLowerCase()} created`);
-      router.push("/documents");
+      toast.success(`${type.charAt(0) + type.slice(1).toLowerCase()} ${isEditMode ? "updated" : "created"}`);
+      router.push(isEditMode ? `/documents/${initialData!.id}` : "/documents");
+      router.refresh();
     } else {
-      toast.error(res.error || "Failed to create document");
+      toast.error(res.error || `Failed to ${isEditMode ? "update" : "create"} document`);
     }
   };
 
   return (
     <div className="flex flex-col max-w-2xl mx-auto w-full">
       <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:justify-between mb-4">
-        <h1 className="text-lg font-semibold sm:text-2xl text-foreground">New Document</h1>
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value as any)}
-          className="w-full md:w-auto h-11 rounded-md border border-input bg-background px-3 text-base"
-        >
-          <option value="INVOICE">Invoice</option>
-          <option value="QUOTATION">Quotation</option>
-          <option value="RECEIPT">Receipt</option>
-        </select>
+        <h1 className="text-lg font-semibold sm:text-2xl text-foreground">
+          {isEditMode ? `Edit ${type.charAt(0) + type.slice(1).toLowerCase()}` : "New Document"}
+        </h1>
+        {isEditMode ? (
+          <span className="w-full md:w-auto h-11 flex items-center px-3 rounded-md border border-input bg-slate-50 text-base text-slate-600">
+            {type.charAt(0) + type.slice(1).toLowerCase()}
+          </span>
+        ) : (
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value as "INVOICE" | "QUOTATION" | "RECEIPT")}
+            className="w-full md:w-auto h-11 rounded-md border border-input bg-background px-3 text-base"
+          >
+            <option value="INVOICE">Invoice</option>
+            <option value="QUOTATION">Quotation</option>
+            <option value="RECEIPT">Receipt</option>
+          </select>
+        )}
       </div>
 
       <MobileStepTabs steps={STEPS} activeStep={step} furthestStep={furthestStep} onStepClick={goToStep} />
@@ -256,7 +291,7 @@ export function DocumentWizard({ clients, defaultType = "INVOICE" }: {
                 disabled={loading}
                 className="h-11 px-5 rounded-xl bg-[#007A55] text-white font-semibold active:scale-95 transition-transform disabled:opacity-50"
               >
-                {loading ? "Creating..." : "Create Document"}
+                {loading ? "Saving..." : isEditMode ? "Save Changes" : "Create Document"}
               </button>
             )}
           </div>
