@@ -53,6 +53,7 @@ export function FilterStrip({
           >
             <option>Status: All</option>
             <option>Paid</option>
+            <option>Partially Paid</option>
             <option>Pending</option>
             <option>Overdue</option>
           </select>

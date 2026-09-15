@@ -52,6 +52,7 @@ enum TransactionStatus {
   PENDING
   PAID
   OVERDUE
+  PARTIALLY_PAID
 }
 
 enum DocumentType {
@@ -221,16 +222,34 @@ model Transaction {
   
   caseFileId      String?
   caseFile        CaseFile?         @relation(fields: [caseFileId], references: [id], onDelete: SetNull)
-  
+
   clientId        String?
   client          Client?           @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  
+
+  payments        TransactionPayment[]
+
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
-  
+
   @@index([type])
   @@index([status])
   @@index([date])
+}
+
+model TransactionPayment {
+  id             String      @id @default(cuid())
+  transactionId  String
+  transaction    Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  amountMinor    Int
+  method         String?
+  transactionRef String?
+  notes          String?
+
+  paidAt         DateTime    @default(now())
+  createdAt      DateTime    @default(now())
+
+  @@index([transactionId])
 }
 
 model Employee {

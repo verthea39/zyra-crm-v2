@@ -254,7 +254,6 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
                         <Input 
                           type="number" 
                           inputMode="decimal"
-                          required 
                           min="0" 
                           step="0.01"
                           placeholder="0.00"
@@ -271,7 +270,6 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
                         <Input 
                           type="number" 
                           inputMode="decimal"
-                          required 
                           min="0" 
                           step="0.01"
                           placeholder="0.00"

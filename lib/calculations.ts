@@ -68,3 +68,23 @@ export function formatMoney(minor: number, currency = "AED"): string {
     minimumFractionDigits: 2,
   }).format(minorToDisplay(minor));
 }
+
+/**
+ * Single source of truth for the Total/Paid -> status mapping used by
+ * Transaction (Invoice/Expense) records:
+ *   paid <= 0             -> PENDING (unpaid / issued)
+ *   0 < paid < total       -> PARTIALLY_PAID
+ *   paid >= total          -> PAID
+ * OVERDUE only applies while there's still a balance and the due date has passed.
+ */
+export function computeTransactionStatus(
+  amountTotal: number,
+  amountPaid: number,
+  dueDate?: Date | string | null
+): "PENDING" | "PARTIALLY_PAID" | "PAID" | "OVERDUE" {
+  const balance = amountTotal - amountPaid;
+  if (balance <= 0) return "PAID";
+  const isOverdue = dueDate && new Date(dueDate) < new Date();
+  if (isOverdue) return "OVERDUE";
+  return amountPaid > 0 ? "PARTIALLY_PAID" : "PENDING";
+}

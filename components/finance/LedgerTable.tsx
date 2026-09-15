@@ -81,9 +81,10 @@ export function LedgerTable({ transactions }: { transactions: Transaction[] }) {
                 </span>
                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border
                   ${tx.status === 'PAID' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
+                    tx.status === 'PARTIALLY_PAID' ? 'bg-blue-50 border-blue-200 text-blue-800' :
                     tx.status === 'PENDING' ? 'bg-amber-50 border-amber-200 text-amber-800' :
                     'bg-rose-50 border-rose-200 text-rose-800'}`}>
-                  {tx.status}
+                  {tx.status.replace('_', ' ')}
                 </span>
               </div>
 
@@ -180,10 +181,11 @@ export function LedgerTable({ transactions }: { transactions: Transaction[] }) {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border
-                      ${tx.status === 'PAID' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 
-                        tx.status === 'PENDING' ? 'bg-amber-50 border-amber-200 text-amber-800' : 
+                      ${tx.status === 'PAID' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
+                        tx.status === 'PARTIALLY_PAID' ? 'bg-blue-50 border-blue-200 text-blue-800' :
+                        tx.status === 'PENDING' ? 'bg-amber-50 border-amber-200 text-amber-800' :
                         'bg-rose-50 border-rose-200 text-rose-800'}`}>
-                      {tx.status}
+                      {tx.status.replace('_', ' ')}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-muted-foreground text-xs">

@@ -56,6 +56,8 @@ export function LedgerView({
     // Status Filter
     if (statusFilter === "Paid") {
       result = result.filter(tx => tx.status === "PAID" || (tx.amountTotal - tx.amountPaid <= 0));
+    } else if (statusFilter === "Partially Paid") {
+      result = result.filter(tx => tx.status === "PARTIALLY_PAID");
     } else if (statusFilter === "Pending") {
       result = result.filter(tx => tx.status === "PENDING" && (tx.amountTotal - tx.amountPaid > 0));
     } else if (statusFilter === "Overdue") {

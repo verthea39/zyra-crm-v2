@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { downloadDocumentPDF, printViaIframe } from "@/lib/printUtils";
 import type { CompanyBranding } from "@/lib/companyBranding";
 import { getBranding } from "@/app/actions/branding";
-import { getPendingInvoices } from "@/app/actions/finance";
+import { getPendingInvoices, recordPayment } from "@/app/actions/finance";
 import { Receipt, X } from "lucide-react";
 
 interface InvoiceOption {
@@ -49,6 +49,9 @@ export function PaymentReceiptModal({ open, onOpenChange, clients }: { open: boo
     }
   }, [clientId]);
 
+  const selectedInvoice = invoices.find(i => i.reference === invoiceRef);
+  const remainingBalanceAed = selectedInvoice ? (selectedInvoice.amountTotal - selectedInvoice.amountPaid) / 100 : undefined;
+
   const handleInvoiceChange = (ref: string) => {
     setInvoiceRef(ref);
     const inv = invoices.find(i => i.reference === ref);
@@ -62,22 +65,43 @@ export function PaymentReceiptModal({ open, onOpenChange, clients }: { open: boo
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const parsedAmount = parseFloat(amount || "0");
+    if (selectedInvoice && remainingBalanceAed !== undefined && parsedAmount > remainingBalanceAed + 0.001) {
+      toast.error(`Amount exceeds the remaining balance of AED ${remainingBalanceAed.toFixed(2)}.`);
+      return;
+    }
+
     setLoading("saving");
 
     try {
+      // Actually apply the payment to the invoice (this used to only generate
+      // a PDF and never touched the database at all -- amountPaid/status on
+      // the linked Transaction never changed no matter how many "receipts"
+      // were printed).
+      let newBalance: number | undefined = undefined;
+      if (selectedInvoice) {
+        const res = await recordPayment({
+          transactionId: selectedInvoice.id,
+          amount: parsedAmount,
+          method,
+          transactionRef: transactionRef || undefined,
+        });
+        if (!res.success) {
+          setLoading(false);
+          toast.error(res.error || "Failed to record payment");
+          return;
+        }
+        newBalance = (res.remainingBalance ?? 0) / 100;
+      }
+
       const selectedClient = clients.find(c => c.id === clientId);
       const clientName = selectedClient ? selectedClient.name : "Unknown Client";
       const clientPhone = selectedClient?.phone || undefined;
       const clientTRN = undefined;
       const clientDocumentRef = selectedClient?.type === 'CORPORATE' ? selectedClient?.tradeLicenseNo : selectedClient?.passportNo;
 
-      const inv = invoices.find(i => i.reference === invoiceRef);
-      const previousTotal = inv ? (inv.amountTotal / 100) : undefined;
-      const parsedAmount = parseFloat(amount || "0");
-      let remainingBalance = undefined;
-      if (inv) {
-        remainingBalance = ((inv.amountTotal - inv.amountPaid) / 100) - parsedAmount;
-      }
+      const previousTotal = selectedInvoice ? (selectedInvoice.amountTotal / 100) : undefined;
 
       const printPayload = {
         type: 'PAYMENT_RECEIPT' as const,
@@ -90,18 +114,22 @@ export function PaymentReceiptModal({ open, onOpenChange, clients }: { open: boo
         amount: parsedAmount,
         method,
         previousTotal,
-        remainingBalance,
+        remainingBalance: newBalance,
         transactionRef
       };
 
-      toast.success("Payment Receipt generated successfully!");
+      toast.success(
+        selectedInvoice
+          ? `Payment recorded. Balance due: AED ${(newBalance ?? 0).toFixed(2)}`
+          : "Payment Receipt generated successfully!"
+      );
 
       setLoading("pdf");
       try {
         await downloadDocumentPDF(printPayload, branding ?? undefined);
       } catch (pdfErr) {
         console.error("PDF generation failed:", pdfErr);
-        toast.error("Receipt generated, but PDF download failed. Use Print instead.", {
+        toast.error("Payment recorded, but PDF download failed. Use Print instead.", {
           action: { label: "Print", onClick: () => printViaIframe(printPayload, branding ?? undefined) },
         });
       }
@@ -116,7 +144,7 @@ export function PaymentReceiptModal({ open, onOpenChange, clients }: { open: boo
       setMethod("Bank Transfer");
       setTransactionRef("");
     } catch (err) {
-      console.error("Failed to generate payment receipt:", err);
+      console.error("Failed to record payment:", err);
       setLoading(false);
       toast.error("An error occurred");
     }
@@ -181,10 +209,41 @@ export function PaymentReceiptModal({ open, onOpenChange, clients }: { open: boo
             )}
           </div>
 
+          {selectedInvoice && (
+            <div className="grid grid-cols-3 gap-2 bg-slate-50 border border-slate-200 rounded-lg p-3 text-center">
+              <div>
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Total Amount</p>
+                <p className="text-sm font-bold text-slate-900">AED {(selectedInvoice.amountTotal / 100).toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Total Paid</p>
+                <p className="text-sm font-bold text-emerald-600">AED {(selectedInvoice.amountPaid / 100).toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Balance Due</p>
+                <p className="text-sm font-bold text-rose-600">AED {(remainingBalanceAed ?? 0).toFixed(2)}</p>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Amount Received (AED) *</Label>
-              <Input type="number" inputMode="decimal" required min="1" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              <Input
+                type="number"
+                inputMode="decimal"
+                required
+                min="0.01"
+                max={remainingBalanceAed ?? undefined}
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+              {remainingBalanceAed !== undefined && (
+                <p className="text-xs text-muted-foreground">
+                  Enter any amount up to AED {remainingBalanceAed.toFixed(2)} -- partial payments are allowed.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Payment Mode *</Label>
