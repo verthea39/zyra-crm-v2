@@ -9,12 +9,26 @@ import ws from 'ws'
 // and keeps this working on any Node version this app might run under.
 neonConfig.webSocketConstructor = ws
 
+function sanitizeConnectionString(name: string, raw: string | undefined): string | undefined {
+  if (!raw) return raw
+  // Strips accidental wrapping quotes/whitespace from env values pasted from
+  // .env's KEY="value" dotenv syntax straight into a dashboard UI -- the raw
+  // Neon Pool constructor calls `new URL()` internally and throws
+  // ERR_INVALID_URL on a leading/trailing `"` that older engine-based
+  // parsing silently tolerated.
+  const cleaned = raw.trim().replace(/^['"]|['"]$/g, '').trim()
+  if (!cleaned.startsWith('postgres://') && !cleaned.startsWith('postgresql://')) {
+    console.warn(`[prisma] ${name} does not look like a valid postgres connection string`)
+  }
+  return cleaned
+}
+
 const prismaClientSingleton = () => {
   // The Neon adapter opens connections over HTTP/WebSocket rather than a
   // long-lived raw TCP socket, so a compute auto-suspend/resume cycle never
   // surfaces as a `kind: Closed` error from a stale pooled connection --
   // each query just reconnects transparently.
-  const connectionString = process.env.DATABASE_URL
+  const connectionString = sanitizeConnectionString('DATABASE_URL', process.env.DATABASE_URL)
   const pool = new Pool({ connectionString })
   const adapter = new PrismaNeon(pool)
 
