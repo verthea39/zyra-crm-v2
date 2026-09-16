@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { logServerError } from "@/lib/logger";
 import { revalidatePath } from "next/cache";
 import { calculateDocumentTotals, lineTotalMinor, DEFAULT_VAT_RATE } from "@/lib/calculations";
 import type { DocumentType } from "@prisma/client";
@@ -100,7 +101,7 @@ export async function createDocument(input: CreateDocumentInput) {
 
     return { success: true, document: doc };
   } catch (err) {
-    console.error("Failed to create document:", err);
+    logServerError(err, { action: "createDocument" });
     return { success: false, error: "Failed to create document" };
   }
 }
@@ -159,7 +160,7 @@ export async function updateDocument(id: string, input: UpdateDocumentInput) {
 
     return { success: true, document: doc };
   } catch (err) {
-    console.error("Failed to update document:", err);
+    logServerError(err, { action: "updateDocument" });
     return { success: false, error: "Failed to update document" };
   }
 }
@@ -172,7 +173,7 @@ export async function getDocuments(type?: DocumentType) {
       orderBy: { createdAt: "desc" },
     });
   } catch (err) {
-    console.error("Failed to fetch documents:", err);
+    logServerError(err, { action: "getDocuments" });
     return [];
   }
 }
@@ -189,7 +190,7 @@ export async function getDocument(id: string) {
       },
     });
   } catch (err) {
-    console.error("Failed to fetch document:", err);
+    logServerError(err, { action: "getDocument" });
     return null;
   }
 }
@@ -212,7 +213,7 @@ export async function updateDocumentStatus(id: string, status: "DRAFT" | "SENT" 
 
     return { success: true };
   } catch (err) {
-    console.error("Failed to update document status:", err);
+    logServerError(err, { action: "updateDocumentStatus" });
     return { success: false, error: "Failed to update status" };
   }
 }
@@ -285,7 +286,7 @@ export async function convertQuotationToInvoice(quotationId: string) {
 
     return { success: true, invoice };
   } catch (err) {
-    console.error("Failed to convert quotation to invoice:", err);
+    logServerError(err, { action: "convertQuotationToInvoice" });
     return { success: false, error: "Failed to convert quotation to invoice" };
   }
 }
@@ -296,7 +297,7 @@ export async function deleteDocument(id: string) {
     revalidatePath("/documents");
     return { success: true };
   } catch (err) {
-    console.error("Failed to delete document:", err);
+    logServerError(err, { action: "deleteDocument" });
     return { success: false, error: "Failed to delete document" };
   }
 }

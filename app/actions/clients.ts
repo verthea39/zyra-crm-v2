@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { logActivity } from "@/lib/activity";
+import { logServerError } from "@/lib/logger";
 
 export async function createClient(data: any) {
   try {
@@ -37,7 +38,7 @@ export async function createClient(data: any) {
 
     return { success: true, client };
   } catch (error) {
-    console.error("Error creating client:", error);
+    logServerError(error, { action: "createClient" });
     return { success: false, error: "Failed to create client profile." };
   }
 }
@@ -66,7 +67,7 @@ export async function updateClient(id: string, data: any) {
     revalidatePath("/finance/cockpit");
     return { success: true, client };
   } catch (error) {
-    console.error("Error updating client:", error);
+    logServerError(error, { action: "updateClient" });
     return { success: false, error: "Failed to update client profile." };
   }
 }
@@ -78,7 +79,7 @@ export async function getClient(id: string) {
       include: { transactions: { orderBy: { date: "desc" } } },
     });
   } catch (error) {
-    console.error("Error fetching client:", error);
+    logServerError(error, { action: "getClient" });
     return null;
   }
 }
@@ -89,7 +90,7 @@ export async function deleteClient(id: string) {
     revalidatePath("/finance/cockpit");
     return { success: true };
   } catch (error) {
-    console.error("Error deleting client:", error);
+    logServerError(error, { action: "deleteClient" });
     return { success: false, error: "Failed to delete client. They may have linked cases or transactions." };
   }
 }

@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { logServerError } from "@/lib/logger";
 
 export async function getVaultDocuments() {
   try {
@@ -34,7 +35,7 @@ export async function getVaultDocuments() {
     // check presence.
     return documents.map((d) => ({ ...d, hasFile: true }));
   } catch (error) {
-    console.error("Error fetching vault documents:", error);
+    logServerError(error, { action: "getVaultDocuments" });
     return [];
   }
 }
@@ -45,7 +46,7 @@ export async function getVaultDocumentFile(id: string) {
     const doc = await prisma.documentVault.findUnique({ where: { id }, select: { fileUrl: true } });
     return { success: true, fileUrl: doc?.fileUrl || null };
   } catch (error) {
-    console.error("Error fetching vault document file:", error);
+    logServerError(error, { action: "getVaultDocumentFile" });
     return { success: false, fileUrl: null };
   }
 }
@@ -72,7 +73,7 @@ export async function uploadVaultDocument(data: {
     revalidatePath("/vault");
     return { success: true, document: newDoc };
   } catch (error) {
-    console.error("Error uploading document:", error);
+    logServerError(error, { action: "uploadVaultDocument" });
     return { success: false, error: "Failed to upload document" };
   }
 }
@@ -85,7 +86,7 @@ export async function deleteVaultDocument(id: string) {
     revalidatePath("/vault");
     return { success: true };
   } catch (error) {
-    console.error("Error deleting document:", error);
+    logServerError(error, { action: "deleteVaultDocument" });
     return { success: false, error: "Failed to delete document" };
   }
 }

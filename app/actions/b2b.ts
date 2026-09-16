@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { logActivity } from "@/lib/activity";
+import { logServerError } from "@/lib/logger";
 
 export async function getCorporateClients() {
   try {
@@ -19,7 +20,7 @@ export async function getCorporateClients() {
     });
     return corporates;
   } catch (error) {
-    console.error("Error fetching corporate clients:", error);
+    logServerError(error, { action: "getCorporateClients" });
     return [];
   }
 }
@@ -34,7 +35,7 @@ export async function getCompanyProfile(id: string) {
       },
     });
   } catch (error) {
-    console.error("Error fetching company profile:", error);
+    logServerError(error, { action: "getCompanyProfile" });
     return null;
   }
 }
@@ -80,7 +81,7 @@ export async function createCompany(input: CreateCompanyInput) {
 
     return { success: true, company };
   } catch (error) {
-    console.error("Error creating company:", error);
+    logServerError(error, { action: "createCompany" });
     return { success: false, error: "Failed to create company" };
   }
 }
@@ -122,7 +123,7 @@ export async function updateCompany(id: string, input: UpdateCompanyInput) {
 
     return { success: true, company };
   } catch (error) {
-    console.error("Error updating company:", error);
+    logServerError(error, { action: "updateCompany" });
     return { success: false, error: "Failed to update company" };
   }
 }
@@ -160,7 +161,7 @@ export async function createEmployee(input: CreateEmployeeInput) {
     revalidatePath("/b2b-registry");
     return { success: true, employee };
   } catch (error) {
-    console.error("Error creating employee:", error);
+    logServerError(error, { action: "createEmployee" });
     return { success: false, error: "Failed to add employee" };
   }
 }
