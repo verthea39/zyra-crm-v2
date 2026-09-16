@@ -240,9 +240,9 @@ export function TaxInvoiceModal({ open, onOpenChange, clients }: { open: boolean
             </div>
           </div>
 
-          <div className={`${mobileStep === 1 ? "block" : "hidden"} sm:block bg-white rounded-lg border p-1 sm:p-1 overflow-hidden`}>
+          <div className={`${mobileStep === 1 ? "block" : "hidden"} sm:block bg-white rounded-lg border p-1 sm:p-1`}>
             {/* Desktop Table View */}
-            <div className="hidden sm:block overflow-x-auto">
+            <div className="hidden sm:block overflow-x-auto rounded-md">
               <table className="w-full text-sm text-left">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
                   <tr>
