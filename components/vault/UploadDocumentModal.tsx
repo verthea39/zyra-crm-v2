@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X, Loader2, UploadCloud } from "lucide-react";
 import { uploadVaultDocument } from "@/app/actions/vault";
 import { toast } from "sonner";
+import { ClientCombobox } from "@/components/ui/client-combobox";
 
 const CATEGORIES = [
   "Passport Copy",
@@ -18,7 +19,7 @@ const CATEGORIES = [
 export function UploadDocumentModal({ onClose, clients }: { onClose: () => void, clients: any[] }) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    clientId: clients[0]?.id || "",
+    clientId: "",
     category: CATEGORIES[0],
     title: "",
     expiryDate: "",
@@ -62,16 +63,12 @@ export function UploadDocumentModal({ onClose, clients }: { onClose: () => void,
           <form id="upload-form" onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Belongs To (Client) *</label>
-              <select
-                required
+              <ClientCombobox
+                clients={clients}
                 value={formData.clientId}
-                onChange={e => setFormData({ ...formData, clientId: e.target.value })}
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none transition-all appearance-none"
-              >
-                {clients.map(c => (
-                  <option key={c.id} value={c.id}>{c.name} ({c.type})</option>
-                ))}
-              </select>
+                onChange={(id) => setFormData({ ...formData, clientId: id })}
+                placeholder="Search by name, company, or phone..."
+              />
             </div>
 
             <div>

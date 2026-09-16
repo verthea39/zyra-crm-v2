@@ -7,7 +7,7 @@ import { ShieldAlert, ShieldCheck, Files } from "lucide-react";
 export const dynamic = "force-dynamic";
 async function getClientsForUpload() {
   return await prisma.client.findMany({
-    select: { id: true, name: true, type: true },
+    select: { id: true, name: true, type: true, phone: true },
     orderBy: { name: 'asc' }
   });
 }
