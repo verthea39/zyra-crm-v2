@@ -7,12 +7,27 @@ export async function getCasePublicTracking(trackingToken: string) {
     const caseData = await prisma.caseFile.findUnique({
       where: { trackingToken },
       include: {
-        client: { select: { name: true, type: true } },
+        client: {
+          select: {
+            name: true,
+            type: true,
+            phone: true,
+            vaultDocuments: {
+              where: { fileUrl: { not: null } },
+              select: { id: true, title: true, category: true, fileUrl: true },
+            },
+          },
+        },
         coordinator: { select: { name: true, email: true } },
         documents: {
           where: { status: 'APPROVED' },
           select: { id: true, title: true }
-        }
+        },
+        billingDocuments: {
+          where: { type: { in: ['INVOICE', 'RECEIPT'] } },
+          select: { id: true, reference: true, type: true, totalMinor: true },
+          orderBy: { createdAt: 'desc' },
+        },
       }
     });
     

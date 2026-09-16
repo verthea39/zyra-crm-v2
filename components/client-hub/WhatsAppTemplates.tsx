@@ -1,10 +1,11 @@
 "use client";
 
-import { MessageCircle, Send, Link as LinkIcon, User } from "lucide-react";
+import { MessageCircle, Link as LinkIcon, Copy, User } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 export function WhatsAppTemplates({ cases }: { cases: any[] }) {
-  
+
   const generateWhatsAppLink = (phone: string | null, message: string) => {
     if (!phone) return "#";
     // Strip non-numeric chars
@@ -12,9 +13,19 @@ export function WhatsAppTemplates({ cases }: { cases: any[] }) {
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
   };
 
+  const copyTrackingLink = async (c: any) => {
+    const trackingLink = `${window.location.origin}/track/${c.trackingToken}`;
+    try {
+      await navigator.clipboard.writeText(trackingLink);
+      toast.success("Tracking link copied");
+    } catch {
+      toast.error("Failed to copy link");
+    }
+  };
+
   const getTemplateForStage = (c: any) => {
     const clientName = c.client?.name || "Client";
-    const trackingLink = `${window.location.origin}/track/${c.id}`;
+    const trackingLink = `${window.location.origin}/track/${c.trackingToken}`;
     
     switch (c.stage) {
       case "ENTRY_PERMIT":
@@ -61,15 +72,23 @@ export function WhatsAppTemplates({ cases }: { cases: any[] }) {
               </p>
             </div>
 
-            <div className="flex gap-3 mt-auto pt-2">
+            <div className="flex gap-2 mt-auto pt-2">
               <Link
-                href={`/track/${c.id}`}
+                href={`/track/${c.trackingToken}`}
                 target="_blank"
                 className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-slate-100  text-slate-600  font-medium text-sm hover:bg-slate-200  transition"
               >
                 <LinkIcon className="w-4 h-4" />
-                Preview Tracker
+                Preview
               </Link>
+              <button
+                type="button"
+                onClick={() => copyTrackingLink(c)}
+                className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-slate-100  text-slate-600  font-medium text-sm hover:bg-slate-200  transition"
+              >
+                <Copy className="w-4 h-4" />
+                Copy Link
+              </button>
               <a
                 href={waLink}
                 target="_blank"

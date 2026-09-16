@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { formatMoney } from "@/lib/calculations";
-import { deleteDocument } from "@/app/actions/documents";
+import { deleteDocument, convertQuotationToInvoice } from "@/app/actions/documents";
 import type { CompanyBranding } from "@/lib/companyBranding";
-import { Pencil, Printer, Trash2, FileText, FileSignature, Receipt, History } from "lucide-react";
+import { Pencil, Printer, Trash2, FileText, FileSignature, Receipt, History, Repeat } from "lucide-react";
 import { ZYRA_LOGO_GOLD_PATH } from "@/lib/brandAssets";
 import { formatDistanceToNow } from "date-fns";
 
@@ -27,13 +27,14 @@ const STATUS_STYLE: Record<string, string> = {
   PAID: "bg-emerald-50 border-emerald-200 text-emerald-700",
   OVERDUE: "bg-rose-50 border-rose-200 text-rose-700",
   CANCELLED: "bg-slate-100 border-slate-200 text-slate-400",
+  CONVERTED: "bg-violet-50 border-violet-200 text-violet-700",
 };
 
 type DocumentWithRelations = {
   id: string;
   reference: string;
   type: "INVOICE" | "QUOTATION" | "RECEIPT";
-  status: "DRAFT" | "SENT" | "PAID" | "OVERDUE" | "CANCELLED";
+  status: "DRAFT" | "SENT" | "PAID" | "OVERDUE" | "CANCELLED" | "CONVERTED";
   subtotalMinor: number;
   discountMinor: number;
   vatRate: number;
@@ -45,11 +46,13 @@ type DocumentWithRelations = {
   notes?: string | null;
   client: { name: string; phone?: string | null };
   items: { id: string; description: string; quantity: number; unitPriceMinor: number; lineTotalMinor: number; vatExempt: boolean }[];
+  convertedInvoice?: { id: string; reference: string } | null;
 };
 
 export function DocumentDetail({ document, branding, activity = [] }: { document: DocumentWithRelations; branding: CompanyBranding; activity?: ActivityEntry[] }) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
+  const [converting, setConverting] = useState(false);
   const typeLabel = document.type.charAt(0) + document.type.slice(1).toLowerCase();
 
   const handleDelete = async () => {
@@ -66,6 +69,20 @@ export function DocumentDetail({ document, branding, activity = [] }: { document
     }
   };
 
+  const handleConvert = async () => {
+    if (!confirm(`Convert this quotation into an official tax invoice?`)) return;
+    setConverting(true);
+    const res = await convertQuotationToInvoice(document.id);
+    setConverting(false);
+    if (res.success && res.invoice) {
+      toast.success(`Converted to Invoice #${res.invoice.reference}`);
+      router.push(`/documents/${res.invoice.id}`);
+      router.refresh();
+    } else {
+      toast.error(res.error || "Failed to convert quotation");
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto w-full pb-28 print:pb-8">
       {/* Action bar -- always visible on every viewport, never hidden behind md: */}
@@ -73,7 +90,26 @@ export function DocumentDetail({ document, branding, activity = [] }: { document
         <Link href="/documents" className="text-sm text-slate-500 hover:text-slate-800 w-fit">
           &larr; Back to Documents
         </Link>
-        <div className="grid grid-cols-3 gap-2 sm:flex sm:w-auto">
+        <div className={`grid gap-2 sm:flex sm:w-auto ${document.type === "QUOTATION" ? "grid-cols-2" : "grid-cols-3"}`}>
+          {document.type === "QUOTATION" && (
+            document.convertedInvoice ? (
+              <Link
+                href={`/documents/${document.convertedInvoice.id}`}
+                className="col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 h-11 px-3 rounded-xl border border-violet-200 bg-violet-50 text-violet-700 font-semibold text-sm active:scale-95 transition-transform"
+              >
+                <Repeat className="w-4 h-4" /> Converted ({document.convertedInvoice.reference})
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={handleConvert}
+                disabled={converting}
+                className="col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 h-11 px-3 rounded-xl border border-[#98682E] bg-[#98682E] text-white font-semibold text-sm active:scale-95 transition-transform disabled:opacity-50"
+              >
+                <Repeat className="w-4 h-4" /> {converting ? "Converting..." : "Convert to Invoice"}
+              </button>
+            )
+          )}
           <Link
             href={`/documents/${document.id}/edit`}
             className="flex items-center justify-center gap-1.5 h-11 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold text-sm active:scale-95 transition-transform"
@@ -134,9 +170,9 @@ export function DocumentDetail({ document, branding, activity = [] }: { document
             {document.client.phone && <p className="text-muted-foreground">{document.client.phone}</p>}
           </div>
           <div className="sm:text-right">
-            <p><span className="text-muted-foreground">Issue Date: </span>{new Date(document.issueDate).toLocaleDateString()}</p>
-            {document.dueDate && <p><span className="text-muted-foreground">Due Date: </span>{new Date(document.dueDate).toLocaleDateString()}</p>}
-            {document.expiryDate && <p><span className="text-muted-foreground">Expiry Date: </span>{new Date(document.expiryDate).toLocaleDateString()}</p>}
+            <p><span className="text-muted-foreground">Issue Date: </span>{new Date(document.issueDate).toLocaleDateString('en-GB')}</p>
+            {document.dueDate && <p><span className="text-muted-foreground">Due Date: </span>{new Date(document.dueDate).toLocaleDateString('en-GB')}</p>}
+            {document.expiryDate && <p><span className="text-muted-foreground">Expiry Date: </span>{new Date(document.expiryDate).toLocaleDateString('en-GB')}</p>}
             <p><span className="text-muted-foreground">Currency: </span>AED</p>
           </div>
         </div>
@@ -155,24 +191,24 @@ export function DocumentDetail({ document, branding, activity = [] }: { document
         </div>
 
         {/* Desktop + print: table */}
-        <table className="hidden sm:table print:table w-full text-xs text-left mb-3">
+        <table className="hidden sm:table print:table w-full text-xs text-left mb-3" style={{ borderCollapse: "separate", borderSpacing: 0 }}>
           <thead className="text-[10px] uppercase text-muted-foreground border-b border-border">
             <tr>
-              <th className="py-1.5 px-2">Description</th>
-              <th className="py-1.5 px-2 text-right">Qty</th>
-              <th className="py-1.5 px-2 text-right">Unit Price</th>
-              <th className="py-1.5 px-2 text-right">VAT</th>
-              <th className="py-1.5 px-2 text-right">Total</th>
+              <th className="py-3 px-3 align-middle text-left leading-normal">Description</th>
+              <th className="py-3 px-3 align-middle text-center leading-normal">Qty</th>
+              <th className="py-3 px-3 align-middle text-right leading-normal font-mono">Unit Price</th>
+              <th className="py-3 px-3 align-middle text-right leading-normal">VAT</th>
+              <th className="py-3 px-3 align-middle text-right leading-normal font-mono">Total</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody>
             {document.items.map((item) => (
-              <tr key={item.id} className="print:break-inside-avoid">
-                <td className="py-1.5 px-2">{item.description}</td>
-                <td className="py-1.5 px-2 text-right">{item.quantity}</td>
-                <td className="py-1.5 px-2 text-right">{formatMoney(item.unitPriceMinor)}</td>
-                <td className="py-1.5 px-2 text-right text-muted-foreground">{item.vatExempt ? "Exempt" : `${document.vatRate}%`}</td>
-                <td className="py-1.5 px-2 text-right font-medium">{formatMoney(item.lineTotalMinor)}</td>
+              <tr key={item.id} className="print:break-inside-avoid border-b border-slate-200">
+                <td className="py-3 px-3 align-middle text-left leading-normal">{item.description}</td>
+                <td className="py-3 px-3 align-middle text-center leading-normal">{item.quantity}</td>
+                <td className="py-3 px-3 align-middle text-right leading-normal font-mono">{formatMoney(item.unitPriceMinor)}</td>
+                <td className="py-3 px-3 align-middle text-right leading-normal text-muted-foreground">{item.vatExempt ? "Exempt" : `${document.vatRate}%`}</td>
+                <td className="py-3 px-3 align-middle text-right leading-normal font-mono font-medium">{formatMoney(item.lineTotalMinor)}</td>
               </tr>
             ))}
           </tbody>
@@ -194,9 +230,9 @@ export function DocumentDetail({ document, branding, activity = [] }: { document
           <span className="font-semibold text-foreground uppercase tracking-wide">Terms:</span>
           <ul className="list-disc list-inside leading-snug mt-0.5">
             {document.type === "QUOTATION" ? (
-              <li>Valid for {document.expiryDate ? new Date(document.expiryDate).toLocaleDateString() : "30 days from issue date"}; prices subject to change after expiry.</li>
+              <li>Valid for {document.expiryDate ? new Date(document.expiryDate).toLocaleDateString('en-GB') : "30 days from issue date"}; prices subject to change after expiry.</li>
             ) : (
-              <li>Payment due {document.dueDate ? `by ${new Date(document.dueDate).toLocaleDateString()}` : (branding.paymentTerms || "within 14 days of invoice date")}.</li>
+              <li>Payment due {document.dueDate ? `by ${new Date(document.dueDate).toLocaleDateString('en-GB')}` : (branding.paymentTerms || "within 14 days of invoice date")}.</li>
             )}
             <li>All amounts stated in AED.</li>
             {(branding.bankName || branding.iban) && (

@@ -1,8 +1,11 @@
 import { getCasePublicTracking } from "@/app/actions/track";
 import { notFound } from "next/navigation";
-import { ShieldCheck, MessageCircle, FileText, Download, CheckCircle, Clock } from "lucide-react";
+import { ShieldCheck, MessageCircle, FileText, Download, CheckCircle, Clock, Phone, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import Image from "next/image";
+
+const COMPANY_PHONE = "+971 50 722 8583";
+const COMPANY_ADDRESS = "Burj Nahar, Deira, Dubai, UAE";
 
 const STAGES = [
   { key: "DRAFT_INTAKE", label: "Case Intake & Document Verification" },
@@ -13,8 +16,9 @@ const STAGES = [
   { key: "COMPLETED_HANDOVER", label: "Completed & Delivered" },
 ];
 
-export default async function PublicTrackingPage({ params }: { params: { trackingToken: string } }) {
-  const caseData = await getCasePublicTracking(params.trackingToken);
+export default async function PublicTrackingPage({ params }: { params: Promise<{ trackingToken: string }> }) {
+  const { trackingToken } = await params;
+  const caseData = await getCasePublicTracking(trackingToken);
 
   if (!caseData) {
     notFound();
@@ -35,6 +39,20 @@ export default async function PublicTrackingPage({ params }: { params: { trackin
 
   const coordinatorPhone = "971501234567"; // Fallback, could be fetched from User model if added
 
+  const needsClientAction = caseData.stage === "DRAFT_INTAKE";
+  const statusBadge = isCompleted
+    ? { label: "Completed", className: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" }
+    : needsClientAction
+      ? { label: "Action Required by Client", className: "bg-amber-500/10 text-amber-400 border-amber-500/30" }
+      : { label: "In Progress", className: "bg-[#98682E]/10 text-[#98682E] border-[#98682E]/30" };
+
+  const downloadableFiles = [
+    ...(caseData.client?.vaultDocuments || []).map((d: any) => ({ id: d.id, title: d.title, href: d.fileUrl })),
+    ...(caseData.billingDocuments || [])
+      .filter((d: any) => d.type === "INVOICE")
+      .map((d: any) => ({ id: d.id, title: `Tax Invoice ${d.reference}`, href: `/documents/${d.id}` })),
+  ];
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-[#98682E]/30">
       {/* Brand Header */}
@@ -47,11 +65,20 @@ export default async function PublicTrackingPage({ params }: { params: { trackin
             <div>
               <h1 className="font-bold text-lg tracking-wide uppercase">Zyra Documents</h1>
               <p className="text-xs text-slate-400 font-medium">Clearance Services — Dubai, UAE</p>
+              <div className="flex flex-col sm:flex-row gap-x-4 gap-y-0.5 mt-1.5 text-[11px] text-slate-300">
+                <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {COMPANY_PHONE}</span>
+                <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {COMPANY_ADDRESS}</span>
+              </div>
             </div>
           </div>
-          <div className="text-center md:text-right bg-white/5 p-3 rounded-lg border border-white/10">
-            <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Secure Tracking Ref</p>
-            <p className="font-mono font-bold text-[#98682E] tracking-wider">{caseData.reference}</p>
+          <div className="flex flex-col items-center md:items-end gap-2">
+            <div className="text-center md:text-right bg-white/5 p-3 rounded-lg border border-white/10">
+              <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Secure Tracking Ref</p>
+              <p className="font-mono font-bold text-[#98682E] tracking-wider">{caseData.reference}</p>
+            </div>
+            <span className={`text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full border ${statusBadge.className}`}>
+              {statusBadge.label}
+            </span>
           </div>
         </div>
       </div>
@@ -125,14 +152,20 @@ export default async function PublicTrackingPage({ params }: { params: { trackin
           </div>
         </div>
 
-        {/* Download Vault */}
-        {caseData.documents && caseData.documents.length > 0 && (
+        {/* Download Vault -- final documents only surface once the case is fully complete */}
+        {isCompleted && downloadableFiles.length > 0 && (
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
             <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Secure Download Vault</h2>
-            <p className="text-sm text-slate-500 mb-4">Approved official documents are available for secure download below.</p>
+            <p className="text-sm text-slate-500 mb-4">Your final documents are ready for secure download below.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {caseData.documents.map((doc: any) => (
-                <button key={doc.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:border-[#98682E] hover:bg-[#98682E]/5 transition-colors group">
+              {downloadableFiles.map((doc) => (
+                <a
+                  key={doc.id}
+                  href={doc.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:border-[#98682E] hover:bg-[#98682E]/5 transition-colors group"
+                >
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-slate-100 group-hover:bg-white rounded-lg text-[#98682E]">
                       <FileText className="w-5 h-5" />
@@ -140,7 +173,7 @@ export default async function PublicTrackingPage({ params }: { params: { trackin
                     <span className="font-bold text-sm text-slate-700 group-hover:text-[#98682E]">{doc.title}</span>
                   </div>
                   <Download className="w-4 h-4 text-slate-400 group-hover:text-[#98682E]" />
-                </button>
+                </a>
               ))}
             </div>
           </div>

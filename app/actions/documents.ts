@@ -181,7 +181,12 @@ export async function getDocument(id: string) {
   try {
     return await prisma.document.findUnique({
       where: { id },
-      include: { client: true, items: true, caseFile: true },
+      include: {
+        client: true,
+        items: true,
+        caseFile: true,
+        convertedInvoice: { select: { id: true, reference: true } },
+      },
     });
   } catch (err) {
     console.error("Failed to fetch document:", err);
@@ -209,6 +214,79 @@ export async function updateDocumentStatus(id: string, status: "DRAFT" | "SENT" 
   } catch (err) {
     console.error("Failed to update document status:", err);
     return { success: false, error: "Failed to update status" };
+  }
+}
+
+export async function convertQuotationToInvoice(quotationId: string) {
+  try {
+    const quotation = await prisma.document.findUnique({
+      where: { id: quotationId },
+      include: { items: true, client: true },
+    });
+
+    if (!quotation) {
+      return { success: false, error: "Quotation not found" };
+    }
+    if (quotation.type !== "QUOTATION") {
+      return { success: false, error: "Only quotations can be converted to invoices" };
+    }
+    if (quotation.convertedInvoiceId) {
+      return { success: false, error: "This quotation has already been converted" };
+    }
+
+    const reference = await generateReference("INVOICE");
+
+    const invoice = await prisma.$transaction(async (tx) => {
+      const newInvoice = await tx.document.create({
+        data: {
+          reference,
+          type: "INVOICE",
+          clientId: quotation.clientId,
+          caseFileId: quotation.caseFileId || undefined,
+          subtotalMinor: quotation.subtotalMinor,
+          discountMinor: quotation.discountMinor,
+          vatRate: quotation.vatRate,
+          vatMinor: quotation.vatMinor,
+          totalMinor: quotation.totalMinor,
+          notes: quotation.notes,
+          items: {
+            create: quotation.items.map((item) => ({
+              description: item.description,
+              quantity: item.quantity,
+              unitPriceMinor: item.unitPriceMinor,
+              lineTotalMinor: item.lineTotalMinor,
+              vatExempt: item.vatExempt,
+            })),
+          },
+        },
+        include: { items: true, client: true },
+      });
+
+      await tx.document.update({
+        where: { id: quotationId },
+        data: { status: "CONVERTED", convertedInvoiceId: newInvoice.id },
+      });
+
+      return newInvoice;
+    });
+
+    revalidatePath("/documents");
+    revalidatePath(`/documents/${quotationId}`);
+    revalidatePath(`/documents/${invoice.id}`);
+    revalidatePath("/dashboard");
+
+    await logActivity({
+      action: "QUOTATION_CONVERTED",
+      title: `Quotation #${quotation.reference} converted to Invoice #${invoice.reference}`,
+      details: { quotationId: quotation.id, invoiceId: invoice.id, totalAmount: invoice.totalMinor },
+      entityType: "INVOICE",
+      entityId: invoice.id,
+    });
+
+    return { success: true, invoice };
+  } catch (err) {
+    console.error("Failed to convert quotation to invoice:", err);
+    return { success: false, error: "Failed to convert quotation to invoice" };
   }
 }
 

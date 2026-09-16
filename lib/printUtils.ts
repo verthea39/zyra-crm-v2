@@ -134,9 +134,9 @@ function buildDocumentContent(
         </div>
       </div>
 
-      <div style="display: flex; justify-content: space-between; margin-top: 12px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; margin-top: 24px;">
         <!-- Left Metadata -->
-        <div style="width: 48%;">
+        <div>
           <h2 style="color: ${ZYRA_BRONZE}; margin: 0 0 2px 0; font-size: 16px; font-weight: 800; text-transform: uppercase;">${documentTitle}</h2>
           ${invoiceNoLine}
           <table style="width: 100%; font-size: 11px; color: #475569; border-spacing: 0; line-height: 1.3; margin-top: 4px;">
@@ -147,7 +147,7 @@ function buildDocumentContent(
         </div>
 
         <!-- Right Metadata -->
-        <div style="width: 48%;">
+        <div>
           <h3 style="color: ${ZYRA_DARK}; margin: 0 0 4px 0; font-size: 12px; text-transform: uppercase;">Billed To</h3>
           <table style="width: 100%; font-size: 11px; color: #475569; border-spacing: 0; line-height: 1.3;">
             <tr><td style="padding: 1px 0; width: 110px;"><strong>Client Name:</strong></td><td><strong style="color: ${ZYRA_DARK};">${data.clientName}</strong></td></tr>
@@ -179,30 +179,32 @@ function buildDocumentContent(
 
     const subtotal = govCost + proFee;
 
+    const PRICE_FONT = "font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-variant-numeric: tabular-nums;";
+
     let itemRows = '';
     items.forEach((item: LineItem, i: number) => {
       const lineTotal = item.govCost + item.proFee;
       itemRows += `
         <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid;">
-          <td style="padding: 3px 6px; text-align: center;">${i + 1}</td>
-          <td style="padding: 3px 6px;">${item.desc}</td>
-          <td style="padding: 3px 6px; text-align: center;">1</td>
-          <td style="padding: 3px 6px; text-align: right;">${formatCurrency(lineTotal)}</td>
-          <td style="padding: 3px 6px; text-align: right;">${formatCurrency(lineTotal)}</td>
+          <td style="padding: 12px 14px; text-align: center; vertical-align: middle; line-height: 1.4;">${i + 1}</td>
+          <td style="padding: 12px 14px; text-align: left; vertical-align: middle; line-height: 1.4;">${item.desc}</td>
+          <td style="padding: 12px 14px; text-align: center; vertical-align: middle; line-height: 1.4;">1</td>
+          <td style="padding: 12px 14px; text-align: right; vertical-align: middle; line-height: 1.4; ${PRICE_FONT}">${formatCurrency(lineTotal)}</td>
+          <td style="padding: 12px 14px; text-align: right; vertical-align: middle; line-height: 1.4; ${PRICE_FONT}">${formatCurrency(lineTotal)}</td>
         </tr>
       `;
     });
 
     const itemsTableHtml = `
       <div style="margin-bottom: 12px; page-break-inside: avoid;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+        <table style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px;">
           <thead>
             <tr style="background-color: #f8fafc; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
-              <th style="padding: 4px 6px; text-align: center; width: 36px;">#</th>
-              <th style="padding: 4px 6px; text-align: left;">Description / Service Details</th>
-              <th style="padding: 4px 6px; text-align: center; width: 50px;">Qty</th>
-              <th style="padding: 4px 6px; text-align: right; width: 110px;">Unit Price (AED)</th>
-              <th style="padding: 4px 6px; text-align: right; width: 110px;">Total (AED)</th>
+              <th style="padding: 12px 14px; text-align: center; vertical-align: middle; width: 36px;">#</th>
+              <th style="padding: 12px 14px; text-align: left; vertical-align: middle;">Description / Service Details</th>
+              <th style="padding: 12px 14px; text-align: center; vertical-align: middle; width: 50px;">Qty</th>
+              <th style="padding: 12px 14px; text-align: right; vertical-align: middle; width: 110px; ${PRICE_FONT}">Unit Price (AED)</th>
+              <th style="padding: 12px 14px; text-align: right; vertical-align: middle; width: 110px; ${PRICE_FONT}">Total (AED)</th>
             </tr>
           </thead>
           <tbody>

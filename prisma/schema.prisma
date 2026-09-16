@@ -67,6 +67,7 @@ enum DocumentStatus {
   PAID
   OVERDUE
   CANCELLED
+  CONVERTED
 }
 
 model Document {
@@ -94,6 +95,12 @@ model Document {
   dueDate       DateTime?
   expiryDate    DateTime?
   notes         String?
+
+  // Quotation -> Invoice conversion link. Set on the quotation, pointing at
+  // the invoice document it was converted into.
+  convertedInvoiceId     String?   @unique
+  convertedInvoice       Document? @relation("QuotationToInvoice", fields: [convertedInvoiceId], references: [id], onDelete: SetNull)
+  convertedFromQuotation Document? @relation("QuotationToInvoice")
 
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt

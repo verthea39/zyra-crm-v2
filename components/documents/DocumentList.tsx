@@ -10,7 +10,7 @@ type DocumentRow = {
   id: string;
   reference: string;
   type: "INVOICE" | "QUOTATION" | "RECEIPT";
-  status: "DRAFT" | "SENT" | "PAID" | "OVERDUE" | "CANCELLED";
+  status: "DRAFT" | "SENT" | "PAID" | "OVERDUE" | "CANCELLED" | "CONVERTED";
   totalMinor: number;
   issueDate: string | Date;
   client: { name: string };
@@ -24,6 +24,7 @@ const STATUS_STYLE: Record<string, string> = {
   PAID: "bg-emerald-50 border-emerald-200 text-emerald-700",
   OVERDUE: "bg-rose-50 border-rose-200 text-rose-700",
   CANCELLED: "bg-slate-100 border-slate-200 text-slate-400",
+  CONVERTED: "bg-violet-50 border-violet-200 text-violet-700",
 };
 
 export function DocumentList({ documents }: { documents: DocumentRow[] }) {
