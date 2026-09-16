@@ -116,6 +116,9 @@ export function AddClientModal({ open, onOpenChange, client }: { open: boolean; 
       RESIDENCE_VISA: "UAE Visa",
       TRADE_LICENSE: "Trade License",
       EJARI: "Ejari",
+      ESTABLISHMENT_CARD: "Establishment Card",
+      LABOUR_CONTRACT: "Labour Contract",
+      MEDICAL_FITNESS: "Medical Fitness",
     };
     const category = CATEGORY_BY_TYPE[scan.documentType] || "Passport Copy";
     const title = scan.documentNumber ? `${category} - ${scan.documentNumber}` : `${category} (Scanned)`;

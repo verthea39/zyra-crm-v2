@@ -17,6 +17,9 @@ const TYPE_LABEL: Record<UniversalDocumentType, string> = {
   RESIDENCE_VISA: "UAE Residence Visa",
   TRADE_LICENSE: "Trade License",
   EJARI: "Ejari Tenancy Contract",
+  ESTABLISHMENT_CARD: "MOHRE Establishment Card",
+  LABOUR_CONTRACT: "Labour Contract",
+  MEDICAL_FITNESS: "Medical Fitness Certificate",
   UNKNOWN: "Document",
 };
 

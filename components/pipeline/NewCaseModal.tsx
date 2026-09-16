@@ -41,6 +41,9 @@ export function NewCaseModal({ onClose, clients, coordinators }: { onClose: () =
         RESIDENCE_VISA: "UAE Visa",
         TRADE_LICENSE: "Trade License",
         EJARI: "Ejari",
+        ESTABLISHMENT_CARD: "Establishment Card",
+        LABOUR_CONTRACT: "Labour Contract",
+        MEDICAL_FITNESS: "Medical Fitness",
       };
       const category = CATEGORY_BY_TYPE[pendingScan.documentType] || "Passport Copy";
       const title = pendingScan.documentNumber ? `${category} - ${pendingScan.documentNumber}` : `${category} (Scanned)`;

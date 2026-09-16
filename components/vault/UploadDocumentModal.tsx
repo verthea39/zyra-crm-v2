@@ -12,8 +12,10 @@ const CATEGORIES = [
   "Emirates ID",
   "Trade License",
   "Establishment Card",
+  "Labour Contract",
   "Ejari",
-  "Medical / Insurance"
+  "Medical / Insurance",
+  "Medical Fitness"
 ];
 
 export function UploadDocumentModal({ onClose, clients }: { onClose: () => void, clients: any[] }) {

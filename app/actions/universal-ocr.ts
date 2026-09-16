@@ -8,6 +8,9 @@ export type UniversalDocumentType =
   | "RESIDENCE_VISA"
   | "TRADE_LICENSE"
   | "EJARI"
+  | "ESTABLISHMENT_CARD"
+  | "LABOUR_CONTRACT"
+  | "MEDICAL_FITNESS"
   | "UNKNOWN";
 
 export type UniversalDocumentFields = {
@@ -26,7 +29,7 @@ const RESPONSE_SCHEMA = {
   properties: {
     documentType: {
       type: Type.STRING,
-      enum: ["PASSPORT", "EMIRATES_ID", "RESIDENCE_VISA", "TRADE_LICENSE", "EJARI", "UNKNOWN"],
+      enum: ["PASSPORT", "EMIRATES_ID", "RESIDENCE_VISA", "TRADE_LICENSE", "EJARI", "ESTABLISHMENT_CARD", "LABOUR_CONTRACT", "MEDICAL_FITNESS", "UNKNOWN"],
     },
     fullName: { type: Type.STRING, nullable: true },
     documentNumber: { type: Type.STRING, nullable: true },
@@ -39,17 +42,17 @@ const RESPONSE_SCHEMA = {
   required: ["documentType"],
 };
 
-const PROMPT = `You are a document data extraction engine for a UAE PRO services company. You will be shown an image of ONE of the following document types: a Passport, a UAE Emirates ID, a UAE Residence Visa page/sticker, a UAE Trade License, or an Ejari tenancy contract.
+const PROMPT = `You are a document data extraction engine for a UAE PRO services company. You will be shown an image of ONE of the following document types: a Passport, a UAE Emirates ID, a UAE Residence Visa page/sticker, a UAE Trade License, an Ejari tenancy contract, a MOHRE Establishment Card, a Labour Contract, or a Medical Fitness certificate.
 
 Identify which document type it is, then extract the fields below exactly as printed. Use null for any field that is not present or not legible -- never guess or fabricate a value.
 
-- documentType: one of PASSPORT, EMIRATES_ID, RESIDENCE_VISA, TRADE_LICENSE, EJARI, or UNKNOWN if the image doesn't match any of these.
-- fullName: the individual's full name as printed (not applicable for Trade License/Ejari unless a signatory name is clearly the main subject).
-- documentNumber: passport number, Emirates ID number, visa file number, trade license number, or Ejari contract number, matching the document type.
+- documentType: one of PASSPORT, EMIRATES_ID, RESIDENCE_VISA, TRADE_LICENSE, EJARI, ESTABLISHMENT_CARD, LABOUR_CONTRACT, MEDICAL_FITNESS, or UNKNOWN if the image doesn't match any of these.
+- fullName: the individual's full name as printed (not applicable for Trade License/Ejari/Establishment Card unless a signatory name is clearly the main subject).
+- documentNumber: passport number, Emirates ID number, visa file number, trade license number, Ejari contract number, establishment card number, or labour contract number, matching the document type.
 - expiryDate: expiry date in YYYY-MM-DD format.
-- dob: date of birth in YYYY-MM-DD format (passport/Emirates ID/visa only).
+- dob: date of birth in YYYY-MM-DD format (passport/Emirates ID/visa/labour contract only).
 - nationality: nationality as printed.
-- companyName: the company/establishment name (Trade License, Ejari, or sponsor company on a residence visa).
+- companyName: the company/establishment name (Trade License, Ejari, Establishment Card, Labour Contract, or sponsor company on a residence visa).
 - sponsorName: sponsor's name if printed on a residence visa or Emirates ID.
 
 Respond with ONLY the JSON object matching the schema. No extra commentary.`;

@@ -14,8 +14,10 @@ const CATEGORIES = [
   "Emirates ID",
   "Trade License",
   "Establishment Card",
+  "Labour Contract",
   "Ejari",
-  "Medical / Insurance"
+  "Medical / Insurance",
+  "Medical Fitness"
 ];
 
 const EXPIRY_FILTERS = [

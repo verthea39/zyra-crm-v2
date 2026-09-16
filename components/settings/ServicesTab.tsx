@@ -7,6 +7,7 @@ import { createServiceItem, deleteServiceItem } from "@/app/actions/settings";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SERVICE_CATEGORY_LABELS } from "@/lib/constants/company";
 
 export function ServicesTab({ initialServices }: { initialServices: any[] }) {
   const [services, setServices] = useState(initialServices);
@@ -15,7 +16,7 @@ export function ServicesTab({ initialServices }: { initialServices: any[] }) {
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   const [newService, setNewService] = useState({
-    name: "", category: "Employment Visa Stages", govFee: "", agencyFee: "", isVatExempt: false
+    name: "", category: SERVICE_CATEGORY_LABELS[0], govFee: "", agencyFee: "", isVatExempt: false
   });
 
   const filteredServices = services.filter(s => {
@@ -60,7 +61,7 @@ export function ServicesTab({ initialServices }: { initialServices: any[] }) {
     }
   };
 
-  const categories = ["Employment Visa Stages", "Investor / Golden Visa", "Corporate / Licensing", "Attestation / Typing", "Other"];
+  const categories = SERVICE_CATEGORY_LABELS;
 
   return (
     <div className="h-full flex flex-col">

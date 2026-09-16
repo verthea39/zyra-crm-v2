@@ -3,9 +3,7 @@ import { notFound } from "next/navigation";
 import { ShieldCheck, MessageCircle, FileText, Download, CheckCircle, Clock, Phone, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import Image from "next/image";
-
-const COMPANY_PHONE = "+971 50 722 8583";
-const COMPANY_ADDRESS = "Burj Nahar, Deira, Dubai, UAE";
+import { COMPANY_PROFILE } from "@/lib/constants/company";
 
 const STAGES = [
   { key: "DRAFT_INTAKE", label: "Case Intake & Document Verification" },
@@ -66,8 +64,8 @@ export default async function PublicTrackingPage({ params }: { params: Promise<{
               <h1 className="font-bold text-lg tracking-wide uppercase">Zyra Documents</h1>
               <p className="text-xs text-slate-400 font-medium">Clearance Services — Dubai, UAE</p>
               <div className="flex flex-col sm:flex-row gap-x-4 gap-y-0.5 mt-1.5 text-[11px] text-slate-300">
-                <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {COMPANY_PHONE}</span>
-                <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {COMPANY_ADDRESS}</span>
+                <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {COMPANY_PROFILE.phones.join(" / ")}</span>
+                <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {COMPANY_PROFILE.address}</span>
               </div>
             </div>
           </div>

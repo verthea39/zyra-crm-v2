@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { ZYRA_LOGO_GOLD_DATA_URI } from "@/lib/brandAssets";
+import { COMPANY_PROFILE } from "@/lib/constants/company";
 
 export type CompanyBranding = {
   name: string;
@@ -19,11 +20,11 @@ export type CompanyBranding = {
 };
 
 const DEFAULT_BRANDING: CompanyBranding = {
-  name: "Zyra Business Hub",
-  address: "Deira / Burj Nahar, Dubai, UAE",
-  phone: null,
-  email: null,
-  website: "zyrabusinesshub.com",
+  name: COMPANY_PROFILE.displayName,
+  address: COMPANY_PROFILE.address,
+  phone: COMPANY_PROFILE.phones.join(" / "),
+  email: COMPANY_PROFILE.email,
+  website: COMPANY_PROFILE.website,
   portalUrl: "crm.zyrabusinesshub.com",
   trn: null,
   tradeLicenseNo: null,
