@@ -2,20 +2,12 @@
 
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
-import { TopUpModal } from "./TopUpModal";
-import { DeductModal } from "./DeductModal";
-import { AddWalletModal } from "./AddWalletModal";
-import { ArrowDownRight, ArrowUpRight, Search, Filter, Plus, Minus, Landmark } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Search, Filter } from "lucide-react";
 
 export function WalletLedger({ wallets, clients }: { wallets: any[], clients: any[] }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterPortal, setFilterPortal] = useState("All");
   const [filterType, setFilterType] = useState("All");
-
-  const [isTopUpOpen, setIsTopUpOpen] = useState(false);
-  const [isDeductOpen, setIsDeductOpen] = useState(false);
-  const [isAddWalletOpen, setIsAddWalletOpen] = useState(false);
-  const [selectedWalletId, setSelectedWalletId] = useState(wallets[0]?.id);
 
   // Flatten all transactions from all wallets
   const allTransactions = useMemo(() => {
@@ -43,59 +35,36 @@ export function WalletLedger({ wallets, clients }: { wallets: any[], clients: an
 
   return (
     <div className="flex flex-col h-full bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-      <div className="p-4 border-b border-slate-200 bg-slate-50 flex flex-col md:flex-row justify-between gap-4 shrink-0">
-        <div className="flex flex-col sm:flex-row gap-3 flex-1">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search ref, client, description..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg text-sm transition-all shadow-sm"
-            />
-          </div>
-          
-          <select
-            value={filterPortal}
-            onChange={(e) => setFilterPortal(e.target.value)}
-            className="px-4 py-2 bg-white border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg text-sm appearance-none shadow-sm min-w-[150px]"
-          >
-            <option value="All">All Portals</option>
-            {wallets.map(w => <option key={w.id} value={w.entityName}>{w.entityName}</option>)}
-          </select>
-          
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="px-4 py-2 bg-white border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg text-sm appearance-none shadow-sm min-w-[120px]"
-          >
-            <option value="All">All Types</option>
-            <option value="TOP_UP">Top-Ups</option>
-            <option value="DEDUCTION">Deductions</option>
-          </select>
+      <div className="p-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row gap-3 shrink-0">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search ref, client, description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg text-sm transition-all shadow-sm"
+          />
         </div>
-        
-        <div className="flex gap-2 shrink-0">
-          <button
-            onClick={() => setIsAddWalletOpen(true)}
-            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 bg-[#FDF8F0] hover:bg-[#F7EEDB] text-[#98682E] px-4 py-2 rounded-lg text-sm font-semibold transition shadow-sm whitespace-nowrap"
-          >
-            <Landmark className="w-4 h-4" /> Add Wallet
-          </button>
-          <button
-            onClick={() => setIsDeductOpen(true)}
-            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 px-4 py-2 rounded-lg text-sm font-semibold transition shadow-sm whitespace-nowrap"
-          >
-            <Minus className="w-4 h-4" /> Log Debit
-          </button>
-          <button 
-            onClick={() => setIsTopUpOpen(true)}
-            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-4 py-2 rounded-lg text-sm font-semibold transition shadow-sm whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4" /> Top-Up
-          </button>
-        </div>
+
+        <select
+          value={filterPortal}
+          onChange={(e) => setFilterPortal(e.target.value)}
+          className="px-4 py-2 bg-white border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg text-sm appearance-none shadow-sm min-w-[150px]"
+        >
+          <option value="All">All Portals</option>
+          {wallets.map(w => <option key={w.id} value={w.entityName}>{w.entityName}</option>)}
+        </select>
+
+        <select
+          value={filterType}
+          onChange={(e) => setFilterType(e.target.value)}
+          className="px-4 py-2 bg-white border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg text-sm appearance-none shadow-sm min-w-[120px]"
+        >
+          <option value="All">All Types</option>
+          <option value="TOP_UP">Top-Ups</option>
+          <option value="DEDUCTION">Deductions</option>
+        </select>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -202,10 +171,6 @@ export function WalletLedger({ wallets, clients }: { wallets: any[], clients: an
           })}
         </div>
       </div>
-
-      {isTopUpOpen && <TopUpModal onClose={() => setIsTopUpOpen(false)} wallets={wallets} defaultWalletId={selectedWalletId} />}
-      {isDeductOpen && <DeductModal onClose={() => setIsDeductOpen(false)} wallets={wallets} clients={clients} defaultWalletId={selectedWalletId} />}
-      {isAddWalletOpen && <AddWalletModal onClose={() => setIsAddWalletOpen(false)} />}
     </div>
   );
 }

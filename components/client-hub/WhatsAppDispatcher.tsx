@@ -144,12 +144,18 @@ export function WhatsAppDispatcher({ cases }: { cases: any[] }) {
           onChange={(e) => setSelectedCaseId(e.target.value)}
           className="w-full px-4 py-3 bg-slate-50  border border-slate-200  focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none transition-all appearance-none text-slate-900 "
         >
-          <option value="">-- Select a Client Case --</option>
-          {cases.map(c => (
-            <option key={c.id} value={c.id}>
-              {c.client?.name} • {c.reference} ({c.serviceType})
-            </option>
-          ))}
+          {cases.length === 0 ? (
+            <option value="" disabled>-- No active cases found (Create a case first) --</option>
+          ) : (
+            <>
+              <option value="">-- Select a Client Case --</option>
+              {cases.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.client?.name} • {c.reference} ({c.serviceType})
+                </option>
+              ))}
+            </>
+          )}
         </select>
 
         {selectedCase && (

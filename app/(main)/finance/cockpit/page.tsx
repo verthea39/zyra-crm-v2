@@ -69,9 +69,9 @@ export default async function FinanceCockpitPage() {
     <PinLockGuard>
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 md:p-8">
         <div className="max-w-[1600px] mx-auto space-y-8">
-          <CashPositionWidget cashInHandMinor={cashInHandMinor} bankCardMinor={bankCardMinor} />
-          <PortalWalletsSection wallets={wallets} />
           <MetricTiles metrics={metrics} />
+          <PortalWalletsSection wallets={wallets} />
+          <CashPositionWidget cashInHandMinor={cashInHandMinor} bankCardMinor={bankCardMinor} />
           <LedgerView
             transactions={transactions} 
             clients={clients}
