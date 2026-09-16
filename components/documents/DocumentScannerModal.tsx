@@ -2,13 +2,52 @@
 
 import { useCallback, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ScanLine, UploadCloud, Loader2, CheckCircle2, RotateCcw } from "lucide-react";
+import { ScanLine, UploadCloud, Loader2, CheckCircle2, RotateCcw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { recognizeText, parseDocumentText, type ParsedDocumentFields } from "@/lib/ocr/document-parser";
+import { parseDocumentWithAI, type UniversalDocumentFields, type UniversalDocumentType } from "@/app/actions/universal-ocr";
+import { recognizeText, parseDocumentText } from "@/lib/ocr/document-parser";
 
 type ScannerStage = "idle" | "scanning" | "preview";
 
-export type ScannerResult = ParsedDocumentFields & { fileDataUrl: string };
+export type ScannerResult = UniversalDocumentFields & { fileDataUrl: string };
+
+const TYPE_LABEL: Record<UniversalDocumentType, string> = {
+  PASSPORT: "Passport",
+  EMIRATES_ID: "Emirates ID",
+  RESIDENCE_VISA: "UAE Residence Visa",
+  TRADE_LICENSE: "Trade License",
+  EJARI: "Ejari Tenancy Contract",
+  UNKNOWN: "Document",
+};
+
+function fileToBase64(file: File): Promise<{ base64: string; dataUrl: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const base64 = dataUrl.split(",")[1] || "";
+      resolve({ base64, dataUrl });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/** Local tesseract.js/mrz fallback if the Gemini call fails (no key, quota, network). */
+async function runLocalFallback(file: File): Promise<UniversalDocumentFields> {
+  const text = await recognizeText(file);
+  const parsed = await parseDocumentText(text);
+  return {
+    documentType: parsed.kind === "EMIRATES_ID" || parsed.kind === "PASSPORT" ? parsed.kind : "UNKNOWN",
+    fullName: parsed.fullName || null,
+    documentNumber: parsed.documentNumber || null,
+    expiryDate: parsed.expiryDate || null,
+    dob: parsed.dob || null,
+    nationality: parsed.nationality || null,
+    companyName: null,
+    sponsorName: null,
+  };
+}
 
 export function DocumentScannerModal({
   open,
@@ -20,31 +59,23 @@ export function DocumentScannerModal({
   onApply: (result: ScannerResult) => void;
 }) {
   const [stage, setStage] = useState<ScannerStage>("idle");
-  const [progressLabel, setProgressLabel] = useState("");
   const [dragOver, setDragOver] = useState(false);
-  const [fields, setFields] = useState<ParsedDocumentFields | null>(null);
+  const [fields, setFields] = useState<UniversalDocumentFields | null>(null);
   const [fileDataUrl, setFileDataUrl] = useState<string>("");
+  const [usedFallback, setUsedFallback] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
     setStage("idle");
-    setProgressLabel("");
     setFields(null);
     setFileDataUrl("");
+    setUsedFallback(false);
   };
 
   const handleClose = (next: boolean) => {
     if (!next) reset();
     onOpenChange(next);
   };
-
-  const readAsDataUrl = (file: File) =>
-    new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
 
   const processFile = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -53,27 +84,32 @@ export function DocumentScannerModal({
     }
 
     setStage("scanning");
-    setProgressLabel("Reading file...");
 
     try {
-      const dataUrl = await readAsDataUrl(file);
+      const { base64, dataUrl } = await fileToBase64(file);
       setFileDataUrl(dataUrl);
 
-      const text = await recognizeText(file, (status, progress) => {
-        setProgressLabel(`${status.replace(/_/g, " ")}... ${Math.round(progress * 100)}%`);
-      });
+      const aiResult = await parseDocumentWithAI(base64, file.type);
 
-      setProgressLabel("Parsing extracted fields...");
-      const parsed = await parseDocumentText(text);
+      let parsed: UniversalDocumentFields;
+      if (aiResult.success) {
+        parsed = aiResult.data;
+        setUsedFallback(false);
+      } else {
+        console.warn("AI parse failed, falling back to local OCR:", aiResult.error);
+        toast.error(`AI analysis unavailable (${aiResult.error}) -- using local scanner instead`);
+        parsed = await runLocalFallback(file);
+        setUsedFallback(true);
+      }
 
-      if (parsed.kind === "UNKNOWN") {
-        toast.error("Could not detect an Emirates ID or Passport in this image. You can still edit fields manually below.");
+      if (parsed.documentType === "UNKNOWN") {
+        toast.error("Could not confidently identify this document. You can still edit fields manually below.");
       }
 
       setFields(parsed);
       setStage("preview");
     } catch (err) {
-      console.error("OCR failed:", err);
+      console.error("Document scan failed:", err);
       toast.error("Failed to scan document. Please try a clearer photo.");
       setStage("idle");
     }
@@ -101,7 +137,7 @@ export function DocumentScannerModal({
             Scan Document (OCR)
           </DialogTitle>
           <DialogDescription>
-            Upload an Emirates ID or Passport photo to auto-fill the form
+            Upload a passport, Emirates ID, residence visa, trade license, or Ejari to auto-fill the form
           </DialogDescription>
         </DialogHeader>
 
@@ -118,7 +154,7 @@ export function DocumentScannerModal({
             >
               <UploadCloud className="w-10 h-10 text-slate-400" />
               <p className="text-sm font-medium text-slate-600">Click to upload or drag and drop</p>
-              <p className="text-xs text-slate-400">Emirates ID or Passport photo &mdash; JPG, PNG</p>
+              <p className="text-xs text-slate-400">Any UAE identity or business document &mdash; JPG, PNG</p>
               <input
                 ref={inputRef}
                 type="file"
@@ -136,33 +172,28 @@ export function DocumentScannerModal({
           {stage === "scanning" && (
             <div className="flex flex-col items-center justify-center gap-3 py-14">
               <Loader2 className="w-8 h-8 text-[#98682E] animate-spin" />
-              <p className="text-sm font-medium text-slate-600">Analyzing document with OCR engine...</p>
-              <p className="text-xs text-slate-400">{progressLabel}</p>
+              <p className="text-sm font-medium text-slate-600">AI analyzing document type & extracting metadata...</p>
             </div>
           )}
 
           {stage === "preview" && fields && (
             <div className="flex flex-col gap-4 pb-1">
               <div className="flex items-center gap-2 text-sm font-semibold text-emerald-600">
-                <CheckCircle2 className="w-4 h-4" />
-                {fields.kind === "EMIRATES_ID" ? "Emirates ID detected" : fields.kind === "PASSPORT" ? "Passport detected" : "Document scanned"}
+                {usedFallback ? <CheckCircle2 className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+                Detected: {TYPE_LABEL[fields.documentType]}
+                {usedFallback && <span className="text-xs font-normal text-slate-400">(local scanner)</span>}
               </div>
 
               <div className="grid grid-cols-1 gap-3">
                 <EditableField label="Full Name" value={fields.fullName || ""} onChange={(v) => setFields({ ...fields, fullName: v })} />
-                <EditableField
-                  label={fields.kind === "PASSPORT" ? "Passport Number" : "Emirates ID Number"}
-                  value={fields.documentNumber || ""}
-                  onChange={(v) => setFields({ ...fields, documentNumber: v })}
-                />
+                <EditableField label="Document Number" value={fields.documentNumber || ""} onChange={(v) => setFields({ ...fields, documentNumber: v })} />
                 <EditableField label="Nationality" value={fields.nationality || ""} onChange={(v) => setFields({ ...fields, nationality: v })} />
                 <div className="grid grid-cols-2 gap-3">
                   <EditableField label="Date of Birth" type="date" value={fields.dob || ""} onChange={(v) => setFields({ ...fields, dob: v })} />
                   <EditableField label="Expiry Date" type="date" value={fields.expiryDate || ""} onChange={(v) => setFields({ ...fields, expiryDate: v })} />
                 </div>
-                {fields.kind === "PASSPORT" && (
-                  <EditableField label="Sex" value={fields.sex || ""} onChange={(v) => setFields({ ...fields, sex: v })} />
-                )}
+                <EditableField label="Company Name" value={fields.companyName || ""} onChange={(v) => setFields({ ...fields, companyName: v })} />
+                <EditableField label="Sponsor Name" value={fields.sponsorName || ""} onChange={(v) => setFields({ ...fields, sponsorName: v })} />
               </div>
 
               <div className="flex gap-2 pt-2">

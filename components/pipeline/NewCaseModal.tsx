@@ -35,7 +35,14 @@ export function NewCaseModal({ onClose, clients, coordinators }: { onClose: () =
     const res = await createCase(formData);
 
     if (res.success && pendingScan && formData.clientId) {
-      const category = pendingScan.kind === "PASSPORT" ? "Passport Copy" : pendingScan.kind === "EMIRATES_ID" ? "Emirates ID" : "Passport Copy";
+      const CATEGORY_BY_TYPE: Record<string, string> = {
+        PASSPORT: "Passport Copy",
+        EMIRATES_ID: "Emirates ID",
+        RESIDENCE_VISA: "UAE Visa",
+        TRADE_LICENSE: "Trade License",
+        EJARI: "Ejari",
+      };
+      const category = CATEGORY_BY_TYPE[pendingScan.documentType] || "Passport Copy";
       const title = pendingScan.documentNumber ? `${category} - ${pendingScan.documentNumber}` : `${category} (Scanned)`;
       await uploadVaultDocument({
         clientId: formData.clientId,

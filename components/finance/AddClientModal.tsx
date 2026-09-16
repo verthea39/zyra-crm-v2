@@ -95,18 +95,29 @@ export function AddClientModal({ open, onOpenChange, client }: { open: boolean; 
   function handleScanApply(result: ScannerResult) {
     if (result.fullName) form.setValue("name", result.fullName);
     if (result.nationality) form.setValue("nationality", result.nationality);
-    if (result.kind === "PASSPORT") {
+    if (result.documentType === "PASSPORT") {
       if (result.documentNumber) form.setValue("passportNo", result.documentNumber);
       if (result.expiryDate) form.setValue("passportExpiry", result.expiryDate);
-    } else if (result.kind === "EMIRATES_ID") {
+    } else if (result.documentType === "EMIRATES_ID") {
       if (result.documentNumber) form.setValue("emiratesIdNo", result.documentNumber);
+    } else if (result.documentType === "TRADE_LICENSE") {
+      if (result.documentNumber) form.setValue("tradeLicenseNo", result.documentNumber);
+      if (result.expiryDate) form.setValue("tradeLicenseExpiry", result.expiryDate);
+      if (result.companyName) form.setValue("name", result.companyName);
     }
     setPendingScan(result);
     toast.success("Scanned fields applied -- review before saving");
   }
 
   async function attachScanToVault(clientId: string, scan: ScannerResult) {
-    const category = scan.kind === "PASSPORT" ? "Passport Copy" : scan.kind === "EMIRATES_ID" ? "Emirates ID" : "Passport Copy";
+    const CATEGORY_BY_TYPE: Record<string, string> = {
+      PASSPORT: "Passport Copy",
+      EMIRATES_ID: "Emirates ID",
+      RESIDENCE_VISA: "UAE Visa",
+      TRADE_LICENSE: "Trade License",
+      EJARI: "Ejari",
+    };
+    const category = CATEGORY_BY_TYPE[scan.documentType] || "Passport Copy";
     const title = scan.documentNumber ? `${category} - ${scan.documentNumber}` : `${category} (Scanned)`;
     const res = await uploadVaultDocument({
       clientId,
