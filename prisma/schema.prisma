@@ -1,11 +1,13 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters", "multiSchema"]
 }
 
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+  schemas   = ["v2"]
 }
 
 enum Role {
@@ -16,11 +18,13 @@ enum Role {
   PRO_SPECIALIST
   TYPIST
   ACCOUNTANT
+  @@schema("v2")
 }
 
 enum ClientType {
   INDIVIDUAL
   CORPORATE
+  @@schema("v2")
 }
 
 enum CaseStage {
@@ -35,17 +39,20 @@ enum CaseStage {
   MEDICAL_BIOMETRICS
   VISA_STAMPING_EID
   COMPLETED_HANDOVER
+  @@schema("v2")
 }
 
 enum DocStatus {
   PENDING
   APPROVED
   REJECTED
+  @@schema("v2")
 }
 
 enum TransactionType {
   INCOME
   EXPENSE
+  @@schema("v2")
 }
 
 enum TransactionStatus {
@@ -53,12 +60,14 @@ enum TransactionStatus {
   PAID
   OVERDUE
   PARTIALLY_PAID
+  @@schema("v2")
 }
 
 enum DocumentType {
   INVOICE
   QUOTATION
   RECEIPT
+  @@schema("v2")
 }
 
 enum DocumentStatus {
@@ -68,6 +77,7 @@ enum DocumentStatus {
   OVERDUE
   CANCELLED
   CONVERTED
+  @@schema("v2")
 }
 
 model Document {
@@ -109,6 +119,7 @@ model Document {
   @@index([caseFileId])
   @@index([type])
   @@index([status])
+  @@schema("v2")
 }
 
 model DocumentItem {
@@ -125,6 +136,7 @@ model DocumentItem {
   createdAt      DateTime @default(now())
 
   @@index([documentId])
+  @@schema("v2")
 }
 
 model User {
@@ -139,6 +151,7 @@ model User {
   cases        CaseFile[]
   whatsappLogs WhatsAppLog[]
   auditLogs    AuditLog[]
+  @@schema("v2")
 }
 
 model Client {
@@ -170,6 +183,7 @@ model Client {
 
   @@index([type])
   @@index([expiryDate])
+  @@schema("v2")
 }
 
 model CaseFile {
@@ -196,6 +210,7 @@ model CaseFile {
   @@index([coordinatorId])
   @@index([stage])
   @@index([trackingToken])
+  @@schema("v2")
 }
 
 model DocumentChecklist {
@@ -207,6 +222,7 @@ model DocumentChecklist {
 
   @@index([caseFileId])
   @@index([status])
+  @@schema("v2")
 }
 
 model Transaction {
@@ -244,6 +260,7 @@ model Transaction {
   @@index([type])
   @@index([status])
   @@index([date])
+  @@schema("v2")
 }
 
 model TransactionPayment {
@@ -260,6 +277,7 @@ model TransactionPayment {
   createdAt      DateTime    @default(now())
 
   @@index([transactionId])
+  @@schema("v2")
 }
 
 model Employee {
@@ -278,6 +296,7 @@ model Employee {
   createdAt      DateTime  @default(now())
   
   @@index([corporateId])
+  @@schema("v2")
 }
 
 model DocumentVault {
@@ -295,6 +314,7 @@ model DocumentVault {
 
   remarks      String?
   createdAt    DateTime  @default(now())
+  @@schema("v2")
 }
 
 model PortalWallet {
@@ -307,6 +327,7 @@ model PortalWallet {
   lastTopUpDate       DateTime?
   lastUpdated         DateTime @updatedAt
   transactions PortalTransaction[]
+  @@schema("v2")
 }
 
 model PortalTransaction {
@@ -329,6 +350,7 @@ model PortalTransaction {
   @@index([walletId])
   @@index([caseRef])
   @@index([clientId])
+  @@schema("v2")
 }
 
 model WhatsAppLog {
@@ -346,6 +368,7 @@ model WhatsAppLog {
   @@index([caseId])
   @@index([clientId])
   @@index([sentById])
+  @@schema("v2")
 }
 
 model ServiceItem {
@@ -358,6 +381,7 @@ model ServiceItem {
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  @@schema("v2")
 }
 
 model CompanySettings {
@@ -379,6 +403,7 @@ model CompanySettings {
   paymentTerms    String?
   logoUrl         String?
   updatedAt       DateTime @updatedAt
+  @@schema("v2")
 }
 
 model AuditLog {
@@ -390,6 +415,7 @@ model AuditLog {
   createdAt   DateTime @default(now())
 
   @@index([userId])
+  @@schema("v2")
 }
 
 model ActivityLog {
@@ -404,4 +430,5 @@ model ActivityLog {
 
   @@index([entityType, entityId])
   @@index([createdAt])
+  @@schema("v2")
 }
