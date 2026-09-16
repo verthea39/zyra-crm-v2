@@ -187,7 +187,7 @@ export function TaxInvoiceModal({ open, onOpenChange, clients }: { open: boolean
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] max-w-full m-0 p-0 sm:rounded-2xl rounded-none bg-white border-none shadow-2xl flex flex-col overflow-hidden">
+      <DialogContent className="sm:max-w-4xl w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] max-w-full m-0 p-0 sm:rounded-2xl rounded-none bg-white border-none shadow-2xl flex flex-col overflow-hidden">
         <DialogHeader className="bg-white border-b border-slate-200 p-5 sm:p-6 sm:rounded-t-2xl shrink-0 relative">
           <button onClick={() => onOpenChange(false)} className="absolute right-5 top-5 p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors">
             <X className="w-4 h-4" />
@@ -207,7 +207,7 @@ export function TaxInvoiceModal({ open, onOpenChange, clients }: { open: boolean
 
         <MobileStepTabs steps={MOBILE_STEPS} activeStep={mobileStep} furthestStep={furthestStep} onStepClick={goToStep} />
 
-        <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:px-2 flex flex-col gap-5">
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 flex flex-col gap-4">
           <div className={`${mobileStep === 0 ? "grid" : "hidden"} sm:grid grid-cols-1 sm:grid-cols-2 gap-4`}>
             <div className="space-y-2">
               <Label>Select Client *</Label>
@@ -240,126 +240,121 @@ export function TaxInvoiceModal({ open, onOpenChange, clients }: { open: boolean
             </div>
           </div>
 
-          <div className={`${mobileStep === 1 ? "block" : "hidden"} sm:block bg-white rounded-lg border p-1 sm:p-1`}>
-            {/* Desktop Table View */}
-            <div className="hidden sm:block overflow-x-auto rounded-md">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
-                  <tr>
-                    <th className="px-3 py-2.5 font-medium">Service Description</th>
-                    <th className="px-3 py-2.5 font-medium w-32 text-right">Gov Fee (AED)</th>
-                    <th className="px-3 py-2.5 font-medium w-32 text-right">Service Fee (AED)</th>
-                    <th className="px-3 py-2.5 font-medium w-32 text-right">Subtotal</th>
-                    <th className="px-2 py-2.5 font-medium w-10 text-center"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {items.map((item, idx) => (
-                    <tr key={idx}>
-                      <td className="px-2 py-2 align-top">
-                        <select
-                          className="w-full h-9 text-sm border border-slate-200 rounded-xl focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] bg-white px-3"
-                          value={
-                            PRESET_SERVICES.flatMap(g => g.items).some(i => i.name === item.desc && i.name !== "Custom / Other Service") 
-                              ? item.desc 
-                              : (item.desc === "" ? "" : "Custom / Other Service")
-                          }
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            const newItems = [...items];
-                            if (val === "Custom / Other Service") {
-                              newItems[idx].desc = "Custom Service Details";
-                              newItems[idx].govCost = 0;
-                              newItems[idx].proFee = 0;
-                            } else {
-                              newItems[idx].desc = val;
-                              const preset = PRESET_SERVICES.flatMap(g => g.items).find(i => i.name === val);
-                              if (preset) {
-                                newItems[idx].govCost = preset.gov;
-                                newItems[idx].proFee = preset.pro;
-                              }
-                            }
-                            setItems(newItems);
-                          }}
-                        >
-                          <option value="" disabled>-- Select Service --</option>
-                          {PRESET_SERVICES.map(g => (
-                            <optgroup key={g.group} label={g.group}>
-                              {g.items.map(i => (
-                                <option key={i.name} value={i.name}>{i.name}</option>
-                              ))}
-                            </optgroup>
-                          ))}
-                        </select>
+          <div className={`${mobileStep === 1 ? "block" : "hidden"} sm:block bg-white rounded-lg border border-slate-200 p-3 sm:p-4`}>
+            {/* Desktop Grid Layout */}
+            <div className="hidden sm:flex flex-col gap-2">
+              <div className="grid grid-cols-12 gap-3 px-1 text-xs uppercase font-medium text-slate-500">
+                <div className="col-span-5">Service Description</div>
+                <div className="col-span-2 text-right">Gov Fee (AED)</div>
+                <div className="col-span-2 text-right">Service Fee (AED)</div>
+                <div className="col-span-2 text-right">Subtotal</div>
+                <div className="col-span-1"></div>
+              </div>
 
-                        {(!PRESET_SERVICES.flatMap(g => g.items).some(i => i.name === item.desc && i.name !== "Custom / Other Service") && item.desc !== "") && (
-                          <Input 
-                            className="mt-2 h-9 text-sm border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E]" 
-                            placeholder="Type custom description..."
-                            value={item.desc === "Custom Service Details" ? "" : item.desc}
-                            onChange={(e) => {
-                              const newItems = [...items];
-                              newItems[idx].desc = e.target.value || "Custom Service Details";
-                              setItems(newItems);
-                            }}
-                          />
-                        )}
-                      </td>
-                      <td className="px-2 py-2 align-top">
-                        <Input 
-                          type="number" 
-                          inputMode="decimal"
-                          min="0" 
-                          step="0.01"
-                          placeholder="0.00"
-                          className="h-9 text-sm text-right border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E]" 
-                          value={item.govCost === 0 && item.desc === "Custom Service Details" ? '' : item.govCost}
-                          onChange={(e) => {
-                            const newItems = [...items];
-                            newItems[idx].govCost = parseFloat(e.target.value || "0");
-                            setItems(newItems);
-                          }}
-                        />
-                      </td>
-                      <td className="px-2 py-2 align-top">
-                        <Input 
-                          type="number" 
-                          inputMode="decimal"
-                          min="0" 
-                          step="0.01"
-                          placeholder="0.00"
-                          className="h-9 text-sm text-right border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E]" 
-                          value={item.proFee === 0 && item.desc === "Custom Service Details" ? '' : item.proFee}
-                          onChange={(e) => {
-                            const newItems = [...items];
-                            newItems[idx].proFee = parseFloat(e.target.value || "0");
-                            setItems(newItems);
-                          }}
-                        />
-                      </td>
-                      <td className="px-2 py-2 align-top font-semibold text-slate-800 text-right pr-2 pt-4">
-                        {(item.govCost + item.proFee).toFixed(2)}
-                      </td>
-                      <td className="px-2 py-2 align-top text-center pt-3.5">
-                        {items.length > 1 && (
-                          <button 
-                            type="button" 
-                            onClick={() => {
-                              const newItems = items.filter((_, i) => i !== idx);
-                              setItems(newItems);
-                            }}
-                            className="text-slate-400 hover:text-rose-500 transition-colors p-1"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {items.map((item, idx) => (
+                <div key={idx} className="grid grid-cols-12 gap-3 items-center bg-slate-50/60 border border-slate-100 rounded-xl p-2.5">
+                  <div className="col-span-5">
+                    <select
+                      className="w-full h-10 text-sm border border-slate-200 rounded-lg focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] bg-white px-3"
+                      value={
+                        PRESET_SERVICES.flatMap(g => g.items).some(i => i.name === item.desc && i.name !== "Custom / Other Service")
+                          ? item.desc
+                          : (item.desc === "" ? "" : "Custom / Other Service")
+                      }
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const newItems = [...items];
+                        if (val === "Custom / Other Service") {
+                          newItems[idx].desc = "Custom Service Details";
+                          newItems[idx].govCost = 0;
+                          newItems[idx].proFee = 0;
+                        } else {
+                          newItems[idx].desc = val;
+                          const preset = PRESET_SERVICES.flatMap(g => g.items).find(i => i.name === val);
+                          if (preset) {
+                            newItems[idx].govCost = preset.gov;
+                            newItems[idx].proFee = preset.pro;
+                          }
+                        }
+                        setItems(newItems);
+                      }}
+                    >
+                      <option value="" disabled>-- Select Service --</option>
+                      {PRESET_SERVICES.map(g => (
+                        <optgroup key={g.group} label={g.group}>
+                          {g.items.map(i => (
+                            <option key={i.name} value={i.name}>{i.name}</option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+
+                    {(!PRESET_SERVICES.flatMap(g => g.items).some(i => i.name === item.desc && i.name !== "Custom / Other Service") && item.desc !== "") && (
+                      <Input
+                        className="mt-2 h-10 text-sm border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E]"
+                        placeholder="Type custom description..."
+                        value={item.desc === "Custom Service Details" ? "" : item.desc}
+                        onChange={(e) => {
+                          const newItems = [...items];
+                          newItems[idx].desc = e.target.value || "Custom Service Details";
+                          setItems(newItems);
+                        }}
+                      />
+                    )}
+                  </div>
+                  <div className="col-span-2">
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      className="h-10 text-sm text-right border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E]"
+                      value={item.govCost === 0 && item.desc === "Custom Service Details" ? '' : item.govCost}
+                      onChange={(e) => {
+                        const newItems = [...items];
+                        newItems[idx].govCost = parseFloat(e.target.value || "0");
+                        setItems(newItems);
+                      }}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      className="h-10 text-sm text-right border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E]"
+                      value={item.proFee === 0 && item.desc === "Custom Service Details" ? '' : item.proFee}
+                      onChange={(e) => {
+                        const newItems = [...items];
+                        newItems[idx].proFee = parseFloat(e.target.value || "0");
+                        setItems(newItems);
+                      }}
+                    />
+                  </div>
+                  <div className="col-span-2 font-semibold text-slate-800 text-right">
+                    {(item.govCost + item.proFee).toFixed(2)}
+                  </div>
+                  <div className="col-span-1 flex justify-center">
+                    {items.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newItems = items.filter((_, i) => i !== idx);
+                          setItems(newItems);
+                        }}
+                        className="text-red-500 hover:text-red-700 transition-colors p-1"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-            
+
             {/* Mobile: collapsed cards, tap to edit in a bottom sheet */}
             <div className="sm:hidden flex flex-col gap-2 p-2">
               {items.map((item, idx) => (

@@ -69,7 +69,7 @@ export function NewCaseModal({ onClose, clients, coordinators }: { onClose: () =
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-      <div className="bg-white  rounded-2xl w-full max-w-md overflow-hidden shadow-xl border  flex flex-col max-h-[90dvh]">
+      <div className="bg-white  rounded-2xl w-full max-w-2xl overflow-hidden shadow-xl border  flex flex-col max-h-[90vh]">
         <div className="p-4 border-b  flex justify-between items-center bg-slate-50/50 ">
           <h2 className="font-bold text-lg text-slate-900 ">New Application Case</h2>
           <button onClick={onClose} className="p-2 hover:bg-slate-200  rounded-full transition-colors text-slate-500">
@@ -101,36 +101,38 @@ export function NewCaseModal({ onClose, clients, coordinators }: { onClose: () =
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Sponsor / Company *</label>
-              <select
-                required
-                value={formData.clientId}
-                onChange={e => setFormData({ ...formData, clientId: e.target.value })}
-                className="w-full px-4 py-2 bg-slate-100  border-transparent focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none transition-all appearance-none"
-              >
-                {clients.map(c => (
-                  <option key={c.id} value={c.id}>{c.name} ({c.type})</option>
-                ))}
-              </select>
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Sponsor / Company *</label>
+                <select
+                  required
+                  value={formData.clientId}
+                  onChange={e => setFormData({ ...formData, clientId: e.target.value })}
+                  className="w-full px-4 py-2 bg-slate-100  border-transparent focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none transition-all appearance-none"
+                >
+                  {clients.map(c => (
+                    <option key={c.id} value={c.id}>{c.name} ({c.type})</option>
+                  ))}
+                </select>
+              </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Service Type *</label>
-              <select
-                required
-                value={formData.serviceType}
-                onChange={e => setFormData({ ...formData, serviceType: e.target.value })}
-                className="w-full px-4 py-2 bg-slate-100  border-transparent focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none transition-all appearance-none"
-              >
-                <option value="New Employment Visa">New Employment Visa</option>
-                <option value="Visa Renewal">Visa Renewal</option>
-                <option value="Visa Cancellation">Visa Cancellation</option>
-                <option value="Family Visa">Family Visa</option>
-                <option value="Freelance Permit">Freelance Permit</option>
-                <option value="Trade License Renewal">Trade License Renewal</option>
-                <option value="Business Setup">Business Setup</option>
-              </select>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Service Type *</label>
+                <select
+                  required
+                  value={formData.serviceType}
+                  onChange={e => setFormData({ ...formData, serviceType: e.target.value })}
+                  className="w-full px-4 py-2 bg-slate-100  border-transparent focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none transition-all appearance-none"
+                >
+                  <option value="New Employment Visa">New Employment Visa</option>
+                  <option value="Visa Renewal">Visa Renewal</option>
+                  <option value="Visa Cancellation">Visa Cancellation</option>
+                  <option value="Family Visa">Family Visa</option>
+                  <option value="Freelance Permit">Freelance Permit</option>
+                  <option value="Trade License Renewal">Trade License Renewal</option>
+                  <option value="Business Setup">Business Setup</option>
+                </select>
+              </div>
             </div>
 
             <div>
