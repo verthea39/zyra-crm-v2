@@ -1,8 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { Building2, Users, Briefcase, Plus } from "lucide-react";
+import { CompanyProfileDrawer } from "./CompanyProfileDrawer";
 
 export function CorporateList({ corporates }: { corporates: any[] }) {
+  const [profileCompanyId, setProfileCompanyId] = useState<string | null>(null);
+
   if (corporates.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-slate-500 border border-dashed rounded-xl ">
@@ -16,9 +20,8 @@ export function CorporateList({ corporates }: { corporates: any[] }) {
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
       {corporates.map(corp => {
         const employeeCount = corp.employees?.length || 0;
-        // Mock quota for demonstration
-        const totalQuota = Math.max(employeeCount + 5, 20); 
-        const utilization = Math.round((employeeCount / totalQuota) * 100);
+        const totalQuota = corp.mohreQuotaTotal ?? 20;
+        const utilization = totalQuota > 0 ? Math.round((employeeCount / totalQuota) * 100) : 0;
 
         return (
           <div key={corp.id} className="bg-white  border  rounded-xl overflow-hidden shadow-sm">
@@ -31,10 +34,13 @@ export function CorporateList({ corporates }: { corporates: any[] }) {
                   <h3 className="font-bold text-lg text-slate-900  leading-none mb-1">
                     {corp.name}
                   </h3>
-                  <p className="text-sm text-slate-500">TRN: {corp.tradeLicenseNo || "N/A"}</p>
+                  <p className="text-sm text-slate-500">TRN: {corp.trnNumber || "N/A"}</p>
                 </div>
               </div>
-              <button className="text-sm font-medium bg-slate-100  px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors">
+              <button
+                onClick={() => setProfileCompanyId(corp.id)}
+                className="text-sm font-medium bg-slate-100  px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors"
+              >
                 View Profile
               </button>
             </div>
@@ -96,6 +102,10 @@ export function CorporateList({ corporates }: { corporates: any[] }) {
           </div>
         );
       })}
+
+      {profileCompanyId && (
+        <CompanyProfileDrawer companyId={profileCompanyId} onClose={() => setProfileCompanyId(null)} />
+      )}
     </div>
   );
 }

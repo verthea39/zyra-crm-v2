@@ -156,6 +156,9 @@ model Client {
   emiratesIdNo    String?
   tradeLicenseNo  String?
   expiryDate      DateTime?
+  trnNumber           String?   // Corporate: Tax Registration Number
+  establishmentCardNo String?   // Corporate: MOHRE Establishment Card No
+  mohreQuotaTotal     Int?      @default(20) // Corporate: total MOHRE labour quota allocation
   createdAt       DateTime   @default(now())
   cases           CaseFile[]
   transactions    Transaction[]
@@ -265,7 +268,10 @@ model Employee {
   designation    String?
   basicSalary    Float?
   visaCategory   String?
-  expiryDate     DateTime?
+  visaStatus     String?   @default("ACTIVE") // ACTIVE, PENDING, EXPIRED, CANCELLED
+  passportNo     String?
+  emiratesIdNo   String?
+  expiryDate     DateTime? // Emirates ID / visa expiry
   corporateId    String
   corporate      Client    @relation(fields: [corporateId], references: [id], onDelete: Cascade)
   documents      DocumentVault[]
