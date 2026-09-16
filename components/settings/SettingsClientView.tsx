@@ -55,7 +55,7 @@ export function SettingsClientView({
         {activeTab === 'services' && <ServicesTab initialServices={services} />}
         {activeTab === 'team' && <TeamTab initialUsers={team} />}
         {activeTab === 'company' && <CompanyTab initialSettings={companySettings} />}
-        {activeTab === 'security' && <SecurityTab />}
+        {activeTab === 'security' && <SecurityTab team={team} />}
       </div>
     </div>
   );
