@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useMemo } from "react";
 import { formatMoney } from "@/lib/calculations";
 import { FileText, FileSignature, Receipt, Plus, ChevronRight } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type DocumentRow = {
   id: string;
@@ -66,10 +67,13 @@ export function DocumentList({ documents }: { documents: DocumentRow[] }) {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 space-y-3 bg-card border border-border rounded-xl">
-          <FileText className="w-10 h-10 text-slate-300" />
-          <p className="text-muted-foreground text-sm">No documents yet.</p>
-        </div>
+        <EmptyState
+          icon={FileText}
+          title="No documents uploaded yet"
+          description="Create a quotation, invoice, or receipt to see it listed here."
+          actionLabel="+ New Document"
+          actionHref="/documents/new"
+        />
       ) : (
         <>
           {/* Mobile: stacked cards */}

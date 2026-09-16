@@ -5,6 +5,7 @@ import { X, Pencil, Users, FileText, UserPlus, Loader2, Building2 } from "lucide
 import { getCompanyProfile } from "@/app/actions/b2b";
 import { EditCompanyModal } from "./EditCompanyModal";
 import { AddEmployeeModal } from "./AddEmployeeModal";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { format } from "date-fns";
 
 export function CompanyProfileDrawer({ companyId, onClose }: { companyId: string; onClose: () => void }) {
@@ -109,7 +110,13 @@ export function CompanyProfileDrawer({ companyId, onClose }: { companyId: string
               </div>
 
               {employeeCount === 0 ? (
-                <p className="text-sm text-slate-500 italic px-2">No employees registered yet.</p>
+                <EmptyState
+                  icon={Users}
+                  title="No sponsored employees yet"
+                  description="Add an employee to start tracking their visa status and MOHRE quota usage."
+                  actionLabel="+ Add Employee"
+                  onAction={() => setIsAddEmployeeOpen(true)}
+                />
               ) : (
                 <div className="border border-slate-200 rounded-lg overflow-x-auto">
                   <table className="w-full text-sm text-left">

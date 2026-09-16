@@ -10,7 +10,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Zyra CRM - PRO Operations",
+  title: "Zyra CRM | Corporate & PRO Services",
   description: "Executive Cash Flow & Case Cockpit",
 };
 

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Transaction } from "@prisma/client";
-import { Edit2, Trash2, MoreVertical, Eye, Printer } from "lucide-react";
+import { Edit2, Trash2, MoreVertical, Eye, Printer, Receipt } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { deleteTransaction } from "@/app/actions/finance";
 import { downloadDocumentPDF, printViaIframe, type LineItem } from "@/lib/printUtils";
 import { getBranding } from "@/app/actions/branding";
@@ -79,12 +80,7 @@ export function LedgerTable({ transactions }: { transactions: Transaction[] }) {
       {/* Mobile card view */}
       <div className="md:hidden space-y-3">
         {transactions.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 space-y-3 bg-card border border-border rounded-xl">
-            <div className="w-12 h-12 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center">
-              <Edit2 className="w-5 h-5 text-slate-400" />
-            </div>
-            <p className="text-muted-foreground text-sm">No transactions found in the master ledger.</p>
-          </div>
+          <EmptyState icon={Receipt} title="No transactions found" description="Income and expenses recorded in the master ledger will appear here." />
         )}
         {transactions.map((tx) => {
           const isIncome = tx.type === "INCOME";
@@ -274,12 +270,7 @@ export function LedgerTable({ transactions }: { transactions: Transaction[] }) {
             {transactions.length === 0 && (
               <tr>
                 <td colSpan={10} className="px-6 py-16 text-center">
-                  <div className="flex flex-col items-center justify-center space-y-3">
-                    <div className="w-12 h-12 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center">
-                      <Edit2 className="w-5 h-5 text-slate-400" />
-                    </div>
-                    <p className="text-muted-foreground text-sm">No transactions found in the master ledger.</p>
-                  </div>
+                  <EmptyState icon={Receipt} title="No transactions found" description="Income and expenses recorded in the master ledger will appear here." />
                 </td>
               </tr>
             )}
