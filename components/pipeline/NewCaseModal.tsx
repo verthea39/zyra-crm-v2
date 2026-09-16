@@ -1,18 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, ScanLine } from "lucide-react";
 import { createCase } from "@/app/actions/pipeline";
+import { uploadVaultDocument } from "@/app/actions/vault";
 import { toast } from "sonner";
+import { DocumentScannerModal, type ScannerResult } from "@/components/documents/DocumentScannerModal";
 
 export function NewCaseModal({ onClose, clients, coordinators }: { onClose: () => void, clients: any[], coordinators: any[] }) {
   const [loading, setLoading] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [pendingScan, setPendingScan] = useState<ScannerResult | null>(null);
   const [formData, setFormData] = useState({
     applicantName: "",
     clientId: clients[0]?.id || "",
     serviceType: "New Employment Visa",
     coordinatorId: coordinators[0]?.id || ""
   });
+
+  const handleScanApply = (result: ScannerResult) => {
+    if (result.fullName) setFormData((prev) => ({ ...prev, applicantName: result.fullName! }));
+    setPendingScan(result);
+    toast.success("Scanned fields applied -- review before saving");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,12 +33,25 @@ export function NewCaseModal({ onClose, clients, coordinators }: { onClose: () =
 
     setLoading(true);
     const res = await createCase(formData);
+
+    if (res.success && pendingScan && formData.clientId) {
+      const category = pendingScan.kind === "PASSPORT" ? "Passport Copy" : pendingScan.kind === "EMIRATES_ID" ? "Emirates ID" : "Passport Copy";
+      const title = pendingScan.documentNumber ? `${category} - ${pendingScan.documentNumber}` : `${category} (Scanned)`;
+      await uploadVaultDocument({
+        clientId: formData.clientId,
+        category,
+        title,
+        expiryDate: pendingScan.expiryDate || new Date().toISOString().slice(0, 10),
+        fileUrl: pendingScan.fileDataUrl,
+      });
+    }
+
     setLoading(false);
 
     if (res.success) {
       toast.success("Case initialized successfully!");
       // Reload page to fetch new initial state since we rely on server component for initial hydration
-      window.location.reload(); 
+      window.location.reload();
     } else {
       toast.error(res.error);
     }
@@ -44,8 +67,18 @@ export function NewCaseModal({ onClose, clients, coordinators }: { onClose: () =
           </button>
         </div>
 
+        <DocumentScannerModal open={scannerOpen} onOpenChange={setScannerOpen} onApply={handleScanApply} />
+
         <div className="p-6 overflow-y-auto">
           <form id="new-case-form" onSubmit={handleSubmit} className="space-y-4">
+            <button
+              type="button"
+              onClick={() => setScannerOpen(true)}
+              className="w-full flex items-center justify-center gap-1.5 h-10 rounded-lg border border-[#98682E]/30 bg-[#98682E]/10 text-[#98682E] text-sm font-semibold hover:bg-[#98682E]/20 transition-colors"
+            >
+              <ScanLine className="w-4 h-4" /> Scan Document (OCR)
+            </button>
+
             <div>
               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Applicant Full Name *</label>
               <input

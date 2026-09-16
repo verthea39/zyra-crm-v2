@@ -4,14 +4,16 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Building2, User, FileText, Shield, Loader2 } from "lucide-react";
+import { Building2, User, FileText, Shield, Loader2, ScanLine } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient, updateClient } from "@/app/actions/clients";
+import { uploadVaultDocument } from "@/app/actions/vault";
 import { Client } from "@prisma/client";
 import { toast } from "sonner"; // Assuming sonner is used, if not, we can remove it or use native alert for now
+import { DocumentScannerModal, type ScannerResult } from "@/components/documents/DocumentScannerModal";
 
 const clientSchema = z.object({
   type: z.enum(["INDIVIDUAL", "CORPORATE"]),
@@ -32,6 +34,8 @@ type ClientFormValues = z.infer<typeof clientSchema>;
 
 export function AddClientModal({ open, onOpenChange, client }: { open: boolean; onOpenChange: (open: boolean) => void; client?: Client }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [pendingScan, setPendingScan] = useState<ScannerResult | null>(null);
   const isEditMode = !!client;
 
   const form = useForm<ClientFormValues>({
@@ -88,14 +92,47 @@ export function AddClientModal({ open, onOpenChange, client }: { open: boolean; 
 
   const clientType = form.watch("type");
 
+  function handleScanApply(result: ScannerResult) {
+    if (result.fullName) form.setValue("name", result.fullName);
+    if (result.nationality) form.setValue("nationality", result.nationality);
+    if (result.kind === "PASSPORT") {
+      if (result.documentNumber) form.setValue("passportNo", result.documentNumber);
+      if (result.expiryDate) form.setValue("passportExpiry", result.expiryDate);
+    } else if (result.kind === "EMIRATES_ID") {
+      if (result.documentNumber) form.setValue("emiratesIdNo", result.documentNumber);
+    }
+    setPendingScan(result);
+    toast.success("Scanned fields applied -- review before saving");
+  }
+
+  async function attachScanToVault(clientId: string, scan: ScannerResult) {
+    const category = scan.kind === "PASSPORT" ? "Passport Copy" : scan.kind === "EMIRATES_ID" ? "Emirates ID" : "Passport Copy";
+    const title = scan.documentNumber ? `${category} - ${scan.documentNumber}` : `${category} (Scanned)`;
+    const res = await uploadVaultDocument({
+      clientId,
+      category,
+      title,
+      expiryDate: scan.expiryDate || new Date().toISOString().slice(0, 10),
+      fileUrl: scan.fileDataUrl,
+    });
+    if (!res.success) {
+      toast.error("Client saved, but attaching the scanned document to the vault failed");
+    }
+  }
+
   async function onSubmit(data: ClientFormValues) {
     setIsSubmitting(true);
     const result = isEditMode ? await updateClient(client!.id, data) : await createClient(data);
     setIsSubmitting(false);
 
     if (result.success) {
+      const savedClientId = isEditMode ? client!.id : (result as any).client?.id;
+      if (pendingScan && savedClientId) {
+        await attachScanToVault(savedClientId, pendingScan);
+      }
       toast.success(isEditMode ? "Client Profile Updated" : "Client Profile Created Successfully");
       form.reset();
+      setPendingScan(null);
       onOpenChange(false);
     } else {
       toast.error(result.error || `Failed to ${isEditMode ? "update" : "create"} client`);
@@ -113,7 +150,16 @@ export function AddClientModal({ open, onOpenChange, client }: { open: boolean; 
           <DialogDescription className="text-slate-400">
             Separate client registry with full identification, UAE visa, and contact records
           </DialogDescription>
+          <button
+            type="button"
+            onClick={() => setScannerOpen(true)}
+            className="mt-2 w-fit flex items-center gap-1.5 h-9 px-3 rounded-lg border border-[#98682E]/30 bg-[#98682E]/10 text-[#98682E] text-sm font-semibold hover:bg-[#98682E]/20 transition-colors"
+          >
+            <ScanLine className="w-4 h-4" /> Scan Document (OCR)
+          </button>
         </DialogHeader>
+
+        <DocumentScannerModal open={scannerOpen} onOpenChange={setScannerOpen} onApply={handleScanApply} />
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
