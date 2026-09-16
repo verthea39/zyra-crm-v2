@@ -6,8 +6,6 @@ import { ActionChecklist, ChecklistCase } from "@/components/dashboard/ActionChe
 import { ExpiryRadarWidget, RadarExpiry } from "@/components/dashboard/ExpiryRadarWidget";
 import { LiquiditySnapshot } from "@/components/dashboard/LiquiditySnapshot";
 import { DailyTransactionsFeed, type DailyFeedItem } from "@/components/dashboard/DailyTransactionsFeed";
-import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
-import { getRecentActivity } from "@/lib/activity";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +27,6 @@ export default async function DashboardPage() {
   let clients: any[] = [];
   let todayPayments: any[] = [];
   let todayExpenses: any[] = [];
-  let recentActivity: any[] = [];
 
   // The 4 summary counts are cached for 60s (lib/dashboardStats.ts) via a
   // route also exposed at /api/dashboard/stats, so navigating between pages
@@ -45,7 +42,6 @@ export default async function DashboardPage() {
       clientsResult,
       todayPaymentsResult,
       todayExpensesResult,
-      recentActivityResult
     ] = await Promise.all([
       getDashboardCounts(),
       prisma.portalWallet.findMany(),
@@ -86,7 +82,6 @@ export default async function DashboardPage() {
         where: { type: 'EXPENSE', date: { gte: startOfDay, lte: endOfDay } },
         orderBy: { date: 'desc' }
       }),
-      getRecentActivity(10)
     ]);
 
     urgencyData = {
@@ -101,7 +96,6 @@ export default async function DashboardPage() {
     clients = clientsResult;
     todayPayments = todayPaymentsResult;
     todayExpenses = todayExpensesResult;
-    recentActivity = recentActivityResult;
   } catch (error) {
     console.error("Dashboard: database unreachable, rendering with empty data:", {
       message: error instanceof Error ? error.message : String(error),
@@ -203,7 +197,6 @@ export default async function DashboardPage() {
             <div className="flex-1">
               <ExpiryRadarWidget expiries={radarExpiries} />
             </div>
-            <ActivityFeed items={recentActivity} />
             <div>
               <LiquiditySnapshot balances={wallets} />
             </div>

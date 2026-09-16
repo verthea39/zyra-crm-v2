@@ -1,4 +1,5 @@
 import { getServiceItems, getCompanySettings, getTeamUsers } from "@/app/actions/settings";
+import { getRecentActivity } from "@/lib/activity";
 import { SettingsClientView } from "@/components/settings/SettingsClientView";
 
 
@@ -10,10 +11,11 @@ export const metadata = {
 export default async function SettingsPage() {
 
   // Fetch all necessary data Server-Side
-  const [services, team, companySettings] = await Promise.all([
+  const [services, team, companySettings, activity] = await Promise.all([
     getServiceItems(),
     getTeamUsers(),
-    getCompanySettings()
+    getCompanySettings(),
+    getRecentActivity(50),
   ]);
 
   return (
@@ -26,10 +28,11 @@ export default async function SettingsPage() {
       </header>
 
       <div className="flex-1 w-full min-w-0 px-4 py-3 sm:px-6 sm:py-6 overflow-hidden overflow-x-hidden flex flex-col max-w-7xl mx-auto">
-        <SettingsClientView 
-          services={services} 
-          team={team} 
-          companySettings={companySettings} 
+        <SettingsClientView
+          services={services}
+          team={team}
+          companySettings={companySettings}
+          activity={activity as any}
         />
       </div>
     </div>

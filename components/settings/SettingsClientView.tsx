@@ -1,22 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { LayoutList, Users, Building2, ShieldCheck } from "lucide-react";
+import { LayoutList, Users, Building2, ShieldCheck, History } from "lucide-react";
 import { ServicesTab } from "./ServicesTab";
 import { TeamTab } from "./TeamTab";
 import { CompanyTab } from "./CompanyTab";
 import { SecurityTab } from "./SecurityTab";
+import { ActivityLogTab } from "./ActivityLogTab";
 
-type SettingsTab = 'services' | 'team' | 'company' | 'security';
+type SettingsTab = 'services' | 'team' | 'company' | 'security' | 'activity';
 
-export function SettingsClientView({ 
-  services = [], 
-  team = [], 
-  companySettings = {} 
-}: { 
-  services: any[], 
-  team: any[], 
-  companySettings: any 
+export function SettingsClientView({
+  services = [],
+  team = [],
+  companySettings = {},
+  activity = [],
+}: {
+  services: any[],
+  team: any[],
+  companySettings: any,
+  activity?: any[],
 }) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('services');
 
@@ -25,6 +28,7 @@ export function SettingsClientView({
     { id: "team", label: "Team & Roles", icon: Users },
     { id: "company", label: "Company Profile", icon: Building2 },
     { id: "security", label: "Security & PIN", icon: ShieldCheck },
+    { id: "activity", label: "Activity Logs", icon: History },
   ];
 
   return (
@@ -56,6 +60,7 @@ export function SettingsClientView({
         {activeTab === 'team' && <TeamTab initialUsers={team} />}
         {activeTab === 'company' && <CompanyTab initialSettings={companySettings} />}
         {activeTab === 'security' && <SecurityTab team={team} />}
+        {activeTab === 'activity' && <ActivityLogTab activity={activity} />}
       </div>
     </div>
   );
