@@ -138,11 +138,11 @@ export function WhatsAppDispatcher({ cases }: { cases: any[] }) {
   return (
     <div className="bg-white  border  rounded-xl flex flex-col h-full overflow-hidden shadow-sm">
       <div className="p-6 border-b ">
-        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">1. Select Active Case to Notify</label>
+        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">1. Select Active Case to Notify</label>
         <select
           value={selectedCaseId}
           onChange={(e) => setSelectedCaseId(e.target.value)}
-          className="w-full px-4 py-3 bg-slate-50  border border-slate-200  focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none transition-all appearance-none text-slate-900 "
+          className="w-full px-4 py-3 bg-slate-50  border border-slate-200  focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none transition-all appearance-none text-slate-900 "
         >
           {cases.length === 0 ? (
             <option value="" disabled>-- No active cases found (Create a case first) --</option>
@@ -171,7 +171,7 @@ export function WhatsAppDispatcher({ cases }: { cases: any[] }) {
       </div>
 
       <div className="p-6 flex-1 overflow-y-auto">
-        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">
+        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-4">
           2. Dispatch WhatsApp Milestone
           {selectedCase && (
             <span className="ml-2 normal-case font-normal text-slate-400">

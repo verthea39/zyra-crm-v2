@@ -40,7 +40,7 @@ export function LineItemEditorSheet({
         <div className="space-y-2">
           <Label className="text-xs text-slate-500">Service Description</Label>
           <select
-            className="w-full h-11 text-base border border-slate-200 rounded-xl focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] bg-white px-3"
+            className="w-full h-11 text-base border border-slate-200 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 bg-white px-3"
             value={
               allPresets.some((i) => i.name === draft.desc && i.name !== "Custom / Other Service")
                 ? draft.desc

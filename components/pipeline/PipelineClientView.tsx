@@ -49,7 +49,7 @@ export function PipelineClientView({ initialCases, clients, coordinators }: { in
               placeholder="Search ref, applicant..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-slate-100  border-transparent focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg text-sm transition-all"
+              className="w-full pl-9 pr-4 py-2 bg-slate-100  border-transparent focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg text-sm transition-all"
             />
           </div>
           
@@ -58,7 +58,7 @@ export function PipelineClientView({ initialCases, clients, coordinators }: { in
             <select
               value={filterSponsor}
               onChange={(e) => setFilterSponsor(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-slate-100  border-transparent focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg text-sm appearance-none cursor-pointer"
+              className="w-full pl-9 pr-4 py-2 bg-slate-100  border-transparent focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg text-sm appearance-none cursor-pointer"
             >
               <option value="">All Sponsors</option>
               {uniqueSponsors.map(sponsor => (

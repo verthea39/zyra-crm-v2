@@ -43,14 +43,14 @@ export function WalletLedger({ wallets, clients }: { wallets: any[], clients: an
             placeholder="Search ref, client, description..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg text-sm transition-all shadow-sm"
+            className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg text-sm transition-all shadow-sm"
           />
         </div>
 
         <select
           value={filterPortal}
           onChange={(e) => setFilterPortal(e.target.value)}
-          className="px-4 py-2 bg-white border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg text-sm appearance-none shadow-sm min-w-[150px]"
+          className="px-4 py-2 bg-white border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg text-sm appearance-none shadow-sm min-w-[150px]"
         >
           <option value="All">All Portals</option>
           {wallets.map(w => <option key={w.id} value={w.entityName}>{w.entityName}</option>)}
@@ -59,7 +59,7 @@ export function WalletLedger({ wallets, clients }: { wallets: any[], clients: an
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
-          className="px-4 py-2 bg-white border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg text-sm appearance-none shadow-sm min-w-[120px]"
+          className="px-4 py-2 bg-white border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg text-sm appearance-none shadow-sm min-w-[120px]"
         >
           <option value="All">All Types</option>
           <option value="TOP_UP">Top-Ups</option>

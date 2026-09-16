@@ -241,7 +241,7 @@ function EditableField({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-10 px-3 rounded-lg border border-slate-200 bg-slate-50 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] outline-none text-sm"
+        className="h-10 px-3 rounded-lg border border-slate-200 bg-slate-50 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none text-sm"
         placeholder="Not detected -- enter manually"
       />
     </label>

@@ -76,7 +76,7 @@ export function AddWalletModal({ onClose }: { onClose: () => void }) {
             <select
               value={portalType}
               onChange={(e) => setPortalType(e.target.value)}
-              className="w-full flex h-10 rounded-xl border border-slate-200 bg-white px-3 py-1 text-sm text-slate-900 shadow-sm focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] transition-colors"
+              className="w-full flex h-10 rounded-xl border border-slate-200 bg-white px-3 py-1 text-sm text-slate-900 shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-colors"
             >
               <option value="IMMIGRATION">Immigration</option>
               <option value="LABOUR">Labour</option>

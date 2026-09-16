@@ -64,7 +64,7 @@ export function UploadDocumentModal({ onClose, clients }: { onClose: () => void,
         <div className="p-6 overflow-y-auto">
           <form id="upload-form" onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Belongs To (Client) *</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Belongs To (Client) *</label>
               <ClientCombobox
                 clients={clients}
                 value={formData.clientId}
@@ -74,12 +74,12 @@ export function UploadDocumentModal({ onClose, clients }: { onClose: () => void,
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Document Category *</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Document Category *</label>
               <select
                 required
                 value={formData.category}
                 onChange={e => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none transition-all appearance-none"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none transition-all appearance-none"
               >
                 {CATEGORIES.map(c => (
                   <option key={c} value={c}>{c}</option>
@@ -88,30 +88,30 @@ export function UploadDocumentModal({ onClose, clients }: { onClose: () => void,
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Document Ref / Title *</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Document Ref / Title *</label>
               <input
                 type="text"
                 required
                 value={formData.title}
                 onChange={e => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none transition-all"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none transition-all"
                 placeholder="e.g. Passport No. XXXXXX"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Expiry Date *</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Expiry Date *</label>
               <input
                 type="date"
                 required
                 value={formData.expiryDate}
                 onChange={e => setFormData({ ...formData, expiryDate: e.target.value })}
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none transition-all"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">File Upload *</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">File Upload *</label>
               <div className="w-full px-4 py-6 bg-slate-50 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors">
                 <UploadCloud className="w-8 h-8 mb-2 text-slate-400" />
                 <span className="text-sm font-medium">Click to upload or drag and drop</span>
@@ -120,12 +120,12 @@ export function UploadDocumentModal({ onClose, clients }: { onClose: () => void,
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Remarks / Notes</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Remarks / Notes</label>
               <input
                 type="text"
                 value={formData.remarks}
                 onChange={e => setFormData({ ...formData, remarks: e.target.value })}
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none transition-all"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none transition-all"
                 placeholder="Optional notes"
               />
             </div>

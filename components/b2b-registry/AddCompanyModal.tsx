@@ -62,7 +62,7 @@ export function AddCompanyModal({ onClose }: { onClose: () => void }) {
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none"
                 placeholder="e.g. Apex Tech LLC"
               />
             </Field>
@@ -72,7 +72,7 @@ export function AddCompanyModal({ onClose }: { onClose: () => void }) {
                   type="text"
                   value={formData.tradeLicenseNo}
                   onChange={(e) => setFormData({ ...formData, tradeLicenseNo: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none"
                 />
               </Field>
               <Field label="TRN Number">
@@ -80,7 +80,7 @@ export function AddCompanyModal({ onClose }: { onClose: () => void }) {
                   type="text"
                   value={formData.trnNumber}
                   onChange={(e) => setFormData({ ...formData, trnNumber: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none"
                 />
               </Field>
             </div>
@@ -90,7 +90,7 @@ export function AddCompanyModal({ onClose }: { onClose: () => void }) {
                   type="text"
                   value={formData.establishmentCardNo}
                   onChange={(e) => setFormData({ ...formData, establishmentCardNo: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none"
                 />
               </Field>
               <Field label="Total Quota Allocation">
@@ -99,7 +99,7 @@ export function AddCompanyModal({ onClose }: { onClose: () => void }) {
                   min={0}
                   value={formData.mohreQuotaTotal}
                   onChange={(e) => setFormData({ ...formData, mohreQuotaTotal: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none"
                 />
               </Field>
             </div>
@@ -109,7 +109,7 @@ export function AddCompanyModal({ onClose }: { onClose: () => void }) {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none"
                 />
               </Field>
               <Field label="Phone">
@@ -117,7 +117,7 @@ export function AddCompanyModal({ onClose }: { onClose: () => void }) {
                   type="text"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none"
                 />
               </Field>
             </div>
@@ -142,7 +142,7 @@ export function AddCompanyModal({ onClose }: { onClose: () => void }) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{label}</label>
+      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">{label}</label>
       {children}
     </div>
   );

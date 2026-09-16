@@ -74,13 +74,13 @@ export function ServicesTab({ initialServices }: { initialServices: any[] }) {
               placeholder="Search services..." 
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm shadow-sm focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E]" 
+              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20" 
             />
           </div>
           <select 
             value={categoryFilter}
             onChange={e => setCategoryFilter(e.target.value)}
-            className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm shadow-sm focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E]"
+            className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
           >
             <option value="All Categories">All Categories</option>
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
@@ -156,7 +156,7 @@ export function ServicesTab({ initialServices }: { initialServices: any[] }) {
               <Label>Category</Label>
               <select 
                 required 
-                className="w-full flex h-10 rounded-xl border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E]"
+                className="w-full flex h-10 rounded-xl border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                 value={newService.category} 
                 onChange={e => setNewService({...newService, category: e.target.value})}
               >

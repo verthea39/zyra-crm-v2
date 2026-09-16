@@ -283,7 +283,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
                 <div key={idx} className="grid grid-cols-12 gap-3 items-center bg-slate-50/60 border border-slate-100 rounded-xl p-2.5">
                   <div className="col-span-5">
                     <select
-                      className="w-full h-10 text-sm border border-slate-200 rounded-lg focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] bg-white px-3"
+                      className="w-full h-10 text-sm border border-slate-200 rounded-lg focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 bg-white px-3"
                       value={
                         PRESET_SERVICES.flatMap(g => g.items).some(i => i.name === item.desc && i.name !== "Custom / Other Service")
                           ? item.desc
@@ -319,7 +319,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
 
                     {(!PRESET_SERVICES.flatMap(g => g.items).some(i => i.name === item.desc && i.name !== "Custom / Other Service") && item.desc !== "") && (
                       <Input
-                        className="mt-2 h-10 text-sm border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E]"
+                        className="mt-2 h-10 text-sm border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                         placeholder="Type custom description..."
                         value={item.desc === "Custom Service Details" ? "" : item.desc}
                         onChange={(e) => {
@@ -337,7 +337,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
                       min="0"
                       step="0.01"
                       placeholder="0.00"
-                      className="h-10 text-sm text-right border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E]"
+                      className="h-10 text-sm text-right border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                       value={item.govCost === 0 && item.desc === "Custom Service Details" ? '' : item.govCost}
                       onChange={(e) => {
                         const newItems = [...items];
@@ -353,7 +353,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
                       min="0"
                       step="0.01"
                       placeholder="0.00"
-                      className="h-10 text-sm text-right border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E]"
+                      className="h-10 text-sm text-right border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                       value={item.proFee === 0 && item.desc === "Custom Service Details" ? '' : item.proFee}
                       onChange={(e) => {
                         const newItems = [...items];

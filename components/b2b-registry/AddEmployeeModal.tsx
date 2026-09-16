@@ -59,7 +59,7 @@ export function AddEmployeeModal({ corporateId, onClose }: { corporateId: string
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none"
               />
             </Field>
             <Field label="Designation">
@@ -67,7 +67,7 @@ export function AddEmployeeModal({ corporateId, onClose }: { corporateId: string
                 type="text"
                 value={formData.designation}
                 onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none"
               />
             </Field>
             <div className="grid grid-cols-2 gap-3">
@@ -76,7 +76,7 @@ export function AddEmployeeModal({ corporateId, onClose }: { corporateId: string
                   type="text"
                   value={formData.passportNo}
                   onChange={(e) => setFormData({ ...formData, passportNo: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none"
                 />
               </Field>
               <Field label="Emirates ID No">
@@ -84,7 +84,7 @@ export function AddEmployeeModal({ corporateId, onClose }: { corporateId: string
                   type="text"
                   value={formData.emiratesIdNo}
                   onChange={(e) => setFormData({ ...formData, emiratesIdNo: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none"
                 />
               </Field>
             </div>
@@ -93,7 +93,7 @@ export function AddEmployeeModal({ corporateId, onClose }: { corporateId: string
                 <select
                   value={formData.visaStatus}
                   onChange={(e) => setFormData({ ...formData, visaStatus: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none appearance-none"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none appearance-none"
                 >
                   <option value="ACTIVE">Active</option>
                   <option value="PENDING">Pending</option>
@@ -106,7 +106,7 @@ export function AddEmployeeModal({ corporateId, onClose }: { corporateId: string
                   type="date"
                   value={formData.expiryDate}
                   onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none"
                 />
               </Field>
             </div>
@@ -131,7 +131,7 @@ export function AddEmployeeModal({ corporateId, onClose }: { corporateId: string
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{label}</label>
+      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">{label}</label>
       {children}
     </div>
   );

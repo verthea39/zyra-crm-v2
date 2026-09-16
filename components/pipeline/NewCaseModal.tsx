@@ -90,25 +90,25 @@ export function NewCaseModal({ onClose, clients, coordinators }: { onClose: () =
             </button>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Applicant Full Name *</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Applicant Full Name *</label>
               <input
                 type="text"
                 required
                 value={formData.applicantName}
                 onChange={e => setFormData({ ...formData, applicantName: e.target.value })}
-                className="w-full px-4 py-2 bg-slate-100  border-transparent focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none transition-all"
+                className="w-full px-4 py-2 bg-slate-100  border-transparent focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none transition-all"
                 placeholder="e.g. John Doe"
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Sponsor / Company *</label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Sponsor / Company *</label>
                 <select
                   required
                   value={formData.clientId}
                   onChange={e => setFormData({ ...formData, clientId: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-100  border-transparent focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none transition-all appearance-none"
+                  className="w-full px-4 py-2 bg-slate-100  border-transparent focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none transition-all appearance-none"
                 >
                   {clients.map(c => (
                     <option key={c.id} value={c.id}>{c.name} ({c.type})</option>
@@ -117,12 +117,12 @@ export function NewCaseModal({ onClose, clients, coordinators }: { onClose: () =
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Service Type *</label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Service Type *</label>
                 <select
                   required
                   value={formData.serviceType}
                   onChange={e => setFormData({ ...formData, serviceType: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-100  border-transparent focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none transition-all appearance-none"
+                  className="w-full px-4 py-2 bg-slate-100  border-transparent focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none transition-all appearance-none"
                 >
                   <option value="New Employment Visa">New Employment Visa</option>
                   <option value="Visa Renewal">Visa Renewal</option>
@@ -136,12 +136,12 @@ export function NewCaseModal({ onClose, clients, coordinators }: { onClose: () =
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Assigned PRO *</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Assigned PRO *</label>
               <select
                 required
                 value={formData.coordinatorId}
                 onChange={e => setFormData({ ...formData, coordinatorId: e.target.value })}
-                className="w-full px-4 py-2 bg-slate-100  border-transparent focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none transition-all appearance-none"
+                className="w-full px-4 py-2 bg-slate-100  border-transparent focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none transition-all appearance-none"
               >
                 {coordinators.map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>

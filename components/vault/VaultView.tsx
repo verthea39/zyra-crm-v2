@@ -128,7 +128,7 @@ export function VaultView({ initialDocuments, clients }: { initialDocuments: any
             placeholder="Search document name, number or client..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-white border-transparent focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg text-sm transition-all shadow-sm"
+            className="w-full pl-9 pr-4 py-2 bg-white border-transparent focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg text-sm transition-all shadow-sm"
           />
         </div>
         
@@ -138,7 +138,7 @@ export function VaultView({ initialDocuments, clients }: { initialDocuments: any
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border-transparent focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg text-sm appearance-none cursor-pointer shadow-sm"
+              className="w-full pl-9 pr-4 py-2 bg-white border-transparent focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg text-sm appearance-none cursor-pointer shadow-sm"
             >
               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -149,7 +149,7 @@ export function VaultView({ initialDocuments, clients }: { initialDocuments: any
             <select
               value={expiryFilter}
               onChange={(e) => setExpiryFilter(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border-transparent focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg text-sm appearance-none cursor-pointer shadow-sm"
+              className="w-full pl-9 pr-4 py-2 bg-white border-transparent focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg text-sm appearance-none cursor-pointer shadow-sm"
             >
               {EXPIRY_FILTERS.map(c => <option key={c} value={c}>{c}</option>)}
             </select>

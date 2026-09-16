@@ -73,7 +73,7 @@ export function EditCompanyModal({ company, onClose }: { company: Company; onClo
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none"
               />
             </Field>
             <div className="grid grid-cols-2 gap-3">
@@ -82,7 +82,7 @@ export function EditCompanyModal({ company, onClose }: { company: Company; onClo
                   type="text"
                   value={formData.trnNumber}
                   onChange={(e) => setFormData({ ...formData, trnNumber: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none"
                 />
               </Field>
               <Field label="Trade License No">
@@ -90,7 +90,7 @@ export function EditCompanyModal({ company, onClose }: { company: Company; onClo
                   type="text"
                   value={formData.tradeLicenseNo}
                   onChange={(e) => setFormData({ ...formData, tradeLicenseNo: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none"
                 />
               </Field>
             </div>
@@ -100,7 +100,7 @@ export function EditCompanyModal({ company, onClose }: { company: Company; onClo
                   type="date"
                   value={formData.expiryDate}
                   onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none"
                 />
               </Field>
               <Field label="MOHRE Total Quota">
@@ -109,7 +109,7 @@ export function EditCompanyModal({ company, onClose }: { company: Company; onClo
                   min={0}
                   value={formData.mohreQuotaTotal}
                   onChange={(e) => setFormData({ ...formData, mohreQuotaTotal: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none"
                 />
               </Field>
             </div>
@@ -119,7 +119,7 @@ export function EditCompanyModal({ company, onClose }: { company: Company; onClo
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none"
                 />
               </Field>
               <Field label="Phone">
@@ -127,7 +127,7 @@ export function EditCompanyModal({ company, onClose }: { company: Company; onClo
                   type="text"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E] rounded-lg outline-none"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg outline-none"
                 />
               </Field>
             </div>
@@ -152,7 +152,7 @@ export function EditCompanyModal({ company, onClose }: { company: Company; onClo
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{label}</label>
+      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">{label}</label>
       {children}
     </div>
   );
