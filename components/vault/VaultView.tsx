@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, Filter, Plus, Download, MessageCircle, Trash2, CalendarClock } from "lucide-react";
+import { Search, Filter, Plus, Download, MessageCircle, Trash2, CalendarClock, Loader2 } from "lucide-react";
 import { UploadDocumentModal } from "./UploadDocumentModal";
-import { deleteVaultDocument } from "@/app/actions/vault";
+import { deleteVaultDocument, getVaultDocumentFile } from "@/app/actions/vault";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -32,6 +32,26 @@ export function VaultView({ initialDocuments, clients }: { initialDocuments: any
   const [expiryFilter, setExpiryFilter] = useState("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const handleDownload = async (docId: string, title: string) => {
+    setDownloadingId(docId);
+    const res = await getVaultDocumentFile(docId);
+    setDownloadingId(null);
+    if (!res.success || !res.fileUrl) {
+      toast.error("Could not load the file");
+      return;
+    }
+    // A data: URL opened via window.open() after an await falls outside the
+    // browser's "direct user gesture" window and gets popup-blocked on most
+    // browsers -- a download-triggering anchor click isn't subject to that.
+    const link = document.createElement("a");
+    link.href = res.fileUrl;
+    link.download = title || "document";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const filteredDocs = useMemo(() => {
     const now = new Date().getTime();
@@ -181,10 +201,16 @@ export function VaultView({ initialDocuments, clients }: { initialDocuments: any
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {doc.fileUrl ? (
-                          <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="p-2 text-slate-400 hover:text-[#98682E] bg-white border border-slate-200 rounded-md shadow-sm transition" title="Download / View">
-                            <Download className="w-4 h-4" />
-                          </a>
+                        {doc.hasFile ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDownload(doc.id, doc.title)}
+                            disabled={downloadingId === doc.id}
+                            className="p-2 text-slate-400 hover:text-[#98682E] bg-white border border-slate-200 rounded-md shadow-sm transition disabled:opacity-50"
+                            title="Download / View"
+                          >
+                            {downloadingId === doc.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                          </button>
                         ) : (
                           <span className="p-2 text-slate-200 bg-white border border-slate-200 rounded-md shadow-sm cursor-not-allowed" title="No file attached">
                             <Download className="w-4 h-4" />
@@ -236,10 +262,15 @@ export function VaultView({ initialDocuments, clients }: { initialDocuments: any
                 </div>
                 
                 <div className="flex gap-2 mt-2 pt-3 border-t border-slate-100">
-                  {doc.fileUrl ? (
-                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="flex-1 flex justify-center items-center gap-1.5 py-2 min-h-[44px] bg-slate-100 text-slate-600 rounded-lg text-xs font-bold uppercase active:scale-95 transition-transform">
-                      <Download className="w-3.5 h-3.5" /> View
-                    </a>
+                  {doc.hasFile ? (
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(doc.id, doc.title)}
+                      disabled={downloadingId === doc.id}
+                      className="flex-1 flex justify-center items-center gap-1.5 py-2 min-h-[44px] bg-slate-100 text-slate-600 rounded-lg text-xs font-bold uppercase active:scale-95 transition-transform disabled:opacity-50"
+                    >
+                      {downloadingId === doc.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} View
+                    </button>
                   ) : (
                     <span className="flex-1 flex justify-center items-center gap-1.5 py-2 min-h-[44px] bg-slate-50 text-slate-300 rounded-lg text-xs font-bold uppercase cursor-not-allowed">
                       <Download className="w-3.5 h-3.5" /> No File

@@ -5,8 +5,18 @@ import { revalidatePath } from "next/cache";
 
 export async function getVaultDocuments() {
   try {
+    // Deliberately excludes fileUrl: scanned documents (OCR) can store a
+    // multi-hundred-KB base64 data URL there, and this list can render
+    // hundreds of rows -- selecting it here would balloon the page payload.
+    // The actual file is fetched on demand via getVaultDocumentFile().
     const documents = await prisma.documentVault.findMany({
-      include: {
+      select: {
+        id: true,
+        category: true,
+        title: true,
+        expiryDate: true,
+        remarks: true,
+        createdAt: true,
         client: {
           select: { id: true, name: true, phone: true }
         },
@@ -18,10 +28,25 @@ export async function getVaultDocuments() {
         expiryDate: 'asc'
       }
     });
-    return documents;
+    // uploadVaultDocument() always writes a fileUrl (real data, or the
+    // "/placeholder-doc.pdf" fallback) -- there's no create path that leaves
+    // it null, so this is safe without re-selecting the payload just to
+    // check presence.
+    return documents.map((d) => ({ ...d, hasFile: true }));
   } catch (error) {
     console.error("Error fetching vault documents:", error);
     return [];
+  }
+}
+
+/** Fetches just the file payload for one document, on demand (see getVaultDocuments). */
+export async function getVaultDocumentFile(id: string) {
+  try {
+    const doc = await prisma.documentVault.findUnique({ where: { id }, select: { fileUrl: true } });
+    return { success: true, fileUrl: doc?.fileUrl || null };
+  } catch (error) {
+    console.error("Error fetching vault document file:", error);
+    return { success: false, fileUrl: null };
   }
 }
 

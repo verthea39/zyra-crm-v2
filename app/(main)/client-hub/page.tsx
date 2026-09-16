@@ -6,8 +6,10 @@ import { format } from "date-fns";
 
 export const dynamic = "force-dynamic";
 export default async function ClientHubPage() {
-  const activeCases = await getActiveCasesForHub();
-  const dispatchHistory = await getDispatchHistory();
+  const [activeCases, dispatchHistory] = await Promise.all([
+    getActiveCasesForHub(),
+    getDispatchHistory(),
+  ]);
 
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-[#16181D]">
