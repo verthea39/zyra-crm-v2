@@ -23,6 +23,25 @@ const STAGES = [
   { id: "COMPLETED_HANDOVER", label: "Completed", short: "Done" },
 ];
 
+const STAGE_IDS = new Set(STAGES.map((s) => s.id));
+
+// Legacy CaseStage values (PRE_CHECK/SUBMITTED/COMPLETED) predate the 6-column
+// pipeline and never match a column id by strict equality -- that silently
+// dropped any case still sitting on one of them from the board entirely.
+// Map them onto the nearest sensible column, and anything still unrecognized
+// falls back to the first column so no active case ever goes invisible.
+const LEGACY_STAGE_MAP: Record<string, string> = {
+  PRE_CHECK: "DRAFT_INTAKE",
+  SUBMITTED: "OFFER_LETTER_MOHRE",
+  COMPLETED: "COMPLETED_HANDOVER",
+};
+
+function resolveStage(stage: string | null | undefined): string {
+  if (stage && STAGE_IDS.has(stage)) return stage;
+  if (stage && LEGACY_STAGE_MAP[stage]) return LEGACY_STAGE_MAP[stage];
+  return STAGES[0].id;
+}
+
 export function KanbanBoard({ cases, onCasesChange, clients = [], coordinators = [] }: { cases: any[], onCasesChange: React.Dispatch<React.SetStateAction<any[]>>, clients?: any[], coordinators?: any[] }) {
   const [updating, setUpdating] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -103,7 +122,7 @@ export function KanbanBoard({ cases, onCasesChange, clients = [], coordinators =
     <div className="md:hidden flex flex-col h-full overflow-hidden">
       <div className="flex overflow-x-auto scrollbar-hide gap-2 p-1 mb-4 border-b border-border shrink-0">
         {STAGES.map(stage => {
-          const count = cases.filter(c => c.stage === stage.id).length;
+          const count = cases.filter(c => resolveStage(c.stage) === stage.id).length;
           const isActive = activeMobileTab === stage.id;
           return (
             <button
@@ -122,7 +141,7 @@ export function KanbanBoard({ cases, onCasesChange, clients = [], coordinators =
       </div>
 
       <div className="flex-1 overflow-y-auto pb-20">
-        {renderCards(cases.filter(c => c.stage === activeMobileTab), STAGES.find(s => s.id === activeMobileTab)!, false)}
+        {renderCards(cases.filter(c => resolveStage(c.stage) === activeMobileTab), STAGES.find(s => s.id === activeMobileTab)!, false)}
       </div>
     </div>
   );
@@ -131,7 +150,7 @@ export function KanbanBoard({ cases, onCasesChange, clients = [], coordinators =
   const renderDesktopView = () => (
     <div className="hidden md:flex gap-4 h-full overflow-x-auto pb-4">
       {STAGES.map((stage) => {
-        const stageCases = cases.filter(c => c.stage === stage.id);
+        const stageCases = cases.filter(c => resolveStage(c.stage) === stage.id);
 
         return (
           <div key={stage.id} className="flex flex-col min-w-[320px] w-[320px] bg-slate-50/50 rounded-xl overflow-hidden border border-border shrink-0 h-[calc(100vh-180px)] min-h-[600px] backdrop-blur-sm">
