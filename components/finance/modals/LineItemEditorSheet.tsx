@@ -15,7 +15,7 @@ export function LineItemEditorSheet({
   item,
   onSave,
   presetServices,
-  proFeeLabel = "Service Fee (AED)",
+  proFeeLabel = "Service Charge (AED)",
   proFeeColorClass = "text-emerald-600",
   proFeeBorderClass = "border-emerald-200",
 }: {
@@ -42,34 +42,27 @@ export function LineItemEditorSheet({
             value={draft.desc}
             inputClassName="h-11 text-base"
             placeholder="Search or type a service..."
-            onSelect={(service) => setDraft({ ...draft, desc: service.name, govCost: service.gov, proFee: service.pro })}
+            // Gov Fee + Service Fee are merged into a single amount now --
+            // the preset's combined total goes into proFee, govCost stays 0
+            // so schema/VAT calc (which reads proFee as the taxable amount)
+            // keeps working unchanged.
+            onSelect={(service) => setDraft({ ...draft, desc: service.name, govCost: 0, proFee: service.gov + service.pro })}
             onChangeText={(text) => setDraft({ ...draft, desc: text })}
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <Label className="text-xs text-slate-500">Gov Fee (AED)</Label>
+        <div className="space-y-1">
+          <Label className={`text-xs ${proFeeColorClass}`}>{proFeeLabel} *</Label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-medium">AED</span>
             <Input
               type="number"
               inputMode="decimal"
               min="0"
               step="0.01"
-              className="h-11 text-base"
-              value={draft.govCost === 0 && draft.desc === "Custom Service Details" ? "" : draft.govCost}
-              onChange={(e) => setDraft({ ...draft, govCost: parseFloat(e.target.value || "0") })}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className={`text-xs ${proFeeColorClass}`}>{proFeeLabel}</Label>
-            <Input
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="0.01"
-              className={`h-11 text-base ${proFeeBorderClass}`}
+              className={`h-11 text-base pl-12 ${proFeeBorderClass}`}
               value={draft.proFee === 0 && draft.desc === "Custom Service Details" ? "" : draft.proFee}
-              onChange={(e) => setDraft({ ...draft, proFee: parseFloat(e.target.value || "0") })}
+              onChange={(e) => setDraft({ ...draft, govCost: 0, proFee: parseFloat(e.target.value || "0") })}
             />
           </div>
         </div>

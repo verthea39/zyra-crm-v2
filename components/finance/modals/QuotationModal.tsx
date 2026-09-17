@@ -231,7 +231,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
             <div>
               <DialogTitle className="text-lg font-bold text-slate-900 tracking-tight">Generate Quotation</DialogTitle>
               <DialogDescription className="text-xs text-slate-500 mt-0.5">
-                Create a professional quotation with split government and service fees.
+                Create a professional quotation with a single all-in fee per service.
               </DialogDescription>
             </div>
           </div>
@@ -280,16 +280,14 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
             {/* Desktop Grid Layout */}
             <div className="hidden sm:flex flex-col gap-2">
               <div className="grid grid-cols-12 gap-3 px-1 text-xs uppercase font-medium text-slate-500">
-                <div className="col-span-5">Service Description</div>
-                <div className="col-span-2 text-right">Gov Fee (AED)</div>
-                <div className="col-span-2 text-right">Service Fee (AED)</div>
-                <div className="col-span-2 text-right">Subtotal</div>
+                <div className="col-span-8">Service Description</div>
+                <div className="col-span-3 text-right">Service Charge (AED) *</div>
                 <div className="col-span-1"></div>
               </div>
 
               {items.map((item, idx) => (
                 <div key={idx} className="grid grid-cols-12 gap-3 items-center bg-slate-50/60 border border-slate-100 rounded-xl p-2.5">
-                  <div className="col-span-5">
+                  <div className="col-span-8">
                     <ServiceCombobox
                       presetServices={PRESET_SERVICES}
                       value={item.desc}
@@ -297,8 +295,12 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
                       onSelect={(service) => {
                         const newItems = [...items];
                         newItems[idx].desc = service.name;
-                        newItems[idx].govCost = service.gov;
-                        newItems[idx].proFee = service.pro;
+                        // Gov Fee + Service Fee are merged into a single
+                        // amount -- keep govCost at 0 so schema/VAT calc
+                        // (which reads proFee as the taxable amount) keeps
+                        // working unchanged.
+                        newItems[idx].govCost = 0;
+                        newItems[idx].proFee = service.gov + service.pro;
                         setItems(newItems);
                       }}
                       onChangeText={(text) => {
@@ -308,40 +310,25 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
                       }}
                     />
                   </div>
-                  <div className="col-span-2">
-                    <Input
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
-                      className="h-10 text-sm text-right border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
-                      value={item.govCost === 0 && item.desc === "Custom Service Details" ? '' : item.govCost}
-                      onChange={(e) => {
-                        const newItems = [...items];
-                        newItems[idx].govCost = parseFloat(e.target.value || "0");
-                        setItems(newItems);
-                      }}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <Input
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
-                      className="h-10 text-sm text-right border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
-                      value={item.proFee === 0 && item.desc === "Custom Service Details" ? '' : item.proFee}
-                      onChange={(e) => {
-                        const newItems = [...items];
-                        newItems[idx].proFee = parseFloat(e.target.value || "0");
-                        setItems(newItems);
-                      }}
-                    />
-                  </div>
-                  <div className="col-span-2 font-semibold text-slate-800 text-right">
-                    {(item.govCost + item.proFee).toFixed(2)}
+                  <div className="col-span-3">
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium pointer-events-none">AED</span>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        className="h-10 text-sm text-right pl-10 border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                        value={item.proFee === 0 && item.desc === "Custom Service Details" ? '' : item.proFee}
+                        onChange={(e) => {
+                          const newItems = [...items];
+                          newItems[idx].govCost = 0;
+                          newItems[idx].proFee = parseFloat(e.target.value || "0");
+                          setItems(newItems);
+                        }}
+                      />
+                    </div>
                   </div>
                   <div className="col-span-1 flex justify-center">
                     {items.length > 1 && (
@@ -459,7 +446,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
               }
             }}
             presetServices={PRESET_SERVICES}
-            proFeeLabel="Service Fee (AED)"
+            proFeeLabel="Service Charge (AED)"
             proFeeColorClass="text-blue-600"
             proFeeBorderClass="border-blue-200"
           />
@@ -498,14 +485,6 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
             {/* Full breakdown: always on desktop, mobile only on final step */}
             <div className={`${mobileStep === 3 ? "block" : "hidden"} sm:block bg-slate-50/80 border border-slate-200 rounded-2xl p-4 space-y-2 text-sm`}>
               <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-medium">Subtotal Government Pass-Through</span>
-                <span className="font-semibold text-slate-700">AED {govFeeNum.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-medium">Subtotal Professional Service Fee</span>
-                <span className="font-semibold text-slate-700">AED {proFeeNum.toFixed(2)}</span>
-              </div>
-              <div className="border-t border-slate-200 pt-3 mt-3 flex justify-between items-center">
                 <span className="text-base font-bold text-slate-900">Total Quotation Value</span>
                 <span className="text-xl font-bold text-slate-900">AED {total}</span>
               </div>

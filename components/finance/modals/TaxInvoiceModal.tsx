@@ -12,6 +12,7 @@ import { createInvoice } from "@/app/actions/finance";
 import { FileText, Plus, Trash2, X, ChevronRight, ArrowLeft, Zap } from "lucide-react";
 import { MobileStepTabs } from "@/components/ui/mobile-step-tabs";
 import { LineItemEditorSheet } from "./LineItemEditorSheet";
+import { ServiceCombobox } from "./ServiceCombobox";
 import { QuickAddClientModal } from "./QuickAddClientModal";
 import { QuickPasteDialog } from "./QuickPasteDialog";
 import type { ParsedLineItem } from "@/lib/quickPasteParser";
@@ -199,7 +200,7 @@ export function TaxInvoiceModal({ open, onOpenChange, clients }: { open: boolean
             <div>
               <DialogTitle className="text-lg font-bold text-slate-900 tracking-tight">Generate Tax Invoice</DialogTitle>
               <DialogDescription className="text-xs text-slate-500 mt-0.5">
-                Strict dual-bucket invoice. VAT is calculated on service fees only.
+                Single all-in fee per service. VAT (5%) is calculated on the subtotal.
               </DialogDescription>
             </div>
           </div>
@@ -244,98 +245,55 @@ export function TaxInvoiceModal({ open, onOpenChange, clients }: { open: boolean
             {/* Desktop Grid Layout */}
             <div className="hidden sm:flex flex-col gap-2">
               <div className="grid grid-cols-12 gap-3 px-1 text-xs uppercase font-medium text-slate-500">
-                <div className="col-span-5">Service Description</div>
-                <div className="col-span-2 text-right">Gov Fee (AED)</div>
-                <div className="col-span-2 text-right">Service Fee (AED)</div>
-                <div className="col-span-2 text-right">Subtotal</div>
+                <div className="col-span-8">Service Description</div>
+                <div className="col-span-3 text-right">Service Charge (AED) *</div>
                 <div className="col-span-1"></div>
               </div>
 
               {items.map((item, idx) => (
                 <div key={idx} className="grid grid-cols-12 gap-3 items-center bg-slate-50/60 border border-slate-100 rounded-xl p-2.5">
-                  <div className="col-span-5">
-                    <select
-                      className="w-full h-10 text-sm border border-slate-200 rounded-lg focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 bg-white px-3"
-                      value={
-                        PRESET_SERVICES.flatMap(g => g.items).some(i => i.name === item.desc && i.name !== "Custom / Other Service")
-                          ? item.desc
-                          : (item.desc === "" ? "" : "Custom / Other Service")
-                      }
-                      onChange={(e) => {
-                        const val = e.target.value;
+                  <div className="col-span-8">
+                    <ServiceCombobox
+                      presetServices={PRESET_SERVICES}
+                      value={item.desc}
+                      inputClassName="h-10 text-sm"
+                      onSelect={(service) => {
                         const newItems = [...items];
-                        if (val === "Custom / Other Service") {
-                          newItems[idx].desc = "Custom Service Details";
-                          newItems[idx].govCost = 0;
-                          newItems[idx].proFee = 0;
-                        } else {
-                          newItems[idx].desc = val;
-                          const preset = PRESET_SERVICES.flatMap(g => g.items).find(i => i.name === val);
-                          if (preset) {
-                            newItems[idx].govCost = preset.gov;
-                            newItems[idx].proFee = preset.pro;
-                          }
-                        }
+                        newItems[idx].desc = service.name;
+                        // Gov Fee + Service Fee merged into a single amount
+                        // -- keep govCost at 0 so schema/VAT calc (which
+                        // reads proFee as the taxable amount) keeps working
+                        // unchanged.
+                        newItems[idx].govCost = 0;
+                        newItems[idx].proFee = service.gov + service.pro;
                         setItems(newItems);
                       }}
-                    >
-                      <option value="" disabled>-- Select Service --</option>
-                      {PRESET_SERVICES.map(g => (
-                        <optgroup key={g.group} label={g.group}>
-                          {g.items.map(i => (
-                            <option key={i.name} value={i.name}>{i.name}</option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
-
-                    {(!PRESET_SERVICES.flatMap(g => g.items).some(i => i.name === item.desc && i.name !== "Custom / Other Service") && item.desc !== "") && (
+                      onChangeText={(text) => {
+                        const newItems = [...items];
+                        newItems[idx].desc = text;
+                        setItems(newItems);
+                      }}
+                    />
+                  </div>
+                  <div className="col-span-3">
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium pointer-events-none">AED</span>
                       <Input
-                        className="mt-2 h-10 text-sm border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
-                        placeholder="Type custom description..."
-                        value={item.desc === "Custom Service Details" ? "" : item.desc}
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        className="h-10 text-sm text-right pl-10 border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                        value={item.proFee === 0 && item.desc === "Custom Service Details" ? '' : item.proFee}
                         onChange={(e) => {
                           const newItems = [...items];
-                          newItems[idx].desc = e.target.value || "Custom Service Details";
+                          newItems[idx].govCost = 0;
+                          newItems[idx].proFee = parseFloat(e.target.value || "0");
                           setItems(newItems);
                         }}
                       />
-                    )}
-                  </div>
-                  <div className="col-span-2">
-                    <Input
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
-                      className="h-10 text-sm text-right border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
-                      value={item.govCost === 0 && item.desc === "Custom Service Details" ? '' : item.govCost}
-                      onChange={(e) => {
-                        const newItems = [...items];
-                        newItems[idx].govCost = parseFloat(e.target.value || "0");
-                        setItems(newItems);
-                      }}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <Input
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
-                      className="h-10 text-sm text-right border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
-                      value={item.proFee === 0 && item.desc === "Custom Service Details" ? '' : item.proFee}
-                      onChange={(e) => {
-                        const newItems = [...items];
-                        newItems[idx].proFee = parseFloat(e.target.value || "0");
-                        setItems(newItems);
-                      }}
-                    />
-                  </div>
-                  <div className="col-span-2 font-semibold text-slate-800 text-right">
-                    {(item.govCost + item.proFee).toFixed(2)}
+                    </div>
                   </div>
                   <div className="col-span-1 flex justify-center">
                     {items.length > 1 && (
@@ -447,7 +405,7 @@ export function TaxInvoiceModal({ open, onOpenChange, clients }: { open: boolean
               setEditingIdx(null);
             }}
             presetServices={PRESET_SERVICES}
-            proFeeLabel="Service Fee (AED)"
+            proFeeLabel="Service Charge (AED)"
             proFeeColorClass="text-emerald-600"
             proFeeBorderClass="border-emerald-200"
           />
@@ -487,15 +445,11 @@ export function TaxInvoiceModal({ open, onOpenChange, clients }: { open: boolean
             {/* Full breakdown: always on desktop, mobile only on final step */}
             <div className={`${mobileStep === 3 ? "block" : "hidden"} sm:block bg-slate-50/80 border border-slate-200 rounded-2xl p-4 space-y-2 text-sm`}>
               <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-medium">Subtotal Government Pass-Through</span>
-                <span className="font-semibold text-slate-700">AED {govFeeNum.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-medium">Subtotal Professional Service Fee</span>
+                <span className="text-slate-500 font-medium">Subtotal</span>
                 <span className="font-semibold text-slate-700">AED {proFeeNum.toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-medium">VAT (5% on Professional Fee)</span>
+                <span className="text-slate-500 font-medium">VAT (5%)</span>
                 <span className="font-semibold text-slate-700">AED {vatAmount.toFixed(2)}</span>
               </div>
               <div className="border-t border-slate-200 pt-3 mt-3 flex justify-between items-center">
