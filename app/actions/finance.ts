@@ -41,6 +41,7 @@ export async function createIncome(data: any) {
         isCaseInvoice: true, // As per rule, we assume this adds to dual-bucket
         govFeePart: govFee,
         serviceFeePart: serviceFee,
+        supplierCostPart: govFee,
         clientId: client?.id,
       }
     });
@@ -60,7 +61,7 @@ export async function createInvoice(data: any) {
     const vatAmount = Math.round(data.vatAmount * 100);
     const amountTotal = govFee + serviceFee + vatAmount;
     const amountPaid = 0; // Invoices are generated unpaid initially
-    
+
     const year = new Date().getFullYear();
     const count = await prisma.transaction.count({ where: { type: 'INCOME' }});
     const reference = `INV-${year}-${String(count + 1).padStart(3, '0')}`;

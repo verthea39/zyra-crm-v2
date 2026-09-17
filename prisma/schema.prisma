@@ -253,6 +253,13 @@ model Transaction {
   isCaseInvoice   Boolean           @default(false)
   govFeePart      Int?
   serviceFeePart  Int?
+  // Internal cost/margin tracking (separate from the client-facing
+  // govFeePart/serviceFeePart split above): supplierCostPart is the real
+  // amount owed to the government/typing supplier, pulled from the
+  // ServiceItem catalog at line-item selection time. Net profit is derived
+  // as amountTotal - supplierCostPart rather than stored, so it can never
+  // drift out of sync.
+  supplierCostPart Int              @default(0) // Minor units
   lineItems       Json?
 
   

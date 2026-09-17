@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { createIncome } from "@/app/actions/finance";
 import { toast } from "sonner";
+import { ProfitBadge } from "@/components/finance/modals/ProfitBadge";
 
 const incomeSchema = z.object({
   clientName: z.string().min(1, "Client Name is required"),
@@ -19,7 +20,8 @@ const incomeSchema = z.object({
   paymentMode: z.string().min(1, "Payment Mode is required"),
   phone: z.string().optional(),
   govFees: z.number().min(0, "Must be positive"),
-  serviceFee: z.number().min(0, "Must be positive"),
+  // Can go negative when the entered supplier cost exceeds the Service Charge (a loss).
+  serviceFee: z.number(),
   amountPaid: z.number().min(0, "Must be positive"),
   issueDate: z.string().min(1, "Issue Date is required"),
   dueDate: z.string().optional(),
@@ -180,40 +182,50 @@ export function AddIncomeModal({ open, onOpenChange }: { open: boolean; onOpenCh
 
             <div className="p-4 border-2 border-emerald-100  rounded-lg bg-emerald-50/30  space-y-4">
               <h4 className="font-bold text-emerald-800  text-sm tracking-tight">DUAL-BUCKET FINANCIALS</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormItem>
+                  <FormLabel className="text-xs font-semibold text-emerald-600">Service Charge (AED) *</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      value={totalBilled}
+                      onChange={e => {
+                        const newCharge = parseFloat(e.target.value) || 0;
+                        // Keep the supplier/govt cost fixed; the margin absorbs the change.
+                        form.setValue("serviceFee", newCharge - govFees, { shouldValidate: true });
+                      }}
+                      className="border-emerald-200 focus-visible:ring-emerald-500 font-bold"
+                    />
+                  </FormControl>
+                </FormItem>
                 <FormField
                   control={form.control}
                   name="govFees"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-semibold text-slate-500">Government Fees (AED) *</FormLabel>
+                      <FormLabel className="text-xs font-semibold text-slate-500">Supplier / Govt Cost (AED) *</FormLabel>
                       <FormControl>
-                        <Input type="number" inputMode="decimal" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          step="0.01"
+                          {...field}
+                          onChange={e => {
+                            const newCost = parseFloat(e.target.value) || 0;
+                            // Keep the Service Charge fixed; the margin absorbs the change.
+                            form.setValue("serviceFee", totalBilled - newCost, { shouldValidate: true });
+                            field.onChange(newCost);
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="serviceFee"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs font-semibold text-emerald-600">Zyra Service Fee (AED) *</FormLabel>
-                      <FormControl>
-                        <Input type="number" inputMode="decimal" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} className="border-emerald-200 focus-visible:ring-emerald-500" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormItem>
-                  <FormLabel className="text-xs font-semibold text-slate-500">Total Billed (AED)</FormLabel>
-                  <FormControl>
-                    <Input value={totalBilled.toFixed(2)} disabled className="bg-slate-100 font-bold text-slate-900" />
-                  </FormControl>
-                </FormItem>
               </div>
+              <ProfitBadge customerRate={totalBilled} supplierCost={govFees} />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                 <FormField
                   control={form.control}
