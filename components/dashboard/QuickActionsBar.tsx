@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, FileText, Receipt, FileSignature } from "lucide-react";
-import { Client } from "@prisma/client";
+import type { Client } from "@prisma/client";
 import {
   DropdownMenu,
   DropdownMenuContent,

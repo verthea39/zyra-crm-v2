@@ -78,7 +78,7 @@ export function PipelineClientView({ initialCases, clients, coordinators }: { in
       </div>
 
       <div className="flex-1 overflow-hidden p-4 md:px-8 pb-8 flex flex-col">
-        <KanbanBoard cases={filteredCases} onCasesChange={setCases} />
+        <KanbanBoard cases={filteredCases} onCasesChange={setCases} clients={clients} coordinators={coordinators} />
       </div>
 
       {isModalOpen && (

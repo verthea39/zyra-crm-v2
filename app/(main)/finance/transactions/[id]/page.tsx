@@ -1,17 +1,27 @@
 import { notFound } from "next/navigation";
 import { getTransaction } from "@/app/actions/finance";
 import prisma from "@/lib/prisma";
+import { logServerError } from "@/lib/logger";
 import { TransactionDetail } from "@/components/finance/TransactionDetail";
 import { PinLockGuard } from "@/components/finance/PinLockGuard";
 
 export const dynamic = "force-dynamic";
+
+async function getClients() {
+  try {
+    return await prisma.client.findMany({ orderBy: { name: "asc" } });
+  } catch (err) {
+    logServerError(err, { action: "finance/transactions/[id]:getClients" });
+    return [];
+  }
+}
 
 export default async function TransactionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const transaction = await getTransaction(id);
   if (!transaction) notFound();
 
-  const clients = await prisma.client.findMany({ orderBy: { name: "asc" } });
+  const clients = await getClients();
 
   return (
     <PinLockGuard>

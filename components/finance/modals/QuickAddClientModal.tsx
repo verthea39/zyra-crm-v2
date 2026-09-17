@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Client } from "@prisma/client";
+import type { Client } from "@prisma/client";
 import { toast } from "sonner";
 import { createClient } from "@/app/actions/clients";
 

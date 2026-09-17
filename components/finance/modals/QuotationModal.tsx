@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Client } from "@prisma/client";
+import type { Client } from "@prisma/client";
 import { toast } from "sonner";
 import { downloadDocumentPDF, printViaIframe, LineItem, DEFAULT_QUOTATION_TERMS } from "@/lib/printUtils";
 import type { CompanyBranding } from "@/lib/companyBranding";
@@ -13,6 +13,7 @@ import { createDocument } from "@/app/actions/documents";
 import { FileSignature, Plus, Trash2, X, ChevronRight, ArrowLeft, Zap } from "lucide-react";
 import { MobileStepTabs } from "@/components/ui/mobile-step-tabs";
 import { LineItemEditorSheet } from "./LineItemEditorSheet";
+import { ServiceCombobox } from "./ServiceCombobox";
 import { QuickAddClientModal } from "./QuickAddClientModal";
 import { QuickPasteDialog } from "./QuickPasteDialog";
 import type { ParsedLineItem } from "@/lib/quickPasteParser";
@@ -106,7 +107,7 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
     otherGroup.items.push({ name: "Custom / Other Service", gov: 0, pro: 0 });
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, autoprint = false) => {
     e.preventDefault();
 
     const govFeeNumCheck = items.reduce((sum, item) => sum + item.govCost, 0);
@@ -177,20 +178,27 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
 
       toast.success("Quotation created successfully");
 
-      setLoading("pdf");
-      try {
-        await downloadDocumentPDF(printPayload, branding ?? undefined);
-      } catch (pdfErr) {
-        console.error("PDF generation failed:", pdfErr);
-        toast.error("Quotation saved, but PDF download failed. Use Print instead.", {
-          action: { label: "Print", onClick: () => printViaIframe(printPayload, branding ?? undefined) },
-        });
-      }
+      if (autoprint) {
+        setLoading(false);
+        onOpenChange(false);
+        router.push(`/documents/${docRes.document.id}?autoprint=true`);
+        router.refresh();
+      } else {
+        setLoading("pdf");
+        try {
+          await downloadDocumentPDF(printPayload, branding ?? undefined);
+        } catch (pdfErr) {
+          console.error("PDF generation failed:", pdfErr);
+          toast.error("Quotation saved, but PDF download failed. Use Print instead.", {
+            action: { label: "Print", onClick: () => printViaIframe(printPayload, branding ?? undefined) },
+          });
+        }
 
-      setLoading(false);
-      onOpenChange(false);
-      router.push(`/documents/${docRes.document.id}`);
-      router.refresh();
+        setLoading(false);
+        onOpenChange(false);
+        router.push(`/documents/${docRes.document.id}`);
+        router.refresh();
+      }
 
       // Reset form
       setClientId("");
@@ -282,53 +290,23 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
               {items.map((item, idx) => (
                 <div key={idx} className="grid grid-cols-12 gap-3 items-center bg-slate-50/60 border border-slate-100 rounded-xl p-2.5">
                   <div className="col-span-5">
-                    <select
-                      className="w-full h-10 text-sm border border-slate-200 rounded-lg focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 bg-white px-3"
-                      value={
-                        PRESET_SERVICES.flatMap(g => g.items).some(i => i.name === item.desc && i.name !== "Custom / Other Service")
-                          ? item.desc
-                          : (item.desc === "" ? "" : "Custom / Other Service")
-                      }
-                      onChange={(e) => {
-                        const val = e.target.value;
+                    <ServiceCombobox
+                      presetServices={PRESET_SERVICES}
+                      value={item.desc}
+                      inputClassName="h-10 text-sm"
+                      onSelect={(service) => {
                         const newItems = [...items];
-                        if (val === "Custom / Other Service") {
-                          newItems[idx].desc = "Custom Service Details";
-                          newItems[idx].govCost = 0;
-                          newItems[idx].proFee = 0;
-                        } else {
-                          newItems[idx].desc = val;
-                          const preset = PRESET_SERVICES.flatMap(g => g.items).find(i => i.name === val);
-                          if (preset) {
-                            newItems[idx].govCost = preset.gov;
-                            newItems[idx].proFee = preset.pro;
-                          }
-                        }
+                        newItems[idx].desc = service.name;
+                        newItems[idx].govCost = service.gov;
+                        newItems[idx].proFee = service.pro;
                         setItems(newItems);
                       }}
-                    >
-                      <option value="" disabled>-- Select Service --</option>
-                      {PRESET_SERVICES.map(g => (
-                        <optgroup key={g.group} label={g.group}>
-                          {g.items.map(i => (
-                            <option key={i.name} value={i.name}>{i.name}</option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
-
-                    {(!PRESET_SERVICES.flatMap(g => g.items).some(i => i.name === item.desc && i.name !== "Custom / Other Service") && item.desc !== "") && (
-                      <Input
-                        className="mt-2 h-10 text-sm border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
-                        placeholder="Type custom description..."
-                        value={item.desc === "Custom Service Details" ? "" : item.desc}
-                        onChange={(e) => {
-                          const newItems = [...items];
-                          newItems[idx].desc = e.target.value || "Custom Service Details";
-                          setItems(newItems);
-                        }}
-                      />
-                    )}
+                      onChangeText={(text) => {
+                        const newItems = [...items];
+                        newItems[idx].desc = text;
+                        setItems(newItems);
+                      }}
+                    />
                   </div>
                   <div className="col-span-2">
                     <Input
@@ -467,12 +445,18 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
               setEditingIdx(null);
             }}
             item={editingIdx !== null ? items[editingIdx] : { desc: "", govCost: 0, proFee: 0 }}
-            onSave={(updated) => {
+            onSave={(updated, addAnother) => {
               if (editingIdx === null) return;
               const newItems = [...items];
               newItems[editingIdx] = updated;
-              setItems(newItems);
-              setEditingIdx(null);
+              if (addAnother) {
+                newItems.push({ desc: "", govCost: 0, proFee: 0 });
+                setItems(newItems);
+                setEditingIdx(newItems.length - 1);
+              } else {
+                setItems(newItems);
+                setEditingIdx(null);
+              }
             }}
             presetServices={PRESET_SERVICES}
             proFeeLabel="Service Fee (AED)"
@@ -538,8 +522,11 @@ export function QuotationModal({ open, onOpenChange, clients }: { open: boolean;
             {/* Desktop actions */}
             <div className="hidden sm:flex justify-end gap-3 pt-2">
               <button type="button" className="px-5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors" onClick={() => onOpenChange(false)}>Cancel</button>
-              <button type="submit" disabled={!!loading} className="bg-[#007A55] hover:bg-[#006244] text-white font-semibold text-sm rounded-xl px-6 py-2.5 shadow-sm active:scale-95 transition-all disabled:opacity-60">
-                {loading === "pdf" ? "Generating PDF..." : loading === "saving" ? "Saving..." : "Save & Generate PDF"}
+              <button type="submit" disabled={!!loading} className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-sm rounded-xl px-6 py-2.5 shadow-sm active:scale-95 transition-all disabled:opacity-60">
+                {loading === "pdf" ? "Generating PDF..." : loading === "saving" ? "Saving..." : "Save Document"}
+              </button>
+              <button type="button" onClick={(e) => handleSubmit(e, true)} disabled={!!loading} className="bg-[#007A55] hover:bg-[#006244] text-white font-semibold text-sm rounded-xl px-6 py-2.5 shadow-sm active:scale-95 transition-all disabled:opacity-60">
+                {loading === "saving" ? "Saving..." : "Save & Print"}
               </button>
             </div>
 

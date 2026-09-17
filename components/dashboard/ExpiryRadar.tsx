@@ -1,5 +1,5 @@
 import { AlertTriangle, Clock } from "lucide-react";
-import { Client } from "@prisma/client";
+import type { Client } from "@prisma/client";
 
 export function ExpiryRadar({ clients }: { clients: Client[] }) {
   const expiringClients = clients

@@ -1,19 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  GitMerge, 
-  ShieldAlert, 
-  Building2, 
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import {
+  LayoutDashboard,
+  GitMerge,
+  ShieldAlert,
+  Building2,
   Landmark,
   MessageSquare,
   Lock,
   Settings,
-  FileText
+  FileText,
+  ChevronsUpDown,
+  LogOut,
 } from "lucide-react";
 import { ZYRA_LOGO_GOLD_PATH } from "@/lib/brandAssets";
+import { getInitials, formatRoleLabel, type CurrentUser } from "@/lib/currentUserHelpers";
 
 const NAV_ITEMS = [
   { name: "Daily Operations", href: "/dashboard", icon: LayoutDashboard },
@@ -25,7 +30,7 @@ const NAV_ITEMS = [
   { name: "WhatsApp & Tracking", href: "/client-hub", icon: MessageSquare },
 ];
 
-export function AppSidebar() {
+export function AppSidebar({ currentUser }: { currentUser: CurrentUser }) {
   const pathname = usePathname();
 
   return (
@@ -88,17 +93,86 @@ export function AppSidebar() {
         </Link>
       </nav>
 
-      <div className="p-4 border-t border-border">
-        <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-50 text-foreground border border-border">
-          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold">
-            AD
+      <SidebarProfileCard currentUser={currentUser} />
+    </aside>
+  );
+}
+
+function SidebarProfileCard({ currentUser }: { currentUser: CurrentUser }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const initials = getInitials(currentUser.name);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
+
+  const handleSignOut = () => {
+    // No login/session system exists in this app (see lib/currentUser.ts) --
+    // there's no server-side session to invalidate and no login screen to
+    // redirect to, so this is an honest local "lock" affordance instead of
+    // a fake sign-out.
+    toast.success("Locked. Refresh or reopen the app to continue.");
+    setOpen(false);
+    router.push("/dashboard");
+  };
+
+  return (
+    <div ref={containerRef} className="relative p-4 border-t border-border">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-50 text-foreground border border-border hover:bg-slate-100 transition-colors"
+      >
+        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold shrink-0">
+          {initials}
+        </div>
+        <div className="flex flex-col min-w-0 text-left">
+          <span className="text-sm font-semibold text-slate-800 truncate">{currentUser.name}</span>
+          <span className="text-xs text-muted-foreground truncate">{formatRoleLabel(currentUser.role)}</span>
+        </div>
+        <ChevronsUpDown className="w-4 h-4 text-slate-400 shrink-0 ml-auto" />
+      </button>
+
+      {open && (
+        <div className="absolute left-4 right-4 bottom-full mb-2 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-50">
+          <div className="px-4 py-3.5 border-b border-slate-100">
+            <p className="text-sm font-bold text-slate-900 truncate">{currentUser.name}</p>
+            <p className="text-xs text-muted-foreground truncate mt-0.5">{currentUser.email}</p>
+            <span className="inline-block mt-1.5 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[#98682E]/10 text-[#98682E]">
+              {formatRoleLabel(currentUser.role)}
+            </span>
           </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-slate-800">Admin User</span>
-            <span className="text-xs text-muted-foreground">PRO Coordinator</span>
+          <div className="py-1.5">
+            <Link
+              href="/settings"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+            >
+              <Settings className="w-4 h-4 text-slate-400" /> Profile Settings
+            </Link>
+            <div className="my-1 border-t border-slate-100" />
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50"
+            >
+              <LogOut className="w-4 h-4" /> Sign Out
+            </button>
           </div>
         </div>
-      </div>
-    </aside>
+      )}
+    </div>
   );
 }

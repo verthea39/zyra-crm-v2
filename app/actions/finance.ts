@@ -4,6 +4,8 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { computeTransactionStatus } from "@/lib/calculations";
 import { logActivity } from "@/lib/activity";
+import { logServerError } from "@/lib/logger";
+import { z } from "zod";
 
 export async function createIncome(data: any) {
   try {
@@ -128,11 +130,23 @@ export async function createExpense(data: any) {
 
 export async function deleteTransaction(id: string) {
   try {
-    await prisma.transaction.delete({ where: { id } });
+    const result = await prisma.$transaction(async (tx) => {
+      const paymentCount = await tx.transactionPayment.count({ where: { transactionId: id } });
+      if (paymentCount > 0) {
+        throw new Error("HAS_PAYMENTS");
+      }
+      await tx.transaction.delete({ where: { id } });
+    });
     revalidatePath("/finance/cockpit");
-    return { success: true };
-  } catch (error) {
-    console.error("Error deleting transaction:", error);
+    return { success: true, result };
+  } catch (error: any) {
+    if (error?.message === "HAS_PAYMENTS") {
+      return {
+        success: false,
+        error: "Cannot delete -- this invoice already has recorded payment receipts. Cancel it instead to preserve the payment audit trail.",
+      };
+    }
+    logServerError(error, { action: "deleteTransaction", extra: { transactionId: id } });
     return { success: false, error: "Failed to delete transaction." };
   }
 }
@@ -168,6 +182,14 @@ export type RecordPaymentInput = {
   notes?: string;
 };
 
+const recordPaymentSchema = z.object({
+  transactionId: z.string().min(1, "Transaction ID is required"),
+  amount: z.number().positive("Payment amount must be greater than zero").finite(),
+  method: z.string().max(100).optional(),
+  transactionRef: z.string().max(200).optional(),
+  notes: z.string().max(1000).optional(),
+});
+
 /**
  * Records one partial-or-full payment against an existing invoice/expense.
  * Multiple payments can be recorded against the same transaction over time
@@ -176,14 +198,16 @@ export type RecordPaymentInput = {
  * individually, while Transaction.amountPaid/status stay the running total.
  */
 export async function recordPayment(input: RecordPaymentInput) {
+  const parsed = recordPaymentSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message || "Invalid payment payload" };
+  }
+
   try {
-    const amountMinor = Math.round(input.amount * 100);
-    if (!Number.isFinite(amountMinor) || amountMinor <= 0) {
-      return { success: false, error: "Payment amount must be greater than zero." };
-    }
+    const amountMinor = Math.round(parsed.data.amount * 100);
 
     const result = await prisma.$transaction(async (tx) => {
-      const transaction = await tx.transaction.findUnique({ where: { id: input.transactionId } });
+      const transaction = await tx.transaction.findUnique({ where: { id: parsed.data.transactionId } });
       if (!transaction) throw new Error("NOT_FOUND");
 
       const remainingBalance = transaction.amountTotal - transaction.amountPaid;
@@ -191,11 +215,11 @@ export async function recordPayment(input: RecordPaymentInput) {
 
       const payment = await tx.transactionPayment.create({
         data: {
-          transactionId: input.transactionId,
+          transactionId: parsed.data.transactionId,
           amountMinor,
-          method: input.method,
-          transactionRef: input.transactionRef,
-          notes: input.notes,
+          method: parsed.data.method,
+          transactionRef: parsed.data.transactionRef,
+          notes: parsed.data.notes,
         },
       });
 
@@ -203,7 +227,7 @@ export async function recordPayment(input: RecordPaymentInput) {
       const newStatus = computeTransactionStatus(transaction.amountTotal, newAmountPaid, transaction.dueDate);
 
       const updated = await tx.transaction.update({
-        where: { id: input.transactionId },
+        where: { id: parsed.data.transactionId },
         data: { amountPaid: newAmountPaid, status: newStatus },
       });
 
@@ -217,9 +241,9 @@ export async function recordPayment(input: RecordPaymentInput) {
       action: "PAYMENT_RECORDED",
       title: `Payment of AED ${(amountMinor / 100).toFixed(2)} recorded against ${result.transaction.reference}`,
       details: {
-        transactionId: input.transactionId,
+        transactionId: parsed.data.transactionId,
         amountMinor,
-        method: input.method,
+        method: parsed.data.method,
         remainingBalance: result.transaction.amountTotal - result.transaction.amountPaid,
       },
       entityType: "PAYMENT",
@@ -239,7 +263,7 @@ export async function recordPayment(input: RecordPaymentInput) {
     if (error?.message === "EXCEEDS_BALANCE") {
       return { success: false, error: "Payment amount exceeds the remaining balance due." };
     }
-    console.error("Error recording payment:", error);
+    logServerError(error, { action: "recordPayment", extra: { transactionId: parsed.data.transactionId } });
     return { success: false, error: "Failed to record payment." };
   }
 }

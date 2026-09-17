@@ -6,11 +6,24 @@ import { createCase } from "@/app/actions/pipeline";
 import { uploadVaultDocument } from "@/app/actions/vault";
 import { toast } from "sonner";
 import { DocumentScannerModal, type ScannerResult } from "@/components/documents/DocumentScannerModal";
+import { mergeScanFields, describeScanMerge } from "@/lib/ocrMerge";
+
+const SCAN_TYPE_LABEL: Record<string, string> = {
+  PASSPORT: "Passport",
+  EMIRATES_ID: "Emirates ID",
+  RESIDENCE_VISA: "UAE Residence Visa",
+  TRADE_LICENSE: "Trade License",
+  EJARI: "Ejari",
+  ESTABLISHMENT_CARD: "Establishment Card",
+  LABOUR_CONTRACT: "Labour Contract",
+  MEDICAL_FITNESS: "Medical Fitness Certificate",
+  UNKNOWN: "Document",
+};
 
 export function NewCaseModal({ onClose, clients, coordinators }: { onClose: () => void, clients: any[], coordinators: any[] }) {
   const [loading, setLoading] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [pendingScan, setPendingScan] = useState<ScannerResult | null>(null);
+  const [pendingScans, setPendingScans] = useState<ScannerResult[]>([]);
   const [formData, setFormData] = useState({
     applicantName: "",
     clientId: clients[0]?.id || "",
@@ -19,9 +32,16 @@ export function NewCaseModal({ onClose, clients, coordinators }: { onClose: () =
   });
 
   const handleScanApply = (result: ScannerResult) => {
-    if (result.fullName) setFormData((prev) => ({ ...prev, applicantName: result.fullName! }));
-    setPendingScan(result);
-    toast.success("Scanned fields applied -- review before saving");
+    const { merged, addedFields, preservedFields } = mergeScanFields(formData, { applicantName: result.fullName });
+    setFormData(merged);
+    setPendingScans((prev) => [...prev, result]);
+    toast.success(
+      describeScanMerge(
+        SCAN_TYPE_LABEL[result.documentType] || "Document",
+        addedFields.map(() => "Applicant Name"),
+        preservedFields.length
+      )
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,7 +54,7 @@ export function NewCaseModal({ onClose, clients, coordinators }: { onClose: () =
     setLoading(true);
     const res = await createCase(formData);
 
-    if (res.success && pendingScan && formData.clientId) {
+    if (res.success && pendingScans.length > 0 && formData.clientId) {
       const CATEGORY_BY_TYPE: Record<string, string> = {
         PASSPORT: "Passport Copy",
         EMIRATES_ID: "Emirates ID",
@@ -45,15 +65,17 @@ export function NewCaseModal({ onClose, clients, coordinators }: { onClose: () =
         LABOUR_CONTRACT: "Labour Contract",
         MEDICAL_FITNESS: "Medical Fitness",
       };
-      const category = CATEGORY_BY_TYPE[pendingScan.documentType] || "Passport Copy";
-      const title = pendingScan.documentNumber ? `${category} - ${pendingScan.documentNumber}` : `${category} (Scanned)`;
-      await uploadVaultDocument({
-        clientId: formData.clientId,
-        category,
-        title,
-        expiryDate: pendingScan.expiryDate || new Date().toISOString().slice(0, 10),
-        fileUrl: pendingScan.fileDataUrl,
-      });
+      await Promise.all(pendingScans.map((scan) => {
+        const category = CATEGORY_BY_TYPE[scan.documentType] || "Passport Copy";
+        const title = scan.documentNumber ? `${category} - ${scan.documentNumber}` : `${category} (Scanned)`;
+        return uploadVaultDocument({
+          clientId: formData.clientId,
+          category,
+          title,
+          expiryDate: scan.expiryDate || new Date().toISOString().slice(0, 10),
+          fileUrl: scan.fileDataUrl,
+        });
+      }));
     }
 
     setLoading(false);

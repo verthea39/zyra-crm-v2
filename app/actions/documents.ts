@@ -293,10 +293,35 @@ export async function convertQuotationToInvoice(quotationId: string) {
 
 export async function deleteDocument(id: string) {
   try {
-    await prisma.document.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      const doc = await tx.document.findUnique({
+        where: { id },
+        select: { status: true, convertedInvoiceId: true },
+      });
+      if (!doc) throw new Error("NOT_FOUND");
+
+      // DocumentItem cascades and convertedInvoice self-relation SetNull are
+      // handled at the schema level -- the check here is a business-rule
+      // guard, not an FK-safety one: a quotation already converted to a real
+      // invoice, or an invoice already sent/paid, shouldn't silently vanish
+      // and orphan the financial trail. Cancel it instead.
+      if (doc.convertedInvoiceId) throw new Error("ALREADY_CONVERTED");
+      if (doc.status !== "DRAFT" && doc.status !== "CANCELLED") throw new Error("ALREADY_ISSUED");
+
+      await tx.document.delete({ where: { id } });
+    });
     revalidatePath("/documents");
     return { success: true };
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.message === "NOT_FOUND") {
+      return { success: false, error: "Document not found" };
+    }
+    if (err?.message === "ALREADY_CONVERTED") {
+      return { success: false, error: "Cannot delete -- this quotation has already been converted to an invoice." };
+    }
+    if (err?.message === "ALREADY_ISSUED") {
+      return { success: false, error: "Cannot delete -- this document has already been sent/paid. Cancel it instead to preserve the record." };
+    }
     logServerError(err, { action: "deleteDocument" });
     return { success: false, error: "Failed to delete document" };
   }

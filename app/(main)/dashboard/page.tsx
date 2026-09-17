@@ -13,8 +13,16 @@ export default async function DashboardPage() {
   const now = new Date();
   const next48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
   const next30d = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+  // "Today" must mean the calendar day in Gulf Standard Time (UTC+4, no DST),
+  // not the server process's local time -- Vercel functions run in UTC, so
+  // `new Date(y, m, d, 0,0,0,0)` built from a UTC `now` produces UTC midnight,
+  // which excludes any transaction recorded between 00:00-03:59 Dubai time
+  // (those timestamps are still "yesterday" in UTC).
+  const GST_OFFSET_MS = 4 * 60 * 60 * 1000;
+  const nowInGst = new Date(now.getTime() + GST_OFFSET_MS);
+  const startOfDay = new Date(Date.UTC(nowInGst.getUTCFullYear(), nowInGst.getUTCMonth(), nowInGst.getUTCDate(), 0, 0, 0, 0) - GST_OFFSET_MS);
+  const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000 - 1);
 
   // Fetch all necessary data in a single parallel batch (one round trip to
   // the pooler instead of three sequential ones). If the database is

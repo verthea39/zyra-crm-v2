@@ -31,7 +31,7 @@ enum CaseStage {
   PRE_CHECK
   SUBMITTED
   COMPLETED
-  
+
   // New Pipeline Stages
   DRAFT_INTAKE
   OFFER_LETTER_MOHRE
@@ -39,6 +39,14 @@ enum CaseStage {
   MEDICAL_BIOMETRICS
   VISA_STAMPING_EID
   COMPLETED_HANDOVER
+  @@schema("v2")
+}
+
+enum CasePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
   @@schema("v2")
 }
 
@@ -194,6 +202,8 @@ model CaseFile {
   gdrfaRequestNo String?
   serviceType    String
   stage          CaseStage           @default(DRAFT_INTAKE)
+  priority       CasePriority        @default(NORMAL)
+  notes          String?
   stageUpdatedAt DateTime            @default(now())
   createdAt      DateTime            @default(now())
   clientId       String

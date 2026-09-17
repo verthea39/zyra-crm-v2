@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { ArrowUpRight, ArrowDownRight, Wallet, Receipt, Plus } from "lucide-react";
 
+const MAX_VISIBLE_ITEMS = 10;
+
 export type DailyFeedItem = {
   id: string;
   transactionId: string;
@@ -15,6 +17,18 @@ export type DailyFeedItem = {
 
 const formatMoney = (minorUnits: number) =>
   new Intl.NumberFormat("en-AE", { style: "currency", currency: "AED", minimumFractionDigits: 2 }).format(minorUnits / 100);
+
+// KPI tiles are narrow (1/3 of the card width) -- large 5-6 digit totals in
+// full currency format would overflow and get clipped with an ellipsis, so
+// these three tiles use compact notation (e.g. "AED 12.3K") while the
+// per-transaction rows below keep full precision.
+const formatMoneyCompact = (minorUnits: number) =>
+  new Intl.NumberFormat("en-AE", {
+    style: "currency",
+    currency: "AED",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(minorUnits / 100);
 
 const formatTime = (date: string | Date) =>
   `Today at ${new Intl.DateTimeFormat("en-AE", { hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(date))}`;
@@ -42,15 +56,15 @@ export function DailyTransactionsFeed({
       <div className="grid grid-cols-3 gap-2 mb-4">
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
           <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wide">Inflow</p>
-          <p className="text-sm font-bold text-emerald-800 mt-1 truncate">{formatMoney(inflowMinor)}</p>
+          <p className="text-sm font-bold text-emerald-800 mt-1 tabular-nums" title={formatMoney(inflowMinor)}>{formatMoneyCompact(inflowMinor)}</p>
         </div>
         <div className="bg-rose-50 border border-rose-200 rounded-xl p-3">
           <p className="text-[10px] font-semibold text-rose-700 uppercase tracking-wide">Outflow</p>
-          <p className="text-sm font-bold text-rose-800 mt-1 truncate">{formatMoney(outflowMinor)}</p>
+          <p className="text-sm font-bold text-rose-800 mt-1 tabular-nums" title={formatMoney(outflowMinor)}>{formatMoneyCompact(outflowMinor)}</p>
         </div>
         <div className={`rounded-xl p-3 border ${netMinor >= 0 ? "bg-slate-50 border-slate-200" : "bg-amber-50 border-amber-200"}`}>
           <p className={`text-[10px] font-semibold uppercase tracking-wide ${netMinor >= 0 ? "text-slate-600" : "text-amber-700"}`}>Net Flow</p>
-          <p className={`text-sm font-bold mt-1 truncate ${netMinor >= 0 ? "text-slate-900" : "text-amber-800"}`}>{formatMoney(netMinor)}</p>
+          <p className={`text-sm font-bold mt-1 tabular-nums ${netMinor >= 0 ? "text-slate-900" : "text-amber-800"}`} title={formatMoney(netMinor)}>{formatMoneyCompact(netMinor)}</p>
         </div>
       </div>
 
@@ -68,8 +82,8 @@ export function DailyTransactionsFeed({
           </Link>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
-          {items.map((item) => (
+        <div className="flex flex-col gap-2 max-h-[320px] overflow-y-auto pr-0.5">
+          {items.slice(0, MAX_VISIBLE_ITEMS).map((item) => (
             <Link
               key={item.id}
               href={`/finance/transactions/${item.transactionId}`}
@@ -108,6 +122,15 @@ export function DailyTransactionsFeed({
             </Link>
           ))}
         </div>
+      )}
+
+      {items.length > MAX_VISIBLE_ITEMS && (
+        <Link
+          href="/finance/cockpit"
+          className="mt-3 flex items-center justify-center h-9 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+        >
+          View All {items.length} Transactions
+        </Link>
       )}
     </div>
   );

@@ -2,13 +2,13 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { Transaction } from "@prisma/client";
+import type { Transaction } from "@prisma/client";
 import { FilterStrip } from "./FilterStrip";
 import { LedgerTable } from "./LedgerTable";
 import { CockpitHeader } from "./CockpitHeader";
 import { ClientsFilterStrip } from "./ClientsFilterStrip";
 import { ClientsTable, ClientWithTransactions } from "./ClientsTable";
-import { toast } from "sonner";
+import { ExportDialog } from "./ExportDialog";
 
 export function LedgerView({ 
   transactions,
@@ -132,98 +132,13 @@ export function LedgerView({
     return result;
   }, [clients, clientSearch, clientTypeFilter, clientExpiryFilter]);
 
-  const handleExport = () => {
-    let headers: string[];
-    let rows: string[][];
-    let filename: string;
-
-    if (activeTab === 'ledger') {
-      headers = [
-        "Reference ID", 
-        "Transaction Date", 
-        "Client / Counterparty", 
-        "Transaction Type", 
-        "Category", 
-        "Government Fees (AED)", 
-        "Service Fees (AED)", 
-        "Total Amount (AED)", 
-        "Paid Amount (AED)", 
-        "Balance (AED)", 
-        "Status", 
-        "Due Date"
-      ];
-      rows = filteredTransactions.map(tx => [
-        tx.reference,
-        new Date(tx.date).toISOString().split('T')[0],
-        `"${tx.counterparty}"`,
-        tx.type === "INCOME" ? "Income" : "Expense",
-        `"${tx.category}"`,
-        ((tx.govFeePart || 0) / 100).toFixed(2),
-        ((tx.serviceFeePart || 0) / 100).toFixed(2),
-        (tx.amountTotal / 100).toFixed(2),
-        (tx.amountPaid / 100).toFixed(2),
-        ((tx.amountTotal - tx.amountPaid) / 100).toFixed(2),
-        tx.status,
-        tx.dueDate ? new Date(tx.dueDate).toISOString().split('T')[0] : ""
-      ]);
-      filename = `Zyra_Transactions_Ledger_${new Date().toISOString().split('T')[0]}.csv`;
-    } else {
-      headers = [
-        "Client ID", 
-        "Client Name", 
-        "Type", 
-        "Phone", 
-        "Place", 
-        "Visa / License Type", 
-        "Expiry Date", 
-        "Total Billed (AED)", 
-        "Outstanding Balance (AED)"
-      ];
-      rows = filteredClients.map(c => {
-        let totalBilled = 0;
-        let outstanding = 0;
-        c.transactions.forEach(tx => {
-          if (tx.type === "INCOME") {
-            totalBilled += tx.amountTotal;
-            outstanding += (tx.amountTotal - tx.amountPaid);
-          }
-        });
-
-        const expiryDate = c.type === 'CORPORATE' ? c.expiryDate : c.passportExpiry;
-
-        return [
-          c.id.substring(0, 11).toUpperCase(),
-          `"${c.name}"`,
-          c.type,
-          c.phone || "",
-          c.place || "",
-          c.type === 'CORPORATE' ? 'Trade License' : (c.visaType || ""),
-          expiryDate ? new Date(expiryDate).toISOString().split('T')[0] : "",
-          (totalBilled / 100).toFixed(2),
-          (outstanding / 100).toFixed(2)
-        ];
-      });
-      filename = `Zyra_Clients_Directory_${new Date().toISOString().split('T')[0]}.csv`;
-    }
-    
-    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast.success("Export completed successfully");
-  };
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
   return (
     <div className="w-full">
-      <CockpitHeader onExport={handleExport} clients={clients} />
-      
+      <CockpitHeader onExport={() => setExportDialogOpen(true)} clients={clients} />
+      <ExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} transactions={transactions} clients={clients} />
+
       <div className="flex items-center gap-1 mt-8 mb-4 border-b border-border">
         <button 
           onClick={() => setActiveTab('ledger')}

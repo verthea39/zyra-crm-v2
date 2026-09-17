@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Transaction } from "@prisma/client";
+import type { Transaction } from "@prisma/client";
 import { Edit2, Trash2, MoreVertical, Eye, Printer, Receipt } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { deleteTransaction } from "@/app/actions/finance";

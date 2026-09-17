@@ -1,40 +1,8 @@
 import prisma from "@/lib/prisma";
-import { ZYRA_LOGO_GOLD_DATA_URI } from "@/lib/brandAssets";
-import { COMPANY_PROFILE } from "@/lib/constants/company";
+import { DEFAULT_BRANDING, type CompanyBranding } from "@/lib/companyBrandingDefaults";
 
-export type CompanyBranding = {
-  name: string;
-  address: string;
-  phone?: string | null;
-  email?: string | null;
-  website: string;
-  portalUrl: string;
-  trn?: string | null;
-  tradeLicenseNo?: string | null;
-  logoUrl?: string | null;
-  bankName?: string | null;
-  accountName?: string | null;
-  iban?: string | null;
-  swift?: string | null;
-  paymentTerms?: string | null;
-};
-
-const DEFAULT_BRANDING: CompanyBranding = {
-  name: COMPANY_PROFILE.displayName,
-  address: COMPANY_PROFILE.address,
-  phone: COMPANY_PROFILE.phones.join(" / "),
-  email: COMPANY_PROFILE.email,
-  website: COMPANY_PROFILE.website,
-  portalUrl: "crm.zyrabusinesshub.com",
-  trn: null,
-  tradeLicenseNo: null,
-  logoUrl: ZYRA_LOGO_GOLD_DATA_URI,
-  bankName: null,
-  accountName: null,
-  iban: null,
-  swift: null,
-  paymentTerms: null,
-};
+export type { CompanyBranding };
+export { DEFAULT_BRANDING, getDefaultCompanyBranding, companyLogoSvg } from "@/lib/companyBrandingDefaults";
 
 /** Server-side: reads CompanySettings and fills gaps with sensible defaults. */
 export async function getCompanyBranding(): Promise<CompanyBranding> {
@@ -62,19 +30,4 @@ export async function getCompanyBranding(): Promise<CompanyBranding> {
     console.error("Failed to load company branding, using defaults:", err);
     return DEFAULT_BRANDING;
   }
-}
-
-/** Client-side-safe fallback for callers that can't hit Prisma directly (e.g. lib/printUtils.ts). */
-export function getDefaultCompanyBranding(): CompanyBranding {
-  return DEFAULT_BRANDING;
-}
-
-/** Inline SVG logo -- used whenever no logoUrl is configured. Safe for print/PDF (no external request, no CORS). */
-export function companyLogoSvg(initials = "ZBH", size = 36): string {
-  return `
-    <svg width="${size}" height="${size}" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
-      <rect width="44" height="44" rx="10" fill="#FDF8F0" stroke="#EADBC8"/>
-      <text x="22" y="28" font-family="Arial, sans-serif" font-size="15" font-weight="900" fill="#98682E" text-anchor="middle">${initials}</text>
-    </svg>
-  `;
 }

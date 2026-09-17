@@ -1,5 +1,6 @@
-import { companyLogoSvg, getDefaultCompanyBranding, type CompanyBranding } from "@/lib/companyBranding";
+import { companyLogoSvg, getDefaultCompanyBranding, type CompanyBranding } from "@/lib/companyBrandingDefaults";
 import { getBranding } from "@/app/actions/branding";
+import { amountToWordsAED } from "@/lib/numberToWords";
 
 export type DocumentType = 'QUOTATION' | 'TAX_INVOICE' | 'PAYMENT_RECEIPT';
 
@@ -56,12 +57,15 @@ export const DEFAULT_TAX_INVOICE_TERMS = `1. Payment Due: Full settlement requir
 
 interface PaymentReceiptData extends BasePrintData {
   type: 'PAYMENT_RECEIPT';
+  voucherRef?: string;
   invoiceRef: string;
   amount: number;
   method: string;
   previousTotal?: number;
   remainingBalance?: number;
   transactionRef?: string;
+  depositedTo?: string;
+  purpose?: string;
 }
 
 type PrintData = QuotationData | TaxInvoiceData | PaymentReceiptData;
@@ -134,7 +138,7 @@ function buildDocumentContent(
         </div>
       </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; margin-top: 24px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; margin-top: 14px;">
         <!-- Left Metadata -->
         <div>
           <h2 style="color: ${ZYRA_BRONZE}; margin: 0 0 2px 0; font-size: 16px; font-weight: 800; text-transform: uppercase;">${documentTitle}</h2>
@@ -288,58 +292,77 @@ function buildDocumentContent(
   } else if (data.type === 'PAYMENT_RECEIPT') {
     const d = data as PaymentReceiptData;
     content = `
-      <div style="max-width: 600px; margin: 20px auto; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden;">
+      <div style="max-width: 480px; margin: 12px auto; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden;">
+        ${d.voucherRef ? `
+        <div style="background-color: ${ZYRA_DARK}; color: white; padding: 8px 16px; font-size: 11px; font-weight: bold; letter-spacing: 1px; text-align: center;">
+          VOUCHER REF: ${d.voucherRef}
+        </div>
+        ` : ''}
         <!-- Payment Breakdown Box -->
-        <div style="background-color: #f8fafc; padding: 40px 30px; text-align: center; border-bottom: 1px solid #cbd5e1;">
-          <p style="color: #64748b; font-size: 14px; margin: 0 0 10px 0; text-transform: uppercase; font-weight: bold;">Amount Received (AED)</p>
-          <div style="font-size: 42px; font-weight: 900; color: ${ZYRA_BRONZE}; margin-bottom: 20px; line-height: 1;">
+        <div style="background-color: #f8fafc; padding: 24px 20px; text-align: center; border-bottom: 1px solid #cbd5e1;">
+          <p style="color: #64748b; font-size: 12px; margin: 0 0 8px 0; text-transform: uppercase; font-weight: bold;">Amount Received (AED)</p>
+          <div style="font-size: 32px; font-weight: 900; color: ${ZYRA_BRONZE}; margin-bottom: 8px; line-height: 1;">
             ${formatCurrency(d.amount)}
           </div>
-          <span style="display: inline-block; padding: 6px 16px; background-color: #10b981; color: white; font-size: 12px; font-weight: bold; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px;">
+          <p style="color: #475569; font-size: 11px; font-style: italic; margin: 0 0 12px 0;">${amountToWordsAED(d.amount)}</p>
+          <span style="display: inline-block; padding: 5px 14px; background-color: #10b981; color: white; font-size: 11px; font-weight: bold; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px;">
             Payment Successful
           </span>
         </div>
-        
-        <div style="padding: 30px;">
-          <table style="width: 100%; font-size: 14px; color: #334155; border-spacing: 0;">
+
+        <div style="padding: 18px 20px;">
+          <table style="width: 100%; font-size: 12px; color: #334155; border-spacing: 0;">
             <tr style="border-bottom: 1px solid #f1f5f9;">
-              <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;"><strong>Payment Mode:</strong></td>
-              <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: 600;">${d.method}</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;"><strong>Payment Mode:</strong></td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: 600;">${d.method}</td>
             </tr>
             <tr style="border-bottom: 1px solid #f1f5f9;">
-              <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;"><strong>Transaction / Cheque Ref:</strong></td>
-              <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: 600;">${d.transactionRef || 'N/A'}</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;"><strong>Transaction / Cheque Ref:</strong></td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: 600;">${d.transactionRef || 'N/A'}</td>
             </tr>
             <tr style="border-bottom: 1px solid #f1f5f9;">
-              <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;"><strong>Linked Invoice Ref:</strong></td>
-              <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: 600;">${d.invoiceRef || 'N/A'}</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;"><strong>Linked Invoice / Case Ref:</strong></td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: 600;">${d.invoiceRef || 'N/A'}</td>
             </tr>
+            ${d.depositedTo ? `
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+              <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;"><strong>Deposited To:</strong></td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: 600;">${d.depositedTo}</td>
+            </tr>
+            ` : ''}
+            ${d.purpose ? `
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+              <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; color: #64748b; vertical-align: top;"><strong>Purpose:</strong></td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: 600;">${d.purpose}</td>
+            </tr>
+            ` : ''}
             ${d.previousTotal !== undefined ? `
             <tr style="border-bottom: 1px solid #f1f5f9;">
-              <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;"><strong>Previous Invoiced Total:</strong></td>
-              <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: 600;">${formatCurrency(d.previousTotal)}</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;"><strong>Previous Invoiced Total:</strong></td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: 600;">${formatCurrency(d.previousTotal)}</td>
             </tr>
             ` : ''}
             ${d.remainingBalance !== undefined ? `
             <tr>
-              <td style="padding: 12px 0; color: #64748b;"><strong>Remaining Balance Due:</strong></td>
-              <td style="padding: 12px 0; text-align: right; font-weight: bold; color: ${d.remainingBalance > 0 ? '#dc2626' : '#10b981'};">${formatCurrency(Math.max(0, d.remainingBalance))}</td>
+              <td style="padding: 8px 0; color: #64748b;"><strong>Balance Pending:</strong></td>
+              <td style="padding: 8px 0; text-align: right; font-weight: bold; color: ${d.remainingBalance > 0 ? '#dc2626' : '#10b981'};">${formatCurrency(Math.max(0, d.remainingBalance))}</td>
             </tr>
             ` : ''}
           </table>
         </div>
       </div>
-      
+
       <!-- Verification Footer -->
-      <div style="margin-top: 60px; display: flex; justify-content: space-between; align-items: flex-end;">
-        <div>
-          <div style="width: 150px; height: 150px; border: 2px dashed #cbd5e1; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #cbd5e1; font-size: 11px; text-transform: uppercase; font-weight: bold; transform: rotate(-15deg);">
-            Official Stamp
-          </div>
+      <div style="margin-top: 28px; display: flex; justify-content: space-between; align-items: flex-end; max-width: 480px; margin-left: auto; margin-right: auto;">
+        <div style="text-align: center; width: 42%;">
+          <div style="height: 30px;"></div>
+          <div style="border-top: 1px solid #94a3b8; padding-top: 3px; font-size: 10px; color: #64748b;">Received By</div>
         </div>
-        <div style="text-align: right; color: #64748b; font-size: 12px;">
-          <p style="margin: 0;">Verified by: Accounts Department</p>
-          <p style="margin: 5px 0 0 0;">Thank you for choosing Zyra Documents Clearance Services.</p>
+        <div style="text-align: center; width: 42%;">
+          <div style="width: 60px; height: 60px; margin: 0 auto; border: 2px dashed #cbd5e1; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #cbd5e1; font-size: 8px; text-transform: uppercase; font-weight: bold; transform: rotate(-15deg);">
+            Stamp
+          </div>
+          <div style="border-top: 1px solid #94a3b8; padding-top: 3px; margin-top: 4px; font-size: 10px; color: #64748b;">Authorized Signatory</div>
         </div>
       </div>
     `;
@@ -431,19 +454,23 @@ function assembleHTML(data: PrintData, branding: CompanyBranding): string {
           background: #22c55e;
           color: white;
         }
+        .print-sheet {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
         @media print {
           .action-bar {
             display: none !important;
           }
           @page {
-            size: A4;
-            margin: 12mm;
+            margin: 10mm;
+            size: auto;
           }
           body {
             padding: 0;
             margin: 0;
             max-width: none;
-            font-size: 12px;
+            font-size: 11.5px;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -461,8 +488,10 @@ function assembleHTML(data: PrintData, branding: CompanyBranding): string {
           Download PDF / Print
         </button>
       </div>
-      ${header}
-      ${content}
+      <div class="print-sheet">
+        ${header}
+        ${content}
+      </div>
     </body>
     </html>
   `;

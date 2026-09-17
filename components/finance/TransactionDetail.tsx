@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Client, Transaction, TransactionPayment } from "@prisma/client";
+import type { Client, Transaction, TransactionPayment } from "@prisma/client";
 import { toast } from "sonner";
 import { ArrowLeft, Pencil, Printer, Trash2, Receipt } from "lucide-react";
 import { deleteTransaction } from "@/app/actions/finance";

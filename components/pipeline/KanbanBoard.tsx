@@ -2,10 +2,17 @@
 
 import { useState } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { advanceCaseStage } from "@/app/actions/pipeline";
+import { advanceCaseStage, deleteCase } from "@/app/actions/pipeline";
 import { toast } from "sonner";
-import { Clock, MessageCircle, MoveRight, Receipt, FileText } from "lucide-react";
+import { Clock, MessageCircle, MoveRight, Receipt, FileText, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { CaseDetailsSheet } from "./CaseDetailsSheet";
+import { EditCaseModal } from "./EditCaseModal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const STAGES = [
   { id: "DRAFT_INTAKE", label: "Draft / Intake", short: "Draft" },
@@ -16,10 +23,30 @@ const STAGES = [
   { id: "COMPLETED_HANDOVER", label: "Completed", short: "Done" },
 ];
 
-export function KanbanBoard({ cases, onCasesChange }: { cases: any[], onCasesChange: React.Dispatch<React.SetStateAction<any[]>> }) {
+export function KanbanBoard({ cases, onCasesChange, clients = [], coordinators = [] }: { cases: any[], onCasesChange: React.Dispatch<React.SetStateAction<any[]>>, clients?: any[], coordinators?: any[] }) {
   const [updating, setUpdating] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [activeMobileTab, setActiveMobileTab] = useState(STAGES[0].id);
   const [selectedCase, setSelectedCase] = useState<string | null>(null);
+  const [editingCase, setEditingCase] = useState<any | null>(null);
+
+  const handleDelete = async (c: any) => {
+    if (!confirm(`Delete case ${c.reference} (${c.applicantName || "Unnamed Applicant"})? This cannot be undone.`)) return;
+
+    setDeletingId(c.id);
+    const previous = cases;
+    onCasesChange(prev => prev.filter(x => x.id !== c.id));
+
+    const res = await deleteCase(c.id);
+    setDeletingId(null);
+
+    if (res.success) {
+      toast.success("Case deleted successfully");
+    } else {
+      onCasesChange(previous);
+      toast.error(res.error || "Failed to delete case");
+    }
+  };
 
   const moveCase = async (caseId: string, newStage: string, previousStage?: string) => {
     setUpdating(caseId);
@@ -161,7 +188,7 @@ export function KanbanBoard({ cases, onCasesChange }: { cases: any[], onCasesCha
         >
           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary to-transparent opacity-30"></div>
 
-          {updating === c.id && (
+          {(updating === c.id || deletingId === c.id) && (
             <div className="absolute inset-0 bg-white/60 flex items-center justify-center z-10 backdrop-blur-[2px]">
               <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
             </div>
@@ -172,11 +199,30 @@ export function KanbanBoard({ cases, onCasesChange }: { cases: any[], onCasesCha
               <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-50 border border-slate-200 px-2 py-1 rounded tracking-widest">
                 {c.reference}
               </span>
-              <span className={`text-[9px] font-bold px-2 py-1 rounded uppercase tracking-widest border ${
-                c.client?.type === 'CORPORATE' ? 'bg-indigo-50 border-indigo-200 text-indigo-800' : 'bg-sky-50 border-sky-200 text-sky-800'
-              }`}>
-                {c.client?.type === 'CORPORATE' ? 'Corporate' : 'Individual'}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className={`text-[9px] font-bold px-2 py-1 rounded uppercase tracking-widest border ${
+                  c.client?.type === 'CORPORATE' ? 'bg-indigo-50 border-indigo-200 text-indigo-800' : 'bg-sky-50 border-sky-200 text-sky-800'
+                }`}>
+                  {c.client?.type === 'CORPORATE' ? 'Corporate' : 'Individual'}
+                </span>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="p-1 rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors">
+                      <MoreVertical className="w-3.5 h-3.5" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-40">
+                      <DropdownMenuItem onClick={() => setEditingCase(c)} className="cursor-pointer">
+                        <Pencil className="w-3.5 h-3.5 mr-2" />
+                        <span>Edit Case</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDelete(c)} className="cursor-pointer text-rose-600 focus:text-rose-600">
+                        <Trash2 className="w-3.5 h-3.5 mr-2" />
+                        <span>Delete Case</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
             </div>
 
             <h3 className="font-bold text-foreground text-sm mb-1 leading-tight tracking-tight">
@@ -267,6 +313,18 @@ export function KanbanBoard({ cases, onCasesChange }: { cases: any[], onCasesCha
         <CaseDetailsSheet
           caseId={selectedCase}
           onClose={() => setSelectedCase(null)}
+        />
+      )}
+
+      {editingCase && (
+        <EditCaseModal
+          caseData={editingCase}
+          clients={clients}
+          coordinators={coordinators}
+          onClose={() => setEditingCase(null)}
+          onSaved={(updated) => {
+            onCasesChange(prev => prev.map(x => x.id === updated.id ? { ...x, ...updated, client: clients.find(cl => cl.id === updated.clientId) || x.client } : x));
+          }}
         />
       )}
     </>

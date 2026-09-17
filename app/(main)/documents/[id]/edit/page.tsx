@@ -1,15 +1,25 @@
 import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { getDocument } from "@/app/actions/documents";
+import { logServerError } from "@/lib/logger";
 import { DocumentWizard } from "@/components/documents/DocumentWizard";
 
 export const dynamic = "force-dynamic";
+
+async function getClients() {
+  try {
+    return await prisma.client.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } });
+  } catch (err) {
+    logServerError(err, { action: "documents/[id]/edit:getClients" });
+    return [];
+  }
+}
 
 export default async function EditDocumentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [document, clients] = await Promise.all([
     getDocument(id),
-    prisma.client.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    getClients(),
   ]);
 
   if (!document) notFound();

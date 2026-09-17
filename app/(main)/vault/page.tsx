@@ -1,15 +1,21 @@
 import { getVaultDocuments } from "@/app/actions/vault";
 import prisma from "@/lib/prisma";
+import { logServerError } from "@/lib/logger";
 import { VaultView } from "@/components/vault/VaultView";
 import { ShieldAlert, ShieldCheck, Files } from "lucide-react";
 
 
 export const dynamic = "force-dynamic";
 async function getClientsForUpload() {
-  return await prisma.client.findMany({
-    select: { id: true, name: true, type: true, phone: true },
-    orderBy: { name: 'asc' }
-  });
+  try {
+    return await prisma.client.findMany({
+      select: { id: true, name: true, type: true, phone: true },
+      orderBy: { name: 'asc' }
+    });
+  } catch (err) {
+    logServerError(err, { action: "vault:getClientsForUpload" });
+    return [];
+  }
 }
 
 export default async function VaultPage() {

@@ -11,9 +11,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient, updateClient } from "@/app/actions/clients";
 import { uploadVaultDocument } from "@/app/actions/vault";
-import { Client } from "@prisma/client";
+import type { Client } from "@prisma/client";
 import { toast } from "sonner"; // Assuming sonner is used, if not, we can remove it or use native alert for now
 import { DocumentScannerModal, type ScannerResult } from "@/components/documents/DocumentScannerModal";
+import { mergeScanFields, describeScanMerge } from "@/lib/ocrMerge";
 
 const clientSchema = z.object({
   type: z.enum(["INDIVIDUAL", "CORPORATE"]),
@@ -32,11 +33,15 @@ const clientSchema = z.object({
 
 type ClientFormValues = z.infer<typeof clientSchema>;
 
-export function AddClientModal({ open, onOpenChange, client }: { open: boolean; onOpenChange: (open: boolean) => void; client?: Client }) {
+export function AddClientModal({ open, onOpenChange, client, autoOpenScanner = false }: { open: boolean; onOpenChange: (open: boolean) => void; client?: Client; autoOpenScanner?: boolean }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [pendingScan, setPendingScan] = useState<ScannerResult | null>(null);
+  const [pendingScans, setPendingScans] = useState<ScannerResult[]>([]);
   const isEditMode = !!client;
+
+  useEffect(() => {
+    if (open && autoOpenScanner && !client) setScannerOpen(true);
+  }, [open, autoOpenScanner, client]);
 
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
@@ -92,21 +97,54 @@ export function AddClientModal({ open, onOpenChange, client }: { open: boolean; 
 
   const clientType = form.watch("type");
 
+  const SCAN_TYPE_LABEL: Record<string, string> = {
+    PASSPORT: "Passport",
+    EMIRATES_ID: "Emirates ID",
+    RESIDENCE_VISA: "UAE Residence Visa",
+    TRADE_LICENSE: "Trade License",
+    EJARI: "Ejari",
+    ESTABLISHMENT_CARD: "Establishment Card",
+    LABOUR_CONTRACT: "Labour Contract",
+    MEDICAL_FITNESS: "Medical Fitness Certificate",
+    UNKNOWN: "Document",
+  };
+
+  const FIELD_LABEL: Record<keyof ClientFormValues, string> = {
+    type: "Type", leadSource: "Lead Source", name: "Name", place: "Place", phone: "Phone",
+    nationality: "Nationality", visaType: "Visa Type", passportNo: "Passport No.",
+    passportExpiry: "Passport Expiry", emiratesIdNo: "Emirates ID No.",
+    tradeLicenseNo: "Trade License No.", tradeLicenseExpiry: "Trade License Expiry",
+  };
+
   function handleScanApply(result: ScannerResult) {
-    if (result.fullName) form.setValue("name", result.fullName);
-    if (result.nationality) form.setValue("nationality", result.nationality);
+    const current = form.getValues();
+    const updates: Partial<Record<keyof ClientFormValues, string | null | undefined>> = {
+      name: result.documentType === "TRADE_LICENSE" ? result.companyName : result.fullName,
+      nationality: result.nationality,
+    };
     if (result.documentType === "PASSPORT") {
-      if (result.documentNumber) form.setValue("passportNo", result.documentNumber);
-      if (result.expiryDate) form.setValue("passportExpiry", result.expiryDate);
+      updates.passportNo = result.documentNumber;
+      updates.passportExpiry = result.expiryDate;
     } else if (result.documentType === "EMIRATES_ID") {
-      if (result.documentNumber) form.setValue("emiratesIdNo", result.documentNumber);
+      updates.emiratesIdNo = result.documentNumber;
     } else if (result.documentType === "TRADE_LICENSE") {
-      if (result.documentNumber) form.setValue("tradeLicenseNo", result.documentNumber);
-      if (result.expiryDate) form.setValue("tradeLicenseExpiry", result.expiryDate);
-      if (result.companyName) form.setValue("name", result.companyName);
+      updates.tradeLicenseNo = result.documentNumber;
+      updates.tradeLicenseExpiry = result.expiryDate;
     }
-    setPendingScan(result);
-    toast.success("Scanned fields applied -- review before saving");
+
+    const { merged, addedFields, preservedFields } = mergeScanFields(current, updates);
+    (Object.keys(merged) as (keyof ClientFormValues)[]).forEach((key) => {
+      if (merged[key] !== current[key]) form.setValue(key, merged[key] as any);
+    });
+
+    setPendingScans((prev) => [...prev, result]);
+    toast.success(
+      describeScanMerge(
+        SCAN_TYPE_LABEL[result.documentType] || "Document",
+        addedFields.map((f) => FIELD_LABEL[f]),
+        preservedFields.length
+      )
+    );
   }
 
   async function attachScanToVault(clientId: string, scan: ScannerResult) {
@@ -141,12 +179,12 @@ export function AddClientModal({ open, onOpenChange, client }: { open: boolean; 
 
     if (result.success) {
       const savedClientId = isEditMode ? client!.id : (result as any).client?.id;
-      if (pendingScan && savedClientId) {
-        await attachScanToVault(savedClientId, pendingScan);
+      if (pendingScans.length > 0 && savedClientId) {
+        await Promise.all(pendingScans.map((scan) => attachScanToVault(savedClientId, scan)));
       }
       toast.success(isEditMode ? "Client Profile Updated" : "Client Profile Created Successfully");
       form.reset();
-      setPendingScan(null);
+      setPendingScans([]);
       onOpenChange(false);
     } else {
       toast.error(result.error || `Failed to ${isEditMode ? "update" : "create"} client`);

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { formatMoney } from "@/lib/calculations";
 import { deleteDocument, convertQuotationToInvoice } from "@/app/actions/documents";
@@ -51,9 +51,18 @@ type DocumentWithRelations = {
 
 export function DocumentDetail({ document, branding, activity = [] }: { document: DocumentWithRelations; branding: CompanyBranding; activity?: ActivityEntry[] }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [deleting, setDeleting] = useState(false);
   const [converting, setConverting] = useState(false);
   const typeLabel = document.type.charAt(0) + document.type.slice(1).toLowerCase();
+
+  useEffect(() => {
+    if (searchParams.get("autoprint") === "true") {
+      const timer = setTimeout(() => window.print(), 500);
+      window.history.replaceState(null, "", `/documents/${document.id}`);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, document.id]);
 
   const handleDelete = async () => {
     if (!confirm(`Delete ${typeLabel} ${document.reference}? This cannot be undone.`)) return;
@@ -137,20 +146,23 @@ export function DocumentDetail({ document, branding, activity = [] }: { document
       {/* Printable content -- kept tight so a typical 3-5 item document fits one A4 page */}
       <div data-print-area className="bg-white border border-border rounded-xl p-4 sm:p-6 text-sm print:text-[11px] print:leading-tight">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between border-b-2 border-[#98682E] pb-2 mb-3">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-start gap-2.5">
             <img
               src={ZYRA_LOGO_GOLD_PATH}
-              alt="Zyra"
+              alt={branding.name}
               className="h-9 w-auto object-contain shrink-0 print:h-8"
             />
-            <div>
-              <h1 className="text-sm font-extrabold uppercase tracking-tight text-foreground leading-tight">{branding.name}</h1>
-              <p className="text-[11px] text-muted-foreground leading-snug">
-                {branding.address}
-                {[branding.phone && `Tel: ${branding.phone}`, branding.email, branding.trn && `TRN: ${branding.trn}`, branding.website]
+            <div className="text-[10.5px] text-muted-foreground leading-snug">
+              <p>{branding.address}</p>
+              <p>
+                {[branding.phone && `Tel: ${branding.phone}`, branding.email && `Email: ${branding.email}`]
                   .filter(Boolean)
-                  .map((part) => ` | ${part}`)
-                  .join("")}
+                  .join(" | ")}
+              </p>
+              <p>
+                {[branding.website && `Web: ${branding.website}`, branding.trn && `TRN: ${branding.trn}`]
+                  .filter(Boolean)
+                  .join(" | ")}
               </p>
             </div>
           </div>

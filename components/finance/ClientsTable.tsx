@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MessageCircle, Edit, Trash2 } from "lucide-react";
-import { Client, Transaction } from "@prisma/client";
+import type { Client, Transaction } from "@prisma/client";
 import { deleteClient } from "@/app/actions/clients";
 import { AddClientModal } from "./AddClientModal";
 import { toast } from "sonner";

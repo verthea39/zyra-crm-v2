@@ -1,15 +1,21 @@
 import { getWalletStats } from "@/app/actions/wallets";
 import prisma from "@/lib/prisma";
+import { logServerError } from "@/lib/logger";
 import { WalletLedger } from "@/components/wallets/WalletLedger";
 import { Landmark, AlertCircle, ArrowUpRight, ArrowDownRight, Wallet } from "lucide-react";
 
 
 export const dynamic = "force-dynamic";
 async function getClients() {
-  return await prisma.client.findMany({
-    select: { id: true, name: true, type: true },
-    orderBy: { name: 'asc' }
-  });
+  try {
+    return await prisma.client.findMany({
+      select: { id: true, name: true, type: true },
+      orderBy: { name: 'asc' }
+    });
+  } catch (err) {
+    logServerError(err, { action: "portal-wallets:getClients" });
+    return [];
+  }
 }
 
 export default async function PortalWalletsPage() {

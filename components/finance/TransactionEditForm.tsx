@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Transaction } from "@prisma/client";
+import type { Transaction } from "@prisma/client";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2, ArrowLeft } from "lucide-react";

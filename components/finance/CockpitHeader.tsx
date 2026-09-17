@@ -8,7 +8,7 @@ import { AddExpenseModal } from "./AddExpenseModal";
 import { QuotationModal } from "./modals/QuotationModal";
 import { TaxInvoiceModal } from "./modals/TaxInvoiceModal";
 import { PaymentReceiptModal } from "./modals/PaymentReceiptModal";
-import { Client } from "@prisma/client";
+import type { Client } from "@prisma/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,10 +17,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { FileText, Receipt, FileSignature, Lock } from "lucide-react";
 
-export function CockpitHeader({ 
+export function CockpitHeader({
   onExport,
-  clients 
-}: { 
+  clients
+}: {
   onExport: () => void;
   clients: Client[];
 }) {
@@ -59,7 +59,7 @@ export function CockpitHeader({
 
         <button
           onClick={onExport}
-          className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 rounded-md shadow-sm h-11 md:h-9">
+          className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 rounded-md shadow-sm h-11 md:h-9">
           <Download className="w-4 h-4" />
           Export Data
         </button>
