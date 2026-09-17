@@ -181,7 +181,7 @@ export function AddIncomeModal({ open, onOpenChange }: { open: boolean; onOpenCh
             </div>
 
             <div className="p-4 border-2 border-emerald-100  rounded-lg bg-emerald-50/30  space-y-4">
-              <h4 className="font-bold text-emerald-800  text-sm tracking-tight">DUAL-BUCKET FINANCIALS</h4>
+              <h4 className="font-bold text-emerald-800  text-sm tracking-tight">SERVICE CHARGE & INTERNAL COST</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormItem>
                   <FormLabel className="text-xs font-semibold text-emerald-600">Service Charge (AED) *</FormLabel>

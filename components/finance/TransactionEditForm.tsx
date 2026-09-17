@@ -85,8 +85,8 @@ export function TransactionEditForm({ transaction }: { transaction: Transaction 
               <thead className="bg-slate-50 text-slate-500 text-xs">
                 <tr>
                   <th className="px-3 py-2">Description</th>
-                  <th className="px-3 py-2 text-right w-28">Gov Fee</th>
-                  <th className="px-3 py-2 text-right w-28">Service Fee</th>
+                  <th className="px-3 py-2 text-right w-28">Supplier / Govt Cost</th>
+                  <th className="px-3 py-2 text-right w-28">Margin</th>
                   <th className="px-2 py-2 w-10"></th>
                 </tr>
               </thead>
