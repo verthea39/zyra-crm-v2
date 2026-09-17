@@ -14,6 +14,7 @@ import {
   Lock,
   Settings,
   FileText,
+  BarChart3,
   ChevronsUpDown,
   LogOut,
 } from "lucide-react";
@@ -74,6 +75,18 @@ export function AppSidebar({ currentUser }: { currentUser: CurrentUser }) {
         >
           <Lock className={`w-5 h-5 ${pathname.startsWith("/finance/cockpit") ? "text-[#98682E]" : ""}`} />
           Finance & Cockpit
+        </Link>
+
+        <Link
+          href="/finance/reports"
+          className={`flex items-center gap-3 px-4 py-3 transition-all duration-200 ${
+            pathname.startsWith("/finance/reports")
+              ? "bg-[#FDF8F0] text-[#98682E] border-r-2 border-[#98682E] font-semibold"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium rounded-lg"
+          }`}
+        >
+          <BarChart3 className={`w-5 h-5 ${pathname.startsWith("/finance/reports") ? "text-[#98682E]" : ""}`} />
+          Reports & BI
         </Link>
 
         <div className="pt-6 pb-2">

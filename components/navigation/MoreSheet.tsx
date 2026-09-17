@@ -8,6 +8,7 @@ import {
   MessageSquare,
   FileText,
   Settings,
+  BarChart3,
   ChevronRight,
 } from "lucide-react";
 
@@ -16,6 +17,7 @@ const MORE_ITEMS = [
   { name: "B2B Registry", href: "/b2b-registry", icon: Building2 },
   { name: "WhatsApp & Tracking", href: "/client-hub", icon: MessageSquare },
   { name: "Documents", href: "/documents", icon: FileText },
+  { name: "Reports & BI", href: "/finance/reports", icon: BarChart3 },
 ];
 
 export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => void }) {

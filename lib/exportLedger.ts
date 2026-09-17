@@ -208,6 +208,86 @@ function triggerDownload(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
+/** Opens the browser print dialog with a generic A4-landscape report table (Save as PDF from there). No financial summary footer -- unlike printLedgerStatement, callers here have arbitrary column layouts. */
+export function printGenericReport(headers: string[], rows: (string | number)[][], currencyCols: number[], title: string): void {
+  const headerCells = headers.map((h) => `<th style="padding:8px;text-align:left;">${h}</th>`).join("");
+  const tableRows = rows
+    .map((row) => {
+      const cells = row
+        .map((val, i) => {
+          const isCurrency = currencyCols.includes(i);
+          const display = isCurrency ? Number(val).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : val;
+          return `<td style="padding:6px 8px;text-align:${isCurrency ? "right" : "left"};white-space:nowrap;">${display}</td>`;
+        })
+        .join("");
+      return `<tr>${cells}</tr>`;
+    })
+    .join("");
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Zyra ${title}</title>
+      <style>
+        @page { size: A4 landscape; margin: 12mm; }
+        body { font-family: 'Inter', Arial, sans-serif; color: #334155; margin: 0; padding: 16px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #98682E; padding-bottom: 10px; margin-bottom: 12px; }
+        .header h1 { font-size: 14px; margin: 0; color: #0F172A; text-transform: uppercase; letter-spacing: 0.3px; }
+        .header p { font-size: 10px; color: #64748b; margin: 2px 0 0 0; }
+        .title { font-size: 16px; font-weight: 800; color: #98682E; text-transform: uppercase; }
+        table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        thead { background: #1e293b; color: white; }
+        tbody tr:nth-child(even) { background: #f8fafc; }
+        tbody tr { border-bottom: 1px solid #e2e8f0; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div>
+          <h1>Zyra Documents Clearance Services</h1>
+          <p>C2-01, M2 Floor, Burj Nahar Complex, Al Muteena, Deira, Dubai, UAE</p>
+        </div>
+        <div class="title">${title}</div>
+      </div>
+      <table>
+        <thead><tr>${headerCells}</tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </body>
+    </html>
+  `;
+
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  document.body.appendChild(iframe);
+
+  const cleanup = () => {
+    if (iframe.parentNode) document.body.removeChild(iframe);
+  };
+
+  const doc = iframe.contentWindow?.document;
+  if (!doc) {
+    cleanup();
+    return;
+  }
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  iframe.onload = () => {
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+    setTimeout(cleanup, 1000);
+  };
+}
+
 const STATUS_BADGE: Record<string, string> = {
   PAID: "background:#dcfce7;color:#166534;",
   PARTIALLY_PAID: "background:#fef3c7;color:#92400e;",
