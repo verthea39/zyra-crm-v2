@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { updateCompanySettings } from "@/app/actions/settings";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export function CompanyTab({ initialSettings }: { initialSettings: any }) {
   const [settings, setSettings] = useState(initialSettings || {});
@@ -55,6 +56,33 @@ export function CompanyTab({ initialSettings }: { initialSettings: any }) {
             <Label>Office Address</Label>
             <Input value={settings.address || ""} onChange={e => setSettings({...settings, address: e.target.value})} placeholder="Office 201, Dubai, UAE" />
           </div>
+          <div className="space-y-2 col-span-1 md:col-span-2">
+            <Label>Company Logo URL</Label>
+            <Input value={settings.logoUrl || ""} onChange={e => setSettings({...settings, logoUrl: e.target.value})} placeholder="https://.../logo.png" />
+            <p className="text-[11px] text-slate-400">Shown on every Quotation, Tax Invoice, and Payment Receipt header.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-slate-50 border border-slate-100 rounded-xl">
+          <div className="space-y-2 col-span-1 md:col-span-2">
+            <h3 className="font-semibold text-slate-700 text-sm border-b pb-2 mb-2">Contact Details</h3>
+          </div>
+          <div className="space-y-2">
+            <Label>Phone</Label>
+            <Input value={settings.phone || ""} onChange={e => setSettings({...settings, phone: e.target.value})} placeholder="+971 4 xxx xxxx" />
+          </div>
+          <div className="space-y-2">
+            <Label>WhatsApp</Label>
+            <Input value={settings.whatsapp || ""} onChange={e => setSettings({...settings, whatsapp: e.target.value})} placeholder="+971 5x xxx xxxx" />
+          </div>
+          <div className="space-y-2">
+            <Label>Email</Label>
+            <Input value={settings.email || ""} onChange={e => setSettings({...settings, email: e.target.value})} placeholder="info@company.com" />
+          </div>
+          <div className="space-y-2">
+            <Label>Website</Label>
+            <Input value={settings.website || ""} onChange={e => setSettings({...settings, website: e.target.value})} placeholder="www.company.com" />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-slate-50 border border-slate-100 rounded-xl">
@@ -79,8 +107,27 @@ export function CompanyTab({ initialSettings }: { initialSettings: any }) {
           </div>
         </div>
 
+        <div className="grid grid-cols-1 gap-6 p-5 bg-slate-50 border border-slate-100 rounded-xl">
+          <div className="space-y-2">
+            <h3 className="font-semibold text-slate-700 text-sm border-b pb-2 mb-2">Document Terms & Footer</h3>
+            <p className="text-xs text-slate-400 -mt-1">Default terms shown on each document type's printed/PDF footer -- overridable per document at creation, falls back to these when left blank.</p>
+          </div>
+          <div className="space-y-2">
+            <Label>Quotation Terms & Conditions</Label>
+            <Textarea rows={3} value={settings.quotationTerms || ""} onChange={e => setSettings({...settings, quotationTerms: e.target.value})} placeholder="1. Quotation validity...&#10;2. Government fees are estimated..." />
+          </div>
+          <div className="space-y-2">
+            <Label>Tax Invoice Terms & Conditions</Label>
+            <Textarea rows={3} value={settings.paymentTerms || ""} onChange={e => setSettings({...settings, paymentTerms: e.target.value})} placeholder="1. Payment due within 7 days...&#10;2. Government fees are non-refundable..." />
+          </div>
+          <div className="space-y-2">
+            <Label>Payment Receipt Footer Disclaimer</Label>
+            <Textarea rows={2} value={settings.receiptFooterNote || ""} onChange={e => setSettings({...settings, receiptFooterNote: e.target.value})} placeholder="This is a computer-generated receipt and does not require a physical signature." />
+          </div>
+        </div>
+
         <div className="pt-4 border-t border-slate-200">
-          <button 
+          <button
             type="submit" 
             disabled={loading}
             className="bg-[#98682E] hover:bg-[#7D5321] text-white px-6 py-2.5 rounded-lg text-sm font-semibold shadow-sm transition-colors"

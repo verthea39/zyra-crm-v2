@@ -11,8 +11,10 @@ import { COMPANY_PROFILE } from "@/lib/constants/company";
  */
 export type CompanyBranding = {
   name: string;
+  nameAr?: string | null;
   address: string;
   phone?: string | null;
+  whatsapp?: string | null;
   email?: string | null;
   website: string;
   portalUrl: string;
@@ -23,13 +25,20 @@ export type CompanyBranding = {
   accountName?: string | null;
   iban?: string | null;
   swift?: string | null;
-  paymentTerms?: string | null;
+  // Per-document-type terms/footer defaults, editable in Company Settings --
+  // fall back to the hardcoded DEFAULT_*_TERMS constants in printUtils.ts
+  // when unset, and are overridden by a document's own `terms` field when set.
+  paymentTerms?: string | null; // Tax Invoice terms & conditions
+  quotationTerms?: string | null; // Quotation terms & conditions
+  receiptFooterNote?: string | null; // Payment Receipt footer disclaimer
 };
 
 export const DEFAULT_BRANDING: CompanyBranding = {
   name: COMPANY_PROFILE.displayName,
+  nameAr: null,
   address: COMPANY_PROFILE.address,
   phone: COMPANY_PROFILE.phones.join(" / "),
+  whatsapp: null,
   email: COMPANY_PROFILE.email,
   website: COMPANY_PROFILE.website,
   portalUrl: "crm.zyrabusinesshub.com",
@@ -41,6 +50,8 @@ export const DEFAULT_BRANDING: CompanyBranding = {
   iban: null,
   swift: null,
   paymentTerms: null,
+  quotationTerms: null,
+  receiptFooterNote: null,
 };
 
 /** Client-side-safe fallback for callers that can't hit Prisma directly (e.g. lib/printUtils.ts). */

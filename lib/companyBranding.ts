@@ -12,8 +12,10 @@ export async function getCompanyBranding(): Promise<CompanyBranding> {
 
     return {
       name: settings.companyNameEn || DEFAULT_BRANDING.name,
+      nameAr: settings.companyNameAr || DEFAULT_BRANDING.nameAr,
       address: settings.address || DEFAULT_BRANDING.address,
       phone: settings.phone || DEFAULT_BRANDING.phone,
+      whatsapp: settings.whatsapp || DEFAULT_BRANDING.whatsapp,
       email: settings.email || DEFAULT_BRANDING.email,
       website: settings.website || DEFAULT_BRANDING.website,
       portalUrl: DEFAULT_BRANDING.portalUrl,
@@ -25,6 +27,8 @@ export async function getCompanyBranding(): Promise<CompanyBranding> {
       iban: settings.iban || DEFAULT_BRANDING.iban,
       swift: settings.swift || DEFAULT_BRANDING.swift,
       paymentTerms: settings.paymentTerms || DEFAULT_BRANDING.paymentTerms,
+      quotationTerms: settings.quotationTerms || DEFAULT_BRANDING.quotationTerms,
+      receiptFooterNote: settings.receiptFooterNote || DEFAULT_BRANDING.receiptFooterNote,
     };
   } catch (err) {
     console.error("Failed to load company branding, using defaults:", err);

@@ -20,9 +20,11 @@ export async function getServiceItems() {
   }
 }
 
-export async function createServiceItem(data: { name: string, category: string, govFee: number, agencyFee: number, isVatExempt: boolean, isActive?: boolean }) {
+export async function createServiceItem(data: { name: string, category: string, supplierCost: number, serviceFee: number, isVatExempt: boolean, isActive?: boolean }) {
   try {
-    const service = await prisma.serviceItem.create({ data });
+    const service = await prisma.serviceItem.create({
+      data: { ...data, totalAmount: data.supplierCost + data.serviceFee },
+    });
     revalidatePath("/settings");
     return { success: true, service };
   } catch (error: any) {
@@ -31,11 +33,22 @@ export async function createServiceItem(data: { name: string, category: string, 
   }
 }
 
-export async function updateServiceItem(id: string, data: Partial<{ name: string, category: string, govFee: number, agencyFee: number, isVatExempt: boolean, isActive: boolean }>) {
+export async function updateServiceItem(id: string, data: Partial<{ name: string, category: string, supplierCost: number, serviceFee: number, isVatExempt: boolean, isActive: boolean }>) {
   try {
+    // totalAmount is a derived column (supplierCost + serviceFee) -- always
+    // recompute it here so it can never drift out of sync with an edit that
+    // only touches one of the two components.
+    let totalAmount: number | undefined;
+    if (data.supplierCost !== undefined || data.serviceFee !== undefined) {
+      const existing = await prisma.serviceItem.findUniqueOrThrow({ where: { id }, select: { supplierCost: true, serviceFee: true } });
+      const supplierCost = data.supplierCost ?? existing.supplierCost;
+      const serviceFee = data.serviceFee ?? existing.serviceFee;
+      totalAmount = supplierCost + serviceFee;
+    }
+
     const service = await prisma.serviceItem.update({
       where: { id },
-      data
+      data: { ...data, ...(totalAmount !== undefined ? { totalAmount } : {}) },
     });
     revalidatePath("/settings");
     return { success: true, service };
@@ -83,12 +96,25 @@ export async function getCompanySettings() {
       iban: "",
       swift: "",
       invoiceNotes: "",
+      logoUrl: "",
+      phone: "",
+      whatsapp: "",
+      email: "",
+      website: "",
+      paymentTerms: "",
+      quotationTerms: "",
+      receiptFooterNote: "",
       financePin: "1234"
     };
   }
 }
 
-export async function updateCompanySettings(data: Partial<{ companyNameEn: string, companyNameAr: string, trn: string, tradeLicenseNo: string, address: string, bankName: string, accountName: string, iban: string, swift: string, invoiceNotes: string }>) {
+export async function updateCompanySettings(data: Partial<{
+  companyNameEn: string, companyNameAr: string, trn: string, tradeLicenseNo: string, address: string,
+  bankName: string, accountName: string, iban: string, swift: string, invoiceNotes: string,
+  logoUrl: string, phone: string, whatsapp: string, email: string, website: string,
+  paymentTerms: string, quotationTerms: string, receiptFooterNote: string,
+}>) {
   try {
     const settings = await prisma.companySettings.upsert({
       where: { id: "DEFAULT" },

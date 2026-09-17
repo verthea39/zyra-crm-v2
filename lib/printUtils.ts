@@ -73,10 +73,53 @@ type PrintData = QuotationData | TaxInvoiceData | PaymentReceiptData;
 const ZYRA_BRONZE = '#98682E';
 const ZYRA_DARK = '#0F172A';
 
-function buildDocumentContent(
+/**
+ * Verifies a network logo URL actually loads before committing to render it
+ * -- a broken/unreachable Settings logoUrl (bad upload, dead link, CORS
+ * block) would otherwise leave a blank image gap in the printed header with
+ * no company name to fall back on. data: URIs (the built-in Zyra wordmark,
+ * or a base64 upload) can't fail a network fetch, so those skip the check.
+ */
+function loadImageOk(url: string, timeoutMs = 4000): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || typeof window.Image === 'undefined') {
+      resolve(false);
+      return;
+    }
+    const img = new window.Image();
+    let settled = false;
+    const finish = (ok: boolean) => {
+      if (settled) return;
+      settled = true;
+      resolve(ok);
+    };
+    img.onload = () => finish(true);
+    img.onerror = () => finish(false);
+    setTimeout(() => finish(false), timeoutMs);
+    img.src = url;
+  });
+}
+
+async function resolveLogo(branding: CompanyBranding): Promise<{ markup: string; hasRealLogo: boolean }> {
+  const initials = branding.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 3).toUpperCase();
+  const fallback = companyLogoSvg(initials, 44);
+
+  if (!branding.logoUrl) return { markup: fallback, hasRealLogo: false };
+
+  const isDataUri = branding.logoUrl.startsWith('data:');
+  const loadsOk = isDataUri || (await loadImageOk(branding.logoUrl));
+  if (!loadsOk) return { markup: fallback, hasRealLogo: false };
+
+  return {
+    markup: `<img src="${branding.logoUrl}" alt="${branding.name}" style="height: 44px; width: auto; max-width: 210px; object-fit: contain; display: block; -webkit-print-color-adjust: exact; print-color-adjust: exact;" />`,
+    hasRealLogo: true,
+  };
+}
+
+async function buildDocumentContent(
   data: PrintData,
   branding: CompanyBranding = getDefaultCompanyBranding()
-): { documentTitle: string; header: string; content: string; whatsappLink: string } {
+): Promise<{ documentTitle: string; header: string; content: string; whatsappLink: string }> {
   const formatCurrency = (amount: number) =>
     `AED ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -88,15 +131,15 @@ function buildDocumentContent(
   // Real uploaded/default logos already contain the company name as a
   // wordmark, so the header never renders a separate text heading next to
   // it -- that would just duplicate the brand name. The generated-initials
-  // SVG fallback has no text baked in, so it's paired with a small heading.
-  const hasRealLogo = !!branding.logoUrl;
-  const logoMarkup = hasRealLogo
-    ? `<img src="${branding.logoUrl}" alt="${branding.name}" style="height: 44px; width: auto; max-width: 210px; object-fit: contain; display: block;" />`
-    : companyLogoSvg(branding.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 3).toUpperCase(), 44);
+  // SVG fallback has no text baked in, so it's paired with a bold heading
+  // instead of leaving a broken/empty image gap (also used whenever the
+  // configured logoUrl fails to actually load).
+  const { markup: logoMarkup, hasRealLogo } = await resolveLogo(branding);
 
   // Compact circular icon badges for contact metadata, in place of plain
   // text labels -- mirrors the app's own rounded icon-badge convention.
   const ICON_PHONE = '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92Z"/>';
+  const ICON_WHATSAPP = '<path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21" /><path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1a5 5 0 0 0 5 5h1a.5.5 0 0 0 0-1h-1a.5.5 0 0 0 0 1" />';
   const ICON_PIN = '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>';
   const ICON_GLOBE = '<circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z"/><path d="M2 12h20"/>';
   const ICON_MAIL = '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>';
@@ -116,6 +159,7 @@ function buildDocumentContent(
 
   const contactItems = [
     branding.phone ? contactRow(ICON_PHONE, branding.phone) : null,
+    branding.whatsapp ? contactRow(ICON_WHATSAPP, branding.whatsapp) : null,
     contactRow(ICON_PIN, branding.address),
     branding.website ? contactRow(ICON_GLOBE, branding.website) : null,
     branding.email ? contactRow(ICON_MAIL, branding.email) : null,
@@ -126,11 +170,14 @@ function buildDocumentContent(
     : '';
 
   const header = `
-    <div style="border-bottom: 2px solid ${ZYRA_BRONZE}; padding-bottom: 10px; margin-bottom: 14px; box-sizing: border-box;">
+    <div style="border-bottom: 2px solid ${ZYRA_BRONZE}; padding-bottom: 10px; margin-bottom: 14px; box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
       <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
-        <div style="flex-shrink: 0; display: flex; align-items: center;">
+        <div style="flex-shrink: 0; display: flex; align-items: center; gap: 8px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
           ${logoMarkup}
-          ${!hasRealLogo ? `<h1 style="color: ${ZYRA_DARK}; margin: 0 0 0 8px; font-size: 15px; font-weight: 800; line-height: 1.15; letter-spacing: -0.3px; text-transform: uppercase;">${branding.name}</h1>` : ''}
+          <div>
+            ${!hasRealLogo ? `<h1 style="color: ${ZYRA_DARK}; margin: 0; font-size: 15px; font-weight: 800; line-height: 1.15; letter-spacing: -0.3px; text-transform: uppercase;">${branding.name}</h1>` : ''}
+            ${branding.nameAr ? `<p dir="rtl" style="color: #64748b; margin: 2px 0 0 0; font-size: 11px; font-weight: 600;">${branding.nameAr}</p>` : ''}
+          </div>
         </div>
         <div style="text-align: right; font-size: 9.5px; color: #64748b; line-height: 1.6; display: flex; flex-direction: column; gap: 2px;">
           ${contactItems}
@@ -263,7 +310,11 @@ function buildDocumentContent(
       <div style="page-break-inside: avoid; border: 1px solid #e2e8f0; border-radius: 5px; padding: 6px 10px; margin-bottom: 8px; font-size: 10px; color: #475569;">
         <strong style="color: ${ZYRA_DARK}; text-transform: uppercase; letter-spacing: 0.3px;">Terms & Conditions:</strong>
         <ol style="margin: 2px 0 0 0; padding-left: 16px; line-height: 1.5;">
-          ${(((data as QuotationData | TaxInvoiceData).terms) || (isQuotation ? DEFAULT_QUOTATION_TERMS : DEFAULT_TAX_INVOICE_TERMS))
+          ${(
+            (data as QuotationData | TaxInvoiceData).terms ||
+            (isQuotation ? branding.quotationTerms : branding.paymentTerms) ||
+            (isQuotation ? DEFAULT_QUOTATION_TERMS : DEFAULT_TAX_INVOICE_TERMS)
+          )
             .split('\n')
             .map((line) => line.replace(/^\s*\d+[.)]\s*/, '').trim())
             .filter(Boolean)
@@ -365,6 +416,11 @@ function buildDocumentContent(
           <div style="border-top: 1px solid #94a3b8; padding-top: 3px; margin-top: 4px; font-size: 10px; color: #64748b;">Authorized Signatory</div>
         </div>
       </div>
+
+      <!-- Footer disclaimer -- company-wide default, editable in Company Settings -->
+      <p style="max-width: 480px; margin: 16px auto 0 auto; text-align: center; font-size: 9px; color: #94a3b8;">
+        ${branding.receiptFooterNote || 'This is a computer-generated receipt and does not require a physical signature.'}
+      </p>
     `;
   }
 
@@ -396,9 +452,9 @@ function buildDocumentContent(
   return { documentTitle, header, content, whatsappLink };
 }
 
-/** Pure/sync: assembles the full standalone HTML page once branding+content are known. */
-function assembleHTML(data: PrintData, branding: CompanyBranding): string {
-  const { documentTitle, header, content, whatsappLink } = buildDocumentContent(data, branding);
+/** Assembles the full standalone HTML page once branding+content are known. */
+async function assembleHTML(data: PrintData, branding: CompanyBranding): Promise<string> {
+  const { documentTitle, header, content, whatsappLink } = await buildDocumentContent(data, branding);
 
   return `
     <!DOCTYPE html>
@@ -527,35 +583,36 @@ export function printViaIframe(data: PrintData, branding?: CompanyBranding): voi
     return;
   }
 
-  const html = assembleHTML(data, branding);
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = '0';
-  document.body.appendChild(iframe);
+  assembleHTML(data, branding).then((html) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
 
-  const cleanup = () => {
-    if (iframe.parentNode) document.body.removeChild(iframe);
-  };
+    const cleanup = () => {
+      if (iframe.parentNode) document.body.removeChild(iframe);
+    };
 
-  const doc = iframe.contentWindow?.document;
-  if (!doc) {
-    cleanup();
-    throw new Error('Unable to open print preview.');
-  }
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      cleanup();
+      throw new Error('Unable to open print preview.');
+    }
 
-  doc.open();
-  doc.write(html);
-  doc.close();
+    doc.open();
+    doc.write(html);
+    doc.close();
 
-  iframe.onload = () => {
-    iframe.contentWindow?.focus();
-    iframe.contentWindow?.print();
-    setTimeout(cleanup, 1000);
-  };
+    iframe.onload = () => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(cleanup, 1000);
+    };
+  });
 }
 
 /**
@@ -571,7 +628,7 @@ export async function downloadDocumentPDF(data: PrintData, branding?: CompanyBra
     branding ? Promise.resolve(branding) : getBranding().catch(() => getDefaultCompanyBranding()),
   ]);
 
-  const { header, content } = buildDocumentContent(data, resolvedBranding);
+  const { header, content } = await buildDocumentContent(data, resolvedBranding);
 
   const container = document.createElement('div');
   container.style.position = 'fixed';

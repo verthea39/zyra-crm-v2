@@ -415,9 +415,12 @@ model CompanySettings {
   invoiceNotes    String?
   financePin      String?  // Store hashed or plain (depending on security reqs) - usually we'd hash, but for MVP plain/simple hash.
   phone           String?
+  whatsapp        String?
   email           String?
   website         String?
-  paymentTerms    String?
+  paymentTerms    String?  // Tax Invoice terms & conditions default
+  quotationTerms  String?  // Quotation terms & conditions default
+  receiptFooterNote String? // Payment Receipt footer disclaimer
   logoUrl         String?
   updatedAt       DateTime @updatedAt
   @@schema("v2")
