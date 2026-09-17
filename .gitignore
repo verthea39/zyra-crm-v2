@@ -33,6 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# any plaintext file -- catches accidental credential dumps like env.txt
+*.txt
+
 # vercel
 .vercel
 
