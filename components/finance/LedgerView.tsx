@@ -82,7 +82,15 @@ export function LedgerView({
 
     // Sort
     if (sortOrder === "Date" || sortOrder === "Latest / Newest") {
-      result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      // `date` alone ties for bulk/seeded rows sharing the same timestamp
+      // (e.g. INV-2026-001-A/B/C) -- fall back to createdAt desc so the most
+      // recently created record wins the tie instead of Array.sort's
+      // unspecified tie order.
+      result.sort((a, b) => {
+        const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+        if (dateDiff !== 0) return dateDiff;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
     } else if (sortOrder === "Amount") {
       result.sort((a, b) => b.amountTotal - a.amountTotal);
     } else if (sortOrder === "ID") {

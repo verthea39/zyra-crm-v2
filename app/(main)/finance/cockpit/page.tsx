@@ -9,9 +9,12 @@ import { getWalletStats } from "@/app/actions/wallets";
 export const dynamic = "force-dynamic";
 
 export default async function FinanceCockpitPage() {
-  // Fetch all transactions, ordered by date descending
+  // Fetch all transactions, newest first. `date` alone ties for seeded/bulk
+  // rows sharing the same timestamp (e.g. INV-2026-001-A/B/C), leaving
+  // Postgres to break ties in an unspecified order -- `createdAt` as a
+  // secondary key guarantees the most recently created record wins ties.
   const transactions = await prisma.transaction.findMany({
-    orderBy: { date: 'desc' },
+    orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
   });
 
   // Calculate metrics

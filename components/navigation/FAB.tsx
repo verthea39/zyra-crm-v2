@@ -21,7 +21,7 @@ export function FAB() {
 
   return (
     <>
-      <div ref={ref} className="md:hidden fixed right-4 bottom-[calc(4rem+env(safe-area-inset-bottom,0px)+1rem)] z-40">
+      <div ref={ref} className="fixed right-4 bottom-[calc(4rem+env(safe-area-inset-bottom,0px)+1rem)] md:bottom-6 z-40">
         {open && (
           <div className="mb-3 flex flex-col items-end gap-2">
             <Link
