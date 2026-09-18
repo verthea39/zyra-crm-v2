@@ -28,7 +28,7 @@ export function LedgerView({
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("Type: All");
   const [statusFilter, setStatusFilter] = useState("Status: All");
-  const [sortOrder, setSortOrder] = useState("Latest / Newest");
+  const [sortOrder, setSortOrder] = useState("newest");
 
   // Allow the dashboard metric cards to deep-link into a pre-filtered ledger view
   useEffect(() => {
@@ -80,21 +80,25 @@ export function LedgerView({
       result = result.filter(tx => tx.status === "OVERDUE");
     }
 
-    // Sort
-    if (sortOrder === "Date" || sortOrder === "Latest / Newest") {
-      // `date` alone ties for bulk/seeded rows sharing the same timestamp
-      // (e.g. INV-2026-001-A/B/C) -- fall back to createdAt desc so the most
-      // recently created record wins the tie instead of Array.sort's
-      // unspecified tie order.
+    // Sort. `tx.date`/`tx.createdAt` are real Prisma DateTime values here
+    // (ISO strings over the wire) -- the DD-MM-YYYY string only exists in
+    // LedgerTable's *display* formatting and is never fed back into this
+    // comparator, so no custom date-string parsing is needed.
+    if (sortOrder === "newest" || sortOrder === "oldest") {
+      const direction = sortOrder === "newest" ? -1 : 1;
       result.sort((a, b) => {
-        const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
-        if (dateDiff !== 0) return dateDiff;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
+        // Ties (e.g. bulk/seeded rows sharing one timestamp, INV-2026-001-A/B/C)
+        // fall back to createdAt, then reference, so order is fully deterministic.
+        if (dateDiff !== 0) return direction * dateDiff;
+        const createdDiff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        if (createdDiff !== 0) return direction * createdDiff;
+        return direction * a.reference.localeCompare(b.reference);
       });
-    } else if (sortOrder === "Amount") {
+    } else if (sortOrder === "amount-desc") {
       result.sort((a, b) => b.amountTotal - a.amountTotal);
-    } else if (sortOrder === "ID") {
-      result.sort((a, b) => b.reference.localeCompare(a.reference));
+    } else if (sortOrder === "amount-asc") {
+      result.sort((a, b) => a.amountTotal - b.amountTotal);
     }
 
     return result;

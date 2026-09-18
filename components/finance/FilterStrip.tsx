@@ -61,15 +61,15 @@ export function FilterStrip({
 
         <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-lg border border-border/50">
           <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground ml-2" />
-          <select 
+          <select
             className="bg-transparent border-none text-sm font-medium focus:ring-0 py-1 pr-8 cursor-pointer"
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value)}
           >
-            <option>Latest / Newest</option>
-            <option>Date</option>
-            <option>ID</option>
-            <option>Amount</option>
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="amount-desc">Highest Amount</option>
+            <option value="amount-asc">Lowest Amount</option>
           </select>
         </div>
       </div>
