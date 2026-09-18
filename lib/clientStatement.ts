@@ -146,7 +146,7 @@ export async function printClientStatement(
 
   // Reuses printUtils' logo preload check -- a broken/unreachable Settings
   // logoUrl falls back cleanly instead of leaving a blank image gap.
-  const { markup: logoMarkup } = await resolveLogo(branding);
+  const { markup: logoMarkup, hasRealLogo } = await resolveLogo(branding);
 
   const html = `
     <!DOCTYPE html>
@@ -180,9 +180,12 @@ export async function printClientStatement(
         <div class="brand-block">
           ${logoMarkup}
           <div>
-            <h1>${branding.name}</h1>
+            ${!hasRealLogo ? `<h1>${branding.name}</h1>` : ""}
             <p>${branding.address}</p>
             ${branding.phone ? `<p>Tel: ${branding.phone}</p>` : ""}
+            ${branding.whatsapp ? `<p>WhatsApp: ${branding.whatsapp}</p>` : ""}
+            ${branding.email ? `<p>${branding.email}</p>` : ""}
+            ${branding.website ? `<p>${branding.website}</p>` : ""}
             ${branding.trn ? `<p>Company TRN: ${branding.trn}</p>` : ""}
           </div>
         </div>
