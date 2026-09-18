@@ -27,6 +27,19 @@ type PaymentDraft = {
 // always the Service Charge shown to the client -- same invariant used by
 // AddIncomeModal/QuotationModal/TaxInvoiceModal.
 function initialItems(transaction: Transaction): LineItem[] {
+  if (transaction.type === "EXPENSE") {
+    // Expenses have no margin concept -- a single flat Amount/Cost, kept in
+    // `proFee` internally so the shared total math (govCost + proFee) still
+    // works. Trust a stored line item only if it actually adds up to
+    // something; a null, missing, or zeroed-out entry (e.g. from a previous
+    // save made before this fallback existed) falls back to the real billed
+    // amount instead of showing AED 0.00.
+    const stored = transaction.lineItems as LineItem[] | null;
+    const storedTotal = stored?.reduce((sum, i) => sum + i.govCost + i.proFee, 0) || 0;
+    if (stored && storedTotal > 0) return stored;
+    return [{ desc: transaction.category, govCost: 0, proFee: transaction.amountTotal / 100 }];
+  }
+
   if (transaction.lineItems) return transaction.lineItems as any;
 
   const govCost = (transaction.govFeePart || 0) / 100;
@@ -53,6 +66,7 @@ function toDraft(p: TransactionPayment): PaymentDraft {
 
 export function TransactionEditForm({ transaction }: { transaction: TransactionWithPayments }) {
   const router = useRouter();
+  const isExpense = transaction.type === "EXPENSE";
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [category, setCategory] = useState(transaction.category);
@@ -160,8 +174,14 @@ export function TransactionEditForm({ transaction }: { transaction: TransactionW
               <thead className="bg-slate-50 text-slate-500 text-xs">
                 <tr>
                   <th className="px-3 py-2">Description</th>
-                  <th className="px-3 py-2 text-right w-32">Service Charge (AED) *</th>
-                  <th className="px-3 py-2 text-right w-32">Supplier / Govt Cost (AED)</th>
+                  {isExpense ? (
+                    <th className="px-3 py-2 text-right w-32">Amount / Cost (AED) *</th>
+                  ) : (
+                    <>
+                      <th className="px-3 py-2 text-right w-32">Service Charge (AED) *</th>
+                      <th className="px-3 py-2 text-right w-32">Supplier / Govt Cost (AED)</th>
+                    </>
+                  )}
                   <th className="px-2 py-2 w-10"></th>
                 </tr>
               </thead>
@@ -182,36 +202,56 @@ export function TransactionEditForm({ transaction }: { transaction: TransactionW
                             placeholder="Service description"
                           />
                         </td>
-                        <td className="px-2 py-2">
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={serviceCharge}
-                            onChange={(e) => {
-                              const newCharge = parseFloat(e.target.value || "0");
-                              const next = [...items];
-                              // Keep supplier cost fixed; the margin absorbs the change.
-                              next[idx] = { ...next[idx], proFee: newCharge - next[idx].govCost };
-                              setItems(next);
-                            }}
-                          />
-                        </td>
-                        <td className="px-2 py-2">
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={item.govCost}
-                            onChange={(e) => {
-                              const newCost = parseFloat(e.target.value || "0");
-                              const next = [...items];
-                              // Keep the Service Charge fixed; the margin absorbs the change.
-                              next[idx] = { ...next[idx], govCost: newCost, proFee: serviceCharge - newCost };
-                              setItems(next);
-                            }}
-                          />
-                        </td>
+                        {isExpense ? (
+                          <td className="px-2 py-2">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={serviceCharge}
+                              onChange={(e) => {
+                                const next = [...items];
+                                // No margin concept on expenses -- the whole
+                                // amount lives in proFee, govCost stays 0.
+                                next[idx] = { ...next[idx], govCost: 0, proFee: parseFloat(e.target.value || "0") };
+                                setItems(next);
+                              }}
+                            />
+                          </td>
+                        ) : (
+                          <>
+                            <td className="px-2 py-2">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={serviceCharge}
+                                onChange={(e) => {
+                                  const newCharge = parseFloat(e.target.value || "0");
+                                  const next = [...items];
+                                  // Keep supplier cost fixed; the margin absorbs the change.
+                                  next[idx] = { ...next[idx], proFee: newCharge - next[idx].govCost };
+                                  setItems(next);
+                                }}
+                              />
+                            </td>
+                            <td className="px-2 py-2">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={item.govCost}
+                                onChange={(e) => {
+                                  const newCost = parseFloat(e.target.value || "0");
+                                  const next = [...items];
+                                  // Keep the Service Charge fixed; the margin absorbs the change.
+                                  next[idx] = { ...next[idx], govCost: newCost, proFee: serviceCharge - newCost };
+                                  setItems(next);
+                                }}
+                              />
+                            </td>
+                          </>
+                        )}
                         <td className="px-2 py-2 text-center">
                           {items.length > 1 && (
                             <button type="button" onClick={() => setItems(items.filter((_, i) => i !== idx))} className="text-slate-400 hover:text-rose-500">
@@ -220,11 +260,13 @@ export function TransactionEditForm({ transaction }: { transaction: TransactionW
                           )}
                         </td>
                       </tr>
-                      <tr className="bg-slate-50/50">
-                        <td colSpan={4} className="px-3 pb-2 pt-0">
-                          <ProfitBadge customerRate={serviceCharge} supplierCost={item.govCost} />
-                        </td>
-                      </tr>
+                      {!isExpense && (
+                        <tr className="bg-slate-50/50">
+                          <td colSpan={4} className="px-3 pb-2 pt-0">
+                            <ProfitBadge customerRate={serviceCharge} supplierCost={item.govCost} />
+                          </td>
+                        </tr>
+                      )}
                     </Fragment>
                   );
                 })}

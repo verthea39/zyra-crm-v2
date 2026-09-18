@@ -368,7 +368,7 @@ export async function updateTransaction(id: string, data: UpdateTransactionInput
 
       let amountPaid = existing.amountPaid;
 
-      if (data.payments) {
+      if (data.payments && data.payments.length > 0) {
         for (const p of data.payments) {
           if (p.deleted) {
             await trx.transactionPayment.delete({ where: { id: p.id } });
@@ -390,6 +390,12 @@ export async function updateTransaction(id: string, data: UpdateTransactionInput
           _sum: { amountMinor: true },
         });
         amountPaid = remaining._sum.amountMinor || 0;
+      } else if (existing.type === "EXPENSE") {
+        // Expenses are recorded fully paid at entry time and have no
+        // TransactionPayment rows to aggregate -- keep them fully paid even
+        // when the amount is corrected here, instead of falling through to
+        // an empty aggregate and wiping the paid amount to zero.
+        amountPaid = amountTotal;
       }
 
       const status = computeTransactionStatus(amountTotal, amountPaid, newDueDate ?? existing.dueDate);
