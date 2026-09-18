@@ -4,13 +4,24 @@ import { useState, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import type { Transaction } from "@prisma/client";
+import type { Transaction, TransactionPayment } from "@prisma/client";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, ArrowLeft } from "lucide-react";
-import { updateTransaction } from "@/app/actions/finance";
+import { Plus, Trash2, ArrowLeft, Loader2 } from "lucide-react";
+import { updateTransaction, deleteTransactionPayment } from "@/app/actions/finance";
 import type { LineItem } from "@/lib/printUtils";
 import { ProfitBadge } from "@/components/finance/modals/ProfitBadge";
+
+const PAYMENT_METHODS = ["Cash", "Bank Transfer", "Card", "Cheque"];
+
+type TransactionWithPayments = Transaction & { payments: TransactionPayment[] };
+
+type PaymentDraft = {
+  id: string;
+  amount: string; // AED, display units -- kept as text while editing
+  method: string;
+  paidAt: string; // yyyy-mm-dd
+};
 
 // govCost = supplier/govt cost, proFee = margin, so govCost + proFee is
 // always the Service Charge shown to the client -- same invariant used by
@@ -31,27 +42,64 @@ function initialItems(transaction: Transaction): LineItem[] {
   return [{ desc: transaction.category, govCost: 0, proFee: transaction.amountTotal / 100 }];
 }
 
-export function TransactionEditForm({ transaction }: { transaction: Transaction }) {
+function toDraft(p: TransactionPayment): PaymentDraft {
+  return {
+    id: p.id,
+    amount: (p.amountMinor / 100).toFixed(2),
+    method: p.method || "Cash",
+    paidAt: new Date(p.paidAt).toISOString().slice(0, 10),
+  };
+}
+
+export function TransactionEditForm({ transaction }: { transaction: TransactionWithPayments }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [category, setCategory] = useState(transaction.category);
   const [paymentMode, setPaymentMode] = useState(transaction.paymentMode || "");
   const [description, setDescription] = useState(transaction.description || "");
   const [dueDate, setDueDate] = useState(transaction.dueDate ? new Date(transaction.dueDate).toISOString().slice(0, 10) : "");
   const [items, setItems] = useState<LineItem[]>(() => initialItems(transaction));
+  const [payments, setPayments] = useState<PaymentDraft[]>(() => transaction.payments.map(toDraft));
 
   const total = items.reduce((sum, i) => sum + i.govCost + i.proFee, 0);
-  const totalMinor = Math.round(total * 100);
-  // Amount Paid is never edited here -- it stays exactly what's already on
-  // the transaction so the outstanding balance recalculates correctly
-  // against the new total instead of being clobbered by this form.
-  const outstanding = (totalMinor - transaction.amountPaid) / 100;
+  const totalPaid = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+  const outstanding = total - totalPaid;
+  const previewStatus = totalPaid <= 0 ? "PENDING" : outstanding <= 0 ? "PAID" : "PARTIALLY PAID";
+  const previewStatusClass =
+    previewStatus === "PAID" ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+    : previewStatus === "PARTIALLY PAID" ? "bg-amber-50 border-amber-200 text-amber-700"
+    : "bg-slate-100 border-slate-200 text-slate-600";
+
+  const updatePayment = (id: string, patch: Partial<PaymentDraft>) => {
+    setPayments((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  };
+
+  const handleDeletePayment = async (id: string, amountLabel: string) => {
+    if (!confirm(`Delete this payment of AED ${amountLabel}? This cannot be undone -- the outstanding balance will increase accordingly.`)) return;
+    setDeletingId(id);
+    const res = await deleteTransactionPayment(id);
+    setDeletingId(null);
+    if (res.success) {
+      toast.success("Payment deleted");
+      setPayments((prev) => prev.filter((p) => p.id !== id));
+      router.refresh();
+    } else {
+      toast.error(res.error || "Failed to delete payment");
+    }
+  };
 
   const handleSave = async () => {
     const validItems = items.filter((i) => i.desc.trim());
     if (validItems.length === 0) {
       toast.error("At least one line item is required");
       return;
+    }
+    for (const p of payments) {
+      if (!p.paidAt || isNaN(parseFloat(p.amount))) {
+        toast.error("Every payment needs a valid amount and date");
+        return;
+      }
     }
     setSaving(true);
     const res = await updateTransaction(transaction.id, {
@@ -60,6 +108,12 @@ export function TransactionEditForm({ transaction }: { transaction: Transaction 
       description: description || undefined,
       dueDate: dueDate || undefined,
       lineItems: validItems,
+      payments: payments.map((p) => ({
+        id: p.id,
+        amount: parseFloat(p.amount) || 0,
+        method: p.method,
+        paidAt: p.paidAt,
+      })),
     });
     setSaving(false);
     if (res.success) {
@@ -186,18 +240,91 @@ export function TransactionEditForm({ transaction }: { transaction: Transaction 
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 pt-3 border-t border-border text-sm">
+        <div className="space-y-2">
+          <Label>Recorded Payments</Label>
+          {payments.length === 0 ? (
+            <p className="text-sm text-slate-400 italic border border-dashed border-border rounded-lg px-3 py-4 text-center">
+              No payments recorded against this transaction yet.
+            </p>
+          ) : (
+            <div className="border border-border rounded-lg overflow-hidden">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-slate-50 text-slate-500 text-xs">
+                  <tr>
+                    <th className="px-3 py-2 w-32">Amount (AED)</th>
+                    <th className="px-3 py-2 w-36">Payment Mode</th>
+                    <th className="px-3 py-2 w-36">Date</th>
+                    <th className="px-2 py-2 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {payments.map((p) => (
+                    <tr key={p.id}>
+                      <td className="px-2 py-2">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={p.amount}
+                          onChange={(e) => updatePayment(p.id, { amount: e.target.value })}
+                        />
+                      </td>
+                      <td className="px-2 py-2">
+                        <select
+                          value={p.method}
+                          onChange={(e) => updatePayment(p.id, { method: e.target.value })}
+                          className="w-full h-9 rounded-md border border-input bg-background px-2 text-sm"
+                        >
+                          {PAYMENT_METHODS.map((m) => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-2 py-2">
+                        <Input type="date" value={p.paidAt} onChange={(e) => updatePayment(p.id, { paidAt: e.target.value })} />
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        <button
+                          type="button"
+                          disabled={deletingId === p.id}
+                          onClick={() => handleDeletePayment(p.id, p.amount)}
+                          className="text-slate-400 hover:text-rose-500 disabled:opacity-50"
+                          title="Delete this payment"
+                        >
+                          {deletingId === p.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="text-[11px] text-slate-400">
+            Editing amount/method/date here saves with "Save Changes" below. Deleting a payment happens immediately.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-3 border-t border-border text-sm">
           <div>
             <span className="text-slate-500">New Total</span>
             <p className="text-lg font-bold text-slate-900">AED {total.toFixed(2)}</p>
           </div>
           <div>
-            <span className="text-slate-500">Amount Paid</span>
-            <p className="text-lg font-bold text-emerald-600">AED {(transaction.amountPaid / 100).toFixed(2)}</p>
+            <span className="text-slate-500">Total Paid</span>
+            <p className="text-lg font-bold text-emerald-600">AED {totalPaid.toFixed(2)}</p>
           </div>
           <div>
             <span className="text-slate-500">Outstanding Balance</span>
             <p className={`text-lg font-bold ${outstanding > 0 ? "text-rose-600" : "text-emerald-600"}`}>AED {outstanding.toFixed(2)}</p>
+          </div>
+          <div>
+            <span className="text-slate-500">Status (on save)</span>
+            <p className="mt-1">
+              <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${previewStatusClass}`}>
+                {previewStatus}
+              </span>
+            </p>
           </div>
         </div>
 

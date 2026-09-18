@@ -296,12 +296,63 @@ export async function getTransaction(transactionId: string) {
   }
 }
 
+/**
+ * Deletes one payment receipt immediately (with its own confirmation dialog
+ * in the UI, separate from the main "Save Changes" flow since it's
+ * destructive) and recomputes the parent transaction's amountPaid/status in
+ * the same Prisma transaction so they never drift out of sync.
+ */
+export async function deleteTransactionPayment(paymentId: string) {
+  try {
+    const tx = await prisma.$transaction(async (trx) => {
+      const payment = await trx.transactionPayment.findUnique({ where: { id: paymentId } });
+      if (!payment) throw new Error("NOT_FOUND");
+
+      await trx.transactionPayment.delete({ where: { id: paymentId } });
+
+      const transaction = await trx.transaction.findUniqueOrThrow({ where: { id: payment.transactionId } });
+      const remaining = await trx.transactionPayment.aggregate({
+        where: { transactionId: payment.transactionId },
+        _sum: { amountMinor: true },
+      });
+      const amountPaid = remaining._sum.amountMinor || 0;
+      const status = computeTransactionStatus(transaction.amountTotal, amountPaid, transaction.dueDate);
+
+      return trx.transaction.update({
+        where: { id: payment.transactionId },
+        data: { amountPaid, status },
+      });
+    });
+
+    revalidatePath("/finance/cockpit");
+    revalidatePath(`/finance/transactions/${tx.id}`);
+    return { success: true, tx };
+  } catch (error: any) {
+    if (error?.message === "NOT_FOUND") {
+      return { success: false, error: "Payment not found." };
+    }
+    logServerError(error, { action: "deleteTransactionPayment", extra: { paymentId } });
+    return { success: false, error: "Failed to delete payment." };
+  }
+}
+
+export type PaymentEditInput = {
+  id: string;
+  amount: number; // AED, display units
+  method: string;
+  paidAt: string; // yyyy-mm-dd
+  deleted?: boolean; // true -> remove this payment entirely
+};
+
 export type UpdateTransactionInput = {
   category: string;
   paymentMode?: string;
   description?: string;
   dueDate?: string;
   lineItems: { desc: string; govCost: number; proFee: number }[];
+  // Edits/deletes to existing TransactionPayment rows -- no new payments are
+  // created here, that's what Add Credit / Record Payment is for.
+  payments?: PaymentEditInput[];
 };
 
 export async function updateTransaction(id: string, data: UpdateTransactionInput) {
@@ -309,34 +360,66 @@ export async function updateTransaction(id: string, data: UpdateTransactionInput
     const govFee = Math.round(data.lineItems.reduce((sum, i) => sum + i.govCost, 0) * 100);
     const serviceFee = Math.round(data.lineItems.reduce((sum, i) => sum + i.proFee, 0) * 100);
     const amountTotal = govFee + serviceFee;
+    const newDueDate = data.dueDate ? new Date(data.dueDate) : null;
 
-    const existing = await prisma.transaction.findUnique({ where: { id } });
-    if (!existing) return { success: false, error: "Transaction not found." };
+    const tx = await prisma.$transaction(async (trx) => {
+      const existing = await trx.transaction.findUnique({ where: { id } });
+      if (!existing) throw new Error("NOT_FOUND");
 
-    const status = computeTransactionStatus(amountTotal, existing.amountPaid, data.dueDate ? new Date(data.dueDate) : existing.dueDate);
+      let amountPaid = existing.amountPaid;
 
-    const tx = await prisma.transaction.update({
-      where: { id },
-      data: {
-        category: data.category,
-        paymentMode: data.paymentMode,
-        description: data.description,
-        dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        amountTotal,
-        govFeePart: govFee,
-        // Keep the internal cost basis in sync with the edited line items --
-        // amountPaid is deliberately left untouched so the outstanding
-        // balance recalculates against the new total instead of being reset.
-        supplierCostPart: govFee,
-        serviceFeePart: serviceFee,
-        lineItems: data.lineItems,
-        status,
-      },
+      if (data.payments) {
+        for (const p of data.payments) {
+          if (p.deleted) {
+            await trx.transactionPayment.delete({ where: { id: p.id } });
+          } else {
+            await trx.transactionPayment.update({
+              where: { id: p.id },
+              data: {
+                amountMinor: Math.round(p.amount * 100),
+                method: p.method,
+                paidAt: new Date(p.paidAt),
+              },
+            });
+          }
+        }
+        // Recompute amountPaid from the edited/remaining payments rather
+        // than trusting the client's arithmetic.
+        const remaining = await trx.transactionPayment.aggregate({
+          where: { transactionId: id },
+          _sum: { amountMinor: true },
+        });
+        amountPaid = remaining._sum.amountMinor || 0;
+      }
+
+      const status = computeTransactionStatus(amountTotal, amountPaid, newDueDate ?? existing.dueDate);
+
+      return trx.transaction.update({
+        where: { id },
+        data: {
+          category: data.category,
+          paymentMode: data.paymentMode,
+          description: data.description,
+          dueDate: newDueDate,
+          amountTotal,
+          amountPaid,
+          govFeePart: govFee,
+          serviceFeePart: serviceFee,
+          // Keep the internal cost basis in sync with the edited line items.
+          supplierCostPart: govFee,
+          lineItems: data.lineItems,
+          status,
+        },
+      });
     });
 
     revalidatePath("/finance/cockpit");
+    revalidatePath(`/finance/transactions/${id}`);
     return { success: true, tx };
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message === "NOT_FOUND") {
+      return { success: false, error: "Transaction not found." };
+    }
     console.error("Error updating transaction:", error);
     return { success: false, error: "Failed to update transaction." };
   }
