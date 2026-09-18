@@ -353,9 +353,8 @@ export type UpdateTransactionInput = {
   // Edits/deletes to existing TransactionPayment rows -- no new payments are
   // created here, that's what Add Credit / Record Payment is for.
   payments?: PaymentEditInput[];
-  // Flat paid-amount override, AED display units. Only applied when there
-  // are no TransactionPayment rows to derive amountPaid from instead (bulk
-  // imports, legacy invoices with no itemized payment history).
+  // The transaction's total paid amount, AED display units -- the single
+  // source of truth for amountPaid when provided (see updateTransaction).
   amountPaid?: number;
 };
 
@@ -372,6 +371,10 @@ export async function updateTransaction(id: string, data: UpdateTransactionInput
 
       let amountPaid = existing.amountPaid;
 
+      // Persist any per-payment edits/deletes for the audit trail regardless,
+      // but their aggregate no longer overrides amountPaid -- the "Amount
+      // Paid by Client" field the form always submits is the single source
+      // of truth for the total from here on.
       if (data.payments && data.payments.length > 0) {
         for (const p of data.payments) {
           if (p.deleted) {
@@ -387,21 +390,14 @@ export async function updateTransaction(id: string, data: UpdateTransactionInput
             });
           }
         }
-        // Recompute amountPaid from the edited/remaining payments rather
-        // than trusting the client's arithmetic.
-        const remaining = await trx.transactionPayment.aggregate({
-          where: { transactionId: id },
-          _sum: { amountMinor: true },
-        });
-        amountPaid = remaining._sum.amountMinor || 0;
-      } else if (existing.type === "EXPENSE") {
-        // Expenses are recorded fully paid at entry time and have no
-        // TransactionPayment rows to aggregate -- keep them fully paid even
-        // when the amount is corrected here, instead of falling through to
-        // an empty aggregate and wiping the paid amount to zero.
-        amountPaid = amountTotal;
-      } else if (typeof data.amountPaid === "number") {
+      }
+
+      if (typeof data.amountPaid === "number") {
         amountPaid = Math.round(data.amountPaid * 100);
+      } else if (existing.type === "EXPENSE") {
+        // Expenses are recorded fully paid at entry time -- keep them fully
+        // paid even when the amount is corrected here.
+        amountPaid = amountTotal;
       }
 
       const status = computeTransactionStatus(amountTotal, amountPaid, newDueDate ?? existing.dueDate);
