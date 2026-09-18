@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -10,6 +10,26 @@ import { Input } from "@/components/ui/input";
 import { Plus, Trash2, ArrowLeft } from "lucide-react";
 import { updateTransaction } from "@/app/actions/finance";
 import type { LineItem } from "@/lib/printUtils";
+import { ProfitBadge } from "@/components/finance/modals/ProfitBadge";
+
+// govCost = supplier/govt cost, proFee = margin, so govCost + proFee is
+// always the Service Charge shown to the client -- same invariant used by
+// AddIncomeModal/QuotationModal/TaxInvoiceModal.
+function initialItems(transaction: Transaction): LineItem[] {
+  if (transaction.lineItems) return transaction.lineItems as any;
+
+  const govCost = (transaction.govFeePart || 0) / 100;
+  const serviceFee = (transaction.serviceFeePart || 0) / 100;
+  if (govCost + serviceFee > 0) {
+    return [{ desc: transaction.category, govCost, proFee: serviceFee }];
+  }
+
+  // Legacy/seeded transactions have neither lineItems nor a recorded
+  // gov/service split -- fall back to the real billed amount as the Service
+  // Charge (supplier cost unknown, defaults to 0) instead of silently
+  // zeroing out the invoice total on save.
+  return [{ desc: transaction.category, govCost: 0, proFee: transaction.amountTotal / 100 }];
+}
 
 export function TransactionEditForm({ transaction }: { transaction: Transaction }) {
   const router = useRouter();
@@ -18,13 +38,14 @@ export function TransactionEditForm({ transaction }: { transaction: Transaction 
   const [paymentMode, setPaymentMode] = useState(transaction.paymentMode || "");
   const [description, setDescription] = useState(transaction.description || "");
   const [dueDate, setDueDate] = useState(transaction.dueDate ? new Date(transaction.dueDate).toISOString().slice(0, 10) : "");
-  const [items, setItems] = useState<LineItem[]>(
-    (transaction.lineItems as any) || [
-      { desc: transaction.category, govCost: (transaction.govFeePart || 0) / 100, proFee: (transaction.serviceFeePart || 0) / 100 },
-    ]
-  );
+  const [items, setItems] = useState<LineItem[]>(() => initialItems(transaction));
 
   const total = items.reduce((sum, i) => sum + i.govCost + i.proFee, 0);
+  const totalMinor = Math.round(total * 100);
+  // Amount Paid is never edited here -- it stays exactly what's already on
+  // the transaction so the outstanding balance recalculates correctly
+  // against the new total instead of being clobbered by this form.
+  const outstanding = (totalMinor - transaction.amountPaid) / 100;
 
   const handleSave = async () => {
     const validItems = items.filter((i) => i.desc.trim());
@@ -85,60 +106,74 @@ export function TransactionEditForm({ transaction }: { transaction: Transaction 
               <thead className="bg-slate-50 text-slate-500 text-xs">
                 <tr>
                   <th className="px-3 py-2">Description</th>
-                  <th className="px-3 py-2 text-right w-28">Supplier / Govt Cost</th>
-                  <th className="px-3 py-2 text-right w-28">Margin</th>
+                  <th className="px-3 py-2 text-right w-32">Service Charge (AED) *</th>
+                  <th className="px-3 py-2 text-right w-32">Supplier / Govt Cost (AED)</th>
                   <th className="px-2 py-2 w-10"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {items.map((item, idx) => (
-                  <tr key={idx}>
-                    <td className="px-2 py-2">
-                      <Input
-                        value={item.desc}
-                        onChange={(e) => {
-                          const next = [...items];
-                          next[idx] = { ...next[idx], desc: e.target.value };
-                          setItems(next);
-                        }}
-                        placeholder="Service description"
-                      />
-                    </td>
-                    <td className="px-2 py-2">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={item.govCost}
-                        onChange={(e) => {
-                          const next = [...items];
-                          next[idx] = { ...next[idx], govCost: parseFloat(e.target.value || "0") };
-                          setItems(next);
-                        }}
-                      />
-                    </td>
-                    <td className="px-2 py-2">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={item.proFee}
-                        onChange={(e) => {
-                          const next = [...items];
-                          next[idx] = { ...next[idx], proFee: parseFloat(e.target.value || "0") };
-                          setItems(next);
-                        }}
-                      />
-                    </td>
-                    <td className="px-2 py-2 text-center">
-                      {items.length > 1 && (
-                        <button type="button" onClick={() => setItems(items.filter((_, i) => i !== idx))} className="text-slate-400 hover:text-rose-500">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {items.map((item, idx) => {
+                  const serviceCharge = item.govCost + item.proFee;
+                  return (
+                    <Fragment key={idx}>
+                      <tr>
+                        <td className="px-2 py-2">
+                          <Input
+                            value={item.desc}
+                            onChange={(e) => {
+                              const next = [...items];
+                              next[idx] = { ...next[idx], desc: e.target.value };
+                              setItems(next);
+                            }}
+                            placeholder="Service description"
+                          />
+                        </td>
+                        <td className="px-2 py-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={serviceCharge}
+                            onChange={(e) => {
+                              const newCharge = parseFloat(e.target.value || "0");
+                              const next = [...items];
+                              // Keep supplier cost fixed; the margin absorbs the change.
+                              next[idx] = { ...next[idx], proFee: newCharge - next[idx].govCost };
+                              setItems(next);
+                            }}
+                          />
+                        </td>
+                        <td className="px-2 py-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.govCost}
+                            onChange={(e) => {
+                              const newCost = parseFloat(e.target.value || "0");
+                              const next = [...items];
+                              // Keep the Service Charge fixed; the margin absorbs the change.
+                              next[idx] = { ...next[idx], govCost: newCost, proFee: serviceCharge - newCost };
+                              setItems(next);
+                            }}
+                          />
+                        </td>
+                        <td className="px-2 py-2 text-center">
+                          {items.length > 1 && (
+                            <button type="button" onClick={() => setItems(items.filter((_, i) => i !== idx))} className="text-slate-400 hover:text-rose-500">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                      <tr className="bg-slate-50/50">
+                        <td colSpan={4} className="px-3 pb-2 pt-0">
+                          <ProfitBadge customerRate={serviceCharge} supplierCost={item.govCost} />
+                        </td>
+                      </tr>
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -151,9 +186,19 @@ export function TransactionEditForm({ transaction }: { transaction: Transaction 
           </button>
         </div>
 
-        <div className="flex justify-between items-center pt-3 border-t border-border">
-          <span className="text-sm font-semibold text-slate-600">New Total</span>
-          <span className="text-lg font-bold text-slate-900">AED {total.toFixed(2)}</span>
+        <div className="grid grid-cols-3 gap-4 pt-3 border-t border-border text-sm">
+          <div>
+            <span className="text-slate-500">New Total</span>
+            <p className="text-lg font-bold text-slate-900">AED {total.toFixed(2)}</p>
+          </div>
+          <div>
+            <span className="text-slate-500">Amount Paid</span>
+            <p className="text-lg font-bold text-emerald-600">AED {(transaction.amountPaid / 100).toFixed(2)}</p>
+          </div>
+          <div>
+            <span className="text-slate-500">Outstanding Balance</span>
+            <p className={`text-lg font-bold ${outstanding > 0 ? "text-rose-600" : "text-emerald-600"}`}>AED {outstanding.toFixed(2)}</p>
+          </div>
         </div>
 
         <div className="flex justify-end gap-3">

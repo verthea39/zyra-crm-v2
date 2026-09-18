@@ -324,6 +324,10 @@ export async function updateTransaction(id: string, data: UpdateTransactionInput
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
         amountTotal,
         govFeePart: govFee,
+        // Keep the internal cost basis in sync with the edited line items --
+        // amountPaid is deliberately left untouched so the outstanding
+        // balance recalculates against the new total instead of being reset.
+        supplierCostPart: govFee,
         serviceFeePart: serviceFee,
         lineItems: data.lineItems,
         status,
