@@ -19,7 +19,8 @@ export default async function FinanceCockpitPage() {
 
   // Calculate metrics
   let revenue = 0;
-  let expenses = 0;
+  let directCosts = 0; // supplierCostPart across all income -- gov/supplier fees paid out per invoice
+  let operatingExpenses = 0;
   let receivables = 0;
   let payables = 0;
   let grossProfit = 0;
@@ -29,20 +30,22 @@ export default async function FinanceCockpitPage() {
 
     if (tx.type === "INCOME") {
       revenue += tx.amountTotal;
+      directCosts += tx.supplierCostPart;
       // Gross profit = customer rate minus real supplier/govt cost, derived
       // rather than stored so it can never drift out of sync with the tx.
       grossProfit += tx.amountTotal - tx.supplierCostPart;
       if (balance > 0) receivables += balance;
     } else if (tx.type === "EXPENSE") {
-      expenses += tx.amountTotal;
+      operatingExpenses += tx.amountTotal;
       if (balance > 0) payables += balance;
     }
   }
 
-  // Net Profit = revenue net of direct supplier/govt costs (grossProfit),
-  // further net of operating expenses -- not just revenue minus expenses,
-  // which ignores the cost of goods/services sold entirely.
-  const netProfit = grossProfit - expenses;
+  // Total Expenses = direct supplier/govt costs passed through on every
+  // invoice + standalone operational expense entries -- not just the
+  // EXPENSE-type transactions, which miss the cost of goods/services sold.
+  const expenses = directCosts + operatingExpenses;
+  const netProfit = revenue - expenses;
 
   const metrics = {
     revenue,
