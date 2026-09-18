@@ -353,6 +353,10 @@ export type UpdateTransactionInput = {
   // Edits/deletes to existing TransactionPayment rows -- no new payments are
   // created here, that's what Add Credit / Record Payment is for.
   payments?: PaymentEditInput[];
+  // Flat paid-amount override, AED display units. Only applied when there
+  // are no TransactionPayment rows to derive amountPaid from instead (bulk
+  // imports, legacy invoices with no itemized payment history).
+  amountPaid?: number;
 };
 
 export async function updateTransaction(id: string, data: UpdateTransactionInput) {
@@ -396,6 +400,8 @@ export async function updateTransaction(id: string, data: UpdateTransactionInput
         // when the amount is corrected here, instead of falling through to
         // an empty aggregate and wiping the paid amount to zero.
         amountPaid = amountTotal;
+      } else if (typeof data.amountPaid === "number") {
+        amountPaid = Math.round(data.amountPaid * 100);
       }
 
       const status = computeTransactionStatus(amountTotal, amountPaid, newDueDate ?? existing.dueDate);

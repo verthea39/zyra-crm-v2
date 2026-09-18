@@ -75,9 +75,16 @@ export function TransactionEditForm({ transaction }: { transaction: TransactionW
   const [dueDate, setDueDate] = useState(transaction.dueDate ? new Date(transaction.dueDate).toISOString().slice(0, 10) : "");
   const [items, setItems] = useState<LineItem[]>(() => initialItems(transaction));
   const [payments, setPayments] = useState<PaymentDraft[]>(() => transaction.payments.map(toDraft));
+  // Flat paid-amount override for transactions with no itemized
+  // TransactionPayment rows (bulk imports, legacy invoices) -- when rows
+  // exist, they remain the source of truth and this field just mirrors them.
+  const [directPaid, setDirectPaid] = useState((transaction.amountPaid / 100).toFixed(2));
+  const hasPaymentRows = payments.length > 0;
 
   const total = items.reduce((sum, i) => sum + i.govCost + i.proFee, 0);
-  const totalPaid = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+  const totalPaid = hasPaymentRows
+    ? payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+    : parseFloat(directPaid) || 0;
   const outstanding = total - totalPaid;
   const previewStatus = totalPaid <= 0 ? "PENDING" : outstanding <= 0 ? "PAID" : "PARTIALLY PAID";
   const previewStatusClass =
@@ -115,6 +122,10 @@ export function TransactionEditForm({ transaction }: { transaction: TransactionW
         return;
       }
     }
+    if (!hasPaymentRows && isNaN(parseFloat(directPaid))) {
+      toast.error("Amount Paid by Client must be a valid number");
+      return;
+    }
     setSaving(true);
     const res = await updateTransaction(transaction.id, {
       category,
@@ -128,6 +139,7 @@ export function TransactionEditForm({ transaction }: { transaction: TransactionW
         method: p.method,
         paidAt: p.paidAt,
       })),
+      amountPaid: hasPaymentRows ? undefined : parseFloat(directPaid) || 0,
     });
     setSaving(false);
     if (res.success) {
@@ -282,6 +294,23 @@ export function TransactionEditForm({ transaction }: { transaction: TransactionW
           </button>
         </div>
 
+        <div className="space-y-2 max-w-xs">
+          <Label>Amount Paid by Client (AED)</Label>
+          <Input
+            type="number"
+            step="0.01"
+            min="0"
+            value={directPaid}
+            disabled={hasPaymentRows}
+            onChange={(e) => setDirectPaid(e.target.value)}
+          />
+          {hasPaymentRows && (
+            <p className="text-[11px] text-slate-400">
+              This transaction has itemized payments below -- edit those rows to change the paid amount.
+            </p>
+          )}
+        </div>
+
         <div className="space-y-2">
           <Label>Recorded Payments</Label>
           {payments.length === 0 ? (
@@ -349,7 +378,7 @@ export function TransactionEditForm({ transaction }: { transaction: TransactionW
 
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-3 border-t border-border text-sm">
           <div>
-            <span className="text-slate-500">New Total</span>
+            <span className="text-slate-500">Total Billed</span>
             <p className="text-lg font-bold text-slate-900">AED {total.toFixed(2)}</p>
           </div>
           <div>
