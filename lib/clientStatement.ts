@@ -157,11 +157,25 @@ export async function printClientStatement(
       <style>
         @page { size: A4 portrait; margin: 15mm; }
         body { font-family: 'Inter', Arial, sans-serif; color: #334155; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #98682E; padding-bottom: 12px; margin-bottom: 16px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .header h1 { font-size: 15px; margin: 0; color: #0F172A; text-transform: uppercase; letter-spacing: 0.3px; }
-        .header p { font-size: 10px; color: #64748b; margin: 2px 0 0 0; }
-        .header .brand-block { display: flex; align-items: center; gap: 10px; }
-        .title { font-size: 18px; font-weight: 800; color: #98682E; text-transform: uppercase; text-align: right; }
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 24px;
+          border-bottom: 2px solid #98682E;
+          padding-bottom: 12px;
+          margin-bottom: 16px;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .header h1 { font-size: 15px; margin: 0 0 3px 0; color: #0F172A; text-transform: uppercase; letter-spacing: 0.3px; }
+        .header .brand-block { display: flex; align-items: flex-start; gap: 12px; flex: 1; min-width: 0; }
+        .header .brand-block img { height: 56px !important; width: auto; max-width: 200px; object-fit: contain; display: block; flex-shrink: 0; }
+        .header .brand-text { text-align: left; }
+        .header .brand-text p { font-size: 10.5px; color: #64748b; margin: 1px 0 0 0; line-height: 1.5; }
+        .header .doc-title { text-align: right; flex-shrink: 0; }
+        .title { font-size: 19px; font-weight: 800; color: #98682E; text-transform: uppercase; white-space: nowrap; }
+        .title-meta { font-size: 10px; color: #94a3b8; margin-top: 4px; }
         .client-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 11px; display: flex; justify-content: space-between; gap: 16px; }
         .client-box strong { color: #0F172A; font-size: 13px; }
         table { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-bottom: 16px; }
@@ -179,17 +193,22 @@ export async function printClientStatement(
       <div class="header">
         <div class="brand-block">
           ${logoMarkup}
-          <div>
+          <div class="brand-text">
             ${!hasRealLogo ? `<h1>${branding.name}</h1>` : ""}
             <p>${branding.address}</p>
-            ${branding.phone ? `<p>Tel: ${branding.phone}</p>` : ""}
-            ${branding.whatsapp ? `<p>WhatsApp: ${branding.whatsapp}</p>` : ""}
-            ${branding.email ? `<p>${branding.email}</p>` : ""}
-            ${branding.website ? `<p>${branding.website}</p>` : ""}
+            ${[branding.phone && `Tel: ${branding.phone}`, branding.whatsapp && `WhatsApp: ${branding.whatsapp}`].filter(Boolean).length
+              ? `<p>${[branding.phone && `Tel: ${branding.phone}`, branding.whatsapp && `WhatsApp: ${branding.whatsapp}`].filter(Boolean).join(" &nbsp;|&nbsp; ")}</p>`
+              : ""}
+            ${[branding.email, branding.website].filter(Boolean).length
+              ? `<p>${[branding.email, branding.website].filter(Boolean).join(" &nbsp;|&nbsp; ")}</p>`
+              : ""}
             ${branding.trn ? `<p>Company TRN: ${branding.trn}</p>` : ""}
           </div>
         </div>
-        <div class="title">Account Statement</div>
+        <div class="doc-title">
+          <div class="title">Account Statement</div>
+          <div class="title-meta">Generated: ${fmtDate(new Date())}</div>
+        </div>
       </div>
 
       <div class="client-box">
