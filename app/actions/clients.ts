@@ -84,6 +84,32 @@ export async function getClient(id: string) {
   }
 }
 
+/** Full profile fetch for the /clients/[id] page -- billing, cases, and vault docs in one round trip. */
+export async function getClientProfile(id: string) {
+  try {
+    return await prisma.client.findUnique({
+      where: { id },
+      include: {
+        transactions: {
+          where: { type: "INCOME" },
+          include: { payments: { orderBy: { paidAt: "desc" } } },
+          orderBy: { date: "desc" },
+        },
+        cases: {
+          include: { coordinator: { select: { name: true } } },
+          orderBy: { createdAt: "desc" },
+        },
+        vaultDocuments: {
+          orderBy: { expiryDate: "asc" },
+        },
+      },
+    });
+  } catch (error) {
+    logServerError(error, { action: "getClientProfile" });
+    return null;
+  }
+}
+
 export async function deleteClient(id: string) {
   try {
     await prisma.client.delete({ where: { id } });

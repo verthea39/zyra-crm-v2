@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Transaction } from "@prisma/client";
 import { Edit2, Trash2, MoreVertical, Eye, Printer, Receipt } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -103,7 +104,15 @@ export function LedgerTable({ transactions }: { transactions: Transaction[] }) {
                       {tx.type}
                     </span>
                   </div>
-                  <p className="text-sm font-medium text-foreground mt-1 truncate">{tx.counterparty}</p>
+                  <p className="text-sm font-medium text-foreground mt-1 truncate">
+                    {tx.clientId ? (
+                      <Link href={`/clients/${tx.clientId}`} onClick={(e) => e.stopPropagation()} className="hover:text-primary hover:underline">
+                        {tx.counterparty}
+                      </Link>
+                    ) : (
+                      tx.counterparty
+                    )}
+                  </p>
                   <p className="text-xs text-muted-foreground mt-0.5">{formatDate(tx.date)}</p>
                 </div>
                 <div className={`text-right shrink-0 font-bold ${isIncome ? 'text-emerald-600' : 'text-rose-600'}`}>
@@ -203,8 +212,14 @@ export function LedgerTable({ transactions }: { transactions: Transaction[] }) {
                   <td className="px-6 py-4 whitespace-nowrap text-slate-500">
                     {formatDate(tx.date)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {tx.counterparty}
+                  <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    {tx.clientId ? (
+                      <Link href={`/clients/${tx.clientId}`} className="hover:text-primary hover:underline">
+                        {tx.counterparty}
+                      </Link>
+                    ) : (
+                      tx.counterparty
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-medium border border-slate-200">

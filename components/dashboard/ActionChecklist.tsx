@@ -7,6 +7,7 @@ export type ChecklistCase = {
   id: string;
   applicantName: string | null;
   clientName: string;
+  clientId: string | null;
   stage: string;
   reference: string;
   phone: string | null;
@@ -83,7 +84,12 @@ export function ActionChecklist({ cases }: { cases: ChecklistCase[] }) {
                       {c.applicantName || "Unknown Applicant"}
                     </h3>
                     <p className="text-xs text-slate-500">
-                      {c.clientName} <span className="mx-1">•</span> <span className="font-mono">{c.reference}</span>
+                      {c.clientId ? (
+                        <Link href={`/clients/${c.clientId}`} className="hover:text-primary hover:underline">{c.clientName}</Link>
+                      ) : (
+                        c.clientName
+                      )}
+                      <span className="mx-1">•</span> <span className="font-mono">{c.reference}</span>
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

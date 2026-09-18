@@ -100,7 +100,8 @@ function loadImageOk(url: string, timeoutMs = 4000): Promise<boolean> {
   });
 }
 
-async function resolveLogo(branding: CompanyBranding): Promise<{ markup: string; hasRealLogo: boolean }> {
+/** Exported for reuse by other print-to-PDF/iframe builders (e.g. client statements) that render their own header. */
+export async function resolveLogo(branding: CompanyBranding): Promise<{ markup: string; hasRealLogo: boolean }> {
   const initials = branding.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 3).toUpperCase();
   const fallback = companyLogoSvg(initials, 44);
 

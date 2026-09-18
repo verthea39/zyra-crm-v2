@@ -132,6 +132,7 @@ export default async function DashboardPage() {
       id: c.id,
       applicantName: c.applicantName,
       clientName: c.client.name,
+      clientId: c.clientId,
       stage: c.stage,
       reference: c.reference,
       phone: c.client.phone,

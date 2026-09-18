@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MessageCircle, Edit, Trash2 } from "lucide-react";
 import type { Client, Transaction } from "@prisma/client";
@@ -114,7 +115,13 @@ Greetings from Zyra Documents Clearance Services. How can our PRO operations tea
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-foreground truncate">{client.name}</h3>
+                  <Link
+                    href={`/clients/${client.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="font-semibold text-foreground truncate hover:text-primary hover:underline block"
+                  >
+                    {client.name}
+                  </Link>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="font-mono text-[11px] font-semibold text-slate-500">{client.id.substring(0, 11).toUpperCase()}</span>
                     <span className={`px-2 py-0.5 text-[10px] font-semibold tracking-wide rounded-full border ${
@@ -216,7 +223,13 @@ Greetings from Zyra Documents Clearance Services. How can our PRO operations tea
                   className="hover:bg-slate-50 transition-colors group bg-card text-sm font-medium text-slate-800 cursor-pointer"
                 >
                   <td className="px-4 py-3 align-top font-semibold text-foreground sticky left-0 z-10 bg-card group-hover:bg-slate-50 border-r border-border shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                    {client.name}
+                    <Link
+                      href={`/clients/${client.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="hover:text-primary hover:underline"
+                    >
+                      {client.name}
+                    </Link>
                   </td>
                   <td className="px-4 py-3 align-top">
                     <div className="font-mono text-xs font-semibold text-slate-600">{client.id.substring(0, 11).toUpperCase()}</div>
