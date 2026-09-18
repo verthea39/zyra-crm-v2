@@ -22,12 +22,16 @@ export default async function FinanceCockpitPage() {
   let expenses = 0;
   let receivables = 0;
   let payables = 0;
+  let grossProfit = 0;
 
   for (const tx of transactions) {
     const balance = tx.amountTotal - tx.amountPaid;
 
     if (tx.type === "INCOME") {
       revenue += tx.amountTotal;
+      // Gross profit = customer rate minus real supplier/govt cost, derived
+      // rather than stored so it can never drift out of sync with the tx.
+      grossProfit += tx.amountTotal - tx.supplierCostPart;
       if (balance > 0) receivables += balance;
     } else if (tx.type === "EXPENSE") {
       expenses += tx.amountTotal;
@@ -35,14 +39,18 @@ export default async function FinanceCockpitPage() {
     }
   }
 
-  const netProfit = revenue - expenses;
+  // Net Profit = revenue net of direct supplier/govt costs (grossProfit),
+  // further net of operating expenses -- not just revenue minus expenses,
+  // which ignores the cost of goods/services sold entirely.
+  const netProfit = grossProfit - expenses;
 
   const metrics = {
     revenue,
     expenses,
     netProfit,
     receivables,
-    payables
+    payables,
+    grossProfit
   };
 
   const clients = await prisma.client.findMany({
@@ -54,19 +62,31 @@ export default async function FinanceCockpitPage() {
 
   const clientCount = clients.length;
 
-  const [allPayments, allExpenses, wallets] = await Promise.all([
-    prisma.transactionPayment.findMany({ select: { amountMinor: true, method: true } }),
+  const [allPayments, allExpenses, incomeTransactions, wallets] = await Promise.all([
+    prisma.transactionPayment.findMany({ select: { transactionId: true, amountMinor: true, method: true } }),
     prisma.transaction.findMany({ where: { type: 'EXPENSE' }, select: { amountTotal: true, paymentMode: true } }),
+    prisma.transaction.findMany({ where: { type: 'INCOME' }, select: { id: true, amountPaid: true, paymentMode: true } }),
     getWalletStats(),
   ]);
 
   const isCashMethod = (method: string | null | undefined) => (method || "").toLowerCase().includes("cash");
-  const cashInHandMinor =
+  let cashInHandMinor =
     allPayments.filter((p) => isCashMethod(p.method)).reduce((sum, p) => sum + p.amountMinor, 0) -
     allExpenses.filter((tx) => isCashMethod(tx.paymentMode)).reduce((sum, tx) => sum + tx.amountTotal, 0);
-  const bankCardMinor =
+  let bankCardMinor =
     allPayments.filter((p) => !isCashMethod(p.method)).reduce((sum, p) => sum + p.amountMinor, 0) -
     allExpenses.filter((tx) => !isCashMethod(tx.paymentMode)).reduce((sum, tx) => sum + tx.amountTotal, 0);
+
+  // Some invoices (bulk-imported records, or ones paid via the legacy
+  // createIncome flow) carry amountPaid directly on the Transaction with no
+  // TransactionPayment rows at all -- without this, their collected cash
+  // never shows up in Liquid Funds despite the invoice being marked PAID.
+  const txIdsWithPaymentRows = new Set(allPayments.map((p) => p.transactionId));
+  for (const tx of incomeTransactions) {
+    if (tx.amountPaid <= 0 || txIdsWithPaymentRows.has(tx.id)) continue;
+    if (isCashMethod(tx.paymentMode)) cashInHandMinor += tx.amountPaid;
+    else bankCardMinor += tx.amountPaid;
+  }
 
   return (
     <PinLockGuard>
