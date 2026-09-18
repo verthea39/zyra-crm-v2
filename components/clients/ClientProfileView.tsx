@@ -44,12 +44,23 @@ function formatDate(d: string | Date | null | undefined): string {
   return new Date(d).toLocaleDateString("en-GB");
 }
 
+// Documents within 30 days of expiry are flagged "Expiring" rather than
+// "Valid" -- gives coordinators a heads-up window to renew before the
+// document actually lapses into "Expired".
+const EXPIRING_SOON_WINDOW_DAYS = 30;
+
 function expiryBadge(expiryDate: string | Date | null | undefined) {
-  if (!expiryDate) return { label: "No Expiry Data", className: "bg-slate-100 border-slate-200 text-slate-500" };
+  if (!expiryDate) {
+    return { status: "No Data", label: "No Expiry Data", detail: null as string | null, className: "bg-slate-100 border-slate-200 text-slate-500" };
+  }
   const days = Math.ceil((new Date(expiryDate).getTime() - Date.now()) / (1000 * 3600 * 24));
-  if (days < 0) return { label: `Expired ${Math.abs(days)}d ago`, className: "bg-rose-50 border-rose-200 text-rose-700" };
-  if (days <= 30) return { label: `Expiring in ${days}d`, className: "bg-amber-50 border-amber-200 text-amber-700" };
-  return { label: `Valid (${days}d left)`, className: "bg-emerald-50 border-emerald-200 text-emerald-700" };
+  if (days < 0) {
+    return { status: "Expired", label: "Expired", detail: `${Math.abs(days)}d ago`, className: "bg-rose-50 border-rose-200 text-rose-700" };
+  }
+  if (days <= EXPIRING_SOON_WINDOW_DAYS) {
+    return { status: "Expiring", label: "Expiring", detail: `${days}d left`, className: "bg-amber-50 border-amber-200 text-amber-700" };
+  }
+  return { status: "Valid", label: "Valid", detail: `${days}d left`, className: "bg-emerald-50 border-emerald-200 text-emerald-700" };
 }
 
 type TabKey = "billing" | "cases" | "vault";
@@ -67,6 +78,17 @@ export function ClientProfileView({ client }: { client: any }) {
   const outstanding = totalBilled - totalPaid;
 
   const formattedPhone = client.phone?.replace(/[^0-9]/g, "");
+
+  // Primary tracked document at the client level (separate from the
+  // Document Vault attachments below): trade license for corporates,
+  // passport for individuals -- the same field used to flag "expiring soon"
+  // clients elsewhere (ClientsTable, LedgerView).
+  const trackedDocs: { label: string; expiryDate: string | Date | null }[] = [
+    client.type === "CORPORATE"
+      ? { label: "Trade License", expiryDate: client.expiryDate }
+      : { label: "Passport", expiryDate: client.passportExpiry },
+  ];
+  const visibleTrackedDocs = trackedDocs.filter((d) => d.expiryDate);
 
   return (
     <div className="max-w-6xl mx-auto w-full pb-16">
@@ -97,6 +119,22 @@ export function ClientProfileView({ client }: { client: any }) {
                 <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {client.place}</span>
               )}
             </div>
+            {visibleTrackedDocs.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mt-3">
+                {visibleTrackedDocs.map((doc) => {
+                  const badge = expiryBadge(doc.expiryDate);
+                  return (
+                    <span
+                      key={doc.label}
+                      title={`${doc.label} expires ${formatDate(doc.expiryDate)}`}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide rounded-full border ${badge.className}`}
+                    >
+                      {doc.label}: {badge.label}{badge.detail ? ` · ${badge.detail}` : ""}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
@@ -257,7 +295,7 @@ function VaultTab({ docs }: { docs: any[] }) {
               <p className="text-[11px] text-slate-400 mt-1">Expires: {formatDate(doc.expiryDate)}</p>
             </div>
             <span className={`shrink-0 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide rounded-full border ${badge.className}`}>
-              {badge.label}
+              {badge.label}{badge.detail ? ` · ${badge.detail}` : ""}
             </span>
           </div>
         );
