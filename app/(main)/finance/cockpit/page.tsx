@@ -7,6 +7,7 @@ import { PortalWalletsSection } from "@/components/wallets/PortalWalletsSection"
 import { getWalletStats } from "@/app/actions/wallets";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function FinanceCockpitPage() {
   // Fetch all transactions, newest first. `date` alone ties for seeded/bulk
@@ -18,9 +19,9 @@ export default async function FinanceCockpitPage() {
   });
 
   // Calculate metrics
-  let revenue = 0;
-  let directCosts = 0; // supplierCostPart across all income -- gov/supplier fees paid out per invoice
-  let operatingExpenses = 0;
+  let totalRevenue = 0;
+  let supplierCostPartTotal = 0; // supplierCostPart across all income -- gov/supplier fees paid out per invoice
+  let standaloneExpensesTotal = 0;
   let receivables = 0;
   let payables = 0;
   let grossProfit = 0;
@@ -29,14 +30,14 @@ export default async function FinanceCockpitPage() {
     const balance = tx.amountTotal - tx.amountPaid;
 
     if (tx.type === "INCOME") {
-      revenue += tx.amountTotal;
-      directCosts += tx.supplierCostPart;
+      totalRevenue += tx.amountTotal;
+      supplierCostPartTotal += tx.supplierCostPart;
       // Gross profit = customer rate minus real supplier/govt cost, derived
       // rather than stored so it can never drift out of sync with the tx.
       grossProfit += tx.amountTotal - tx.supplierCostPart;
       if (balance > 0) receivables += balance;
     } else if (tx.type === "EXPENSE") {
-      operatingExpenses += tx.amountTotal;
+      standaloneExpensesTotal += tx.amountTotal;
       if (balance > 0) payables += balance;
     }
   }
@@ -44,12 +45,12 @@ export default async function FinanceCockpitPage() {
   // Total Expenses = direct supplier/govt costs passed through on every
   // invoice + standalone operational expense entries -- not just the
   // EXPENSE-type transactions, which miss the cost of goods/services sold.
-  const expenses = directCosts + operatingExpenses;
-  const netProfit = revenue - expenses;
+  const totalExpenses = (standaloneExpensesTotal || 0) + (supplierCostPartTotal || 0);
+  const netProfit = (totalRevenue || 0) - totalExpenses;
 
   const metrics = {
-    revenue,
-    expenses,
+    revenue: totalRevenue,
+    expenses: totalExpenses,
     netProfit,
     receivables,
     payables,
