@@ -40,11 +40,12 @@ type DocumentWithRelations = {
   vatRate: number;
   vatMinor: number;
   totalMinor: number;
+  paidMinor: number;
   issueDate: string | Date;
   dueDate?: string | Date | null;
   expiryDate?: string | Date | null;
   notes?: string | null;
-  client: { name: string; phone?: string | null };
+  client: { name: string; phone?: string | null; place?: string | null; trnNumber?: string | null };
   items: { id: string; description: string; quantity: number; unitPriceMinor: number; lineTotalMinor: number; vatExempt: boolean }[];
   convertedInvoice?: { id: string; reference: string } | null;
 };
@@ -143,16 +144,22 @@ export function DocumentDetail({ document, branding, activity = [] }: { document
         </div>
       </div>
 
+      {/* @page rule can't be expressed as a Tailwind class -- A4 portrait
+          with 12mm margins for every browser print/PDF path this hits. */}
+      <style>{`@page { size: A4 portrait; margin: 12mm; }`}</style>
+
       {/* Printable content -- kept tight so a typical 3-5 item document fits one A4 page */}
-      <div data-print-area className="bg-white border border-border rounded-xl p-4 sm:p-6 text-sm print:text-[11px] print:leading-tight">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between border-b-2 border-[#98682E] pb-2 mb-3">
-          <div className="flex items-start gap-2.5 min-w-0 flex-1">
+      <div data-print-area className="bg-white border border-border rounded-xl p-4 sm:p-6 print:p-8 text-sm print:text-[11px] print:leading-tight">
+        {/* 1. Brand header -- logo + business details left, document badge right */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between border-b-2 pb-3 mb-4" style={{ borderColor: "#9B722B" }}>
+          <div className="flex items-start gap-3 min-w-0 flex-1">
             <img
               src={ZYRA_LOGO_GOLD_PATH}
               alt={branding.name}
-              className="h-9 w-auto object-contain shrink-0 print:h-8"
+              className="h-10 w-auto object-contain shrink-0 print:h-9"
             />
-            <div className="text-[10.5px] text-muted-foreground leading-snug min-w-0">
+            <div className="text-[10.5px] text-slate-600 leading-snug min-w-0">
+              <p className="font-semibold text-slate-800 text-xs">{branding.name}</p>
               <p>{branding.address}</p>
               <p>
                 {[branding.phone && `Tel: ${branding.phone}`, branding.email && `Email: ${branding.email}`]
@@ -170,26 +177,31 @@ export function DocumentDetail({ document, branding, activity = [] }: { document
               column -- title, full reference, and status badge -- always
               keeps its natural width instead of being clipped by the page
               edge on print. */}
-          <div className="text-left sm:text-right shrink-0 w-full sm:w-auto sm:max-w-[45%]">
-            <p className="text-base font-extrabold uppercase tracking-wide text-foreground leading-tight">{typeLabel}</p>
-            <p className="font-mono text-xs text-muted-foreground break-all">{document.reference}</p>
-            <span className={`inline-block mt-0.5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide rounded-full border ${STATUS_STYLE[document.status]}`}>
+          <div className="text-left sm:text-right shrink-0 w-full sm:w-auto sm:max-w-[45%] sm:pl-4">
+            <p className="text-lg font-extrabold uppercase tracking-wide text-slate-900 leading-tight">{typeLabel}</p>
+            <p className="font-mono text-xs text-slate-500 break-all mt-0.5">Invoice No: {document.reference}</p>
+            <p className="text-[10.5px] text-slate-500 mt-1">Issue Date: {new Date(document.issueDate).toLocaleDateString('en-GB')}</p>
+            {document.dueDate && <p className="text-[10.5px] text-slate-500">Due Date: {new Date(document.dueDate).toLocaleDateString('en-GB')}</p>}
+            <span className={`inline-block mt-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide rounded-full border ${STATUS_STYLE[document.status]}`}>
               {document.status}
             </span>
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:justify-between mb-3 text-xs">
+        {/* 2. Client & meta info strip */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 bg-slate-50/70 border border-slate-100 rounded-lg p-4">
           <div>
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Billed To</p>
-            <p className="font-semibold text-foreground text-sm">{document.client.name}</p>
-            {document.client.phone && <p className="text-muted-foreground">{document.client.phone}</p>}
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Invoice To</p>
+            <p className="font-bold text-slate-900 text-sm">{document.client.name}</p>
+            {document.client.phone && <p className="text-slate-600 text-xs mt-0.5">{document.client.phone}</p>}
+            {document.client.place && <p className="text-slate-600 text-xs">{document.client.place}</p>}
           </div>
           <div className="sm:text-right">
-            <p><span className="text-muted-foreground">Issue Date: </span>{new Date(document.issueDate).toLocaleDateString('en-GB')}</p>
-            {document.dueDate && <p><span className="text-muted-foreground">Due Date: </span>{new Date(document.dueDate).toLocaleDateString('en-GB')}</p>}
-            {document.expiryDate && <p><span className="text-muted-foreground">Expiry Date: </span>{new Date(document.expiryDate).toLocaleDateString('en-GB')}</p>}
-            <p><span className="text-muted-foreground">Currency: </span>AED</p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Payment Summary</p>
+            <p className="text-slate-600 text-xs">Currency: <span className="font-semibold text-slate-800">AED</span></p>
+            {document.dueDate && <p className="text-slate-600 text-xs">Payment Due: <span className="font-semibold text-slate-800">{new Date(document.dueDate).toLocaleDateString('en-GB')}</span></p>}
+            {document.expiryDate && <p className="text-slate-600 text-xs">Valid Until: <span className="font-semibold text-slate-800">{new Date(document.expiryDate).toLocaleDateString('en-GB')}</span></p>}
+            {document.client.trnNumber && <p className="text-slate-600 text-xs">Client TRN: <span className="font-semibold text-slate-800">{document.client.trnNumber}</span></p>}
           </div>
         </div>
 
@@ -206,76 +218,94 @@ export function DocumentDetail({ document, branding, activity = [] }: { document
           ))}
         </div>
 
-        {/* Desktop + print: table */}
-        <table className="hidden sm:table print:table w-full text-xs text-left mb-3" style={{ borderCollapse: "separate", borderSpacing: 0 }}>
-          <thead className="text-[10px] uppercase text-muted-foreground border-b border-border">
+        {/* 3. Line items table -- desktop + print */}
+        <table className="hidden sm:table print:table w-full text-xs text-left mb-4 border border-slate-100 rounded-lg overflow-hidden" style={{ borderCollapse: "separate", borderSpacing: 0 }}>
+          <thead className="bg-slate-100 text-slate-800 uppercase text-[10px] tracking-wider">
             <tr>
-              <th className="py-3 px-3 align-middle text-left leading-normal">Description</th>
-              <th className="py-3 px-3 align-middle text-center leading-normal">Qty</th>
-              <th className="py-3 px-3 align-middle text-right leading-normal font-mono">Unit Price</th>
-              <th className="py-3 px-3 align-middle text-right leading-normal">VAT</th>
-              <th className="py-3 px-3 align-middle text-right leading-normal font-mono">Total</th>
+              <th className="py-3 px-4 align-middle text-center leading-normal w-10">#</th>
+              <th className="py-3 px-4 align-middle text-left leading-normal">Description</th>
+              <th className="py-3 px-4 align-middle text-center leading-normal">Qty</th>
+              <th className="py-3 px-4 align-middle text-right leading-normal font-mono">Unit Price (AED)</th>
+              <th className="py-3 px-4 align-middle text-right leading-normal">VAT</th>
+              <th className="py-3 px-4 align-middle text-right leading-normal font-mono">Total (AED)</th>
             </tr>
           </thead>
           <tbody>
-            {document.items.map((item) => (
-              <tr key={item.id} className="print:break-inside-avoid border-b border-slate-200">
-                <td className="py-3 px-3 align-middle text-left leading-normal">{item.description}</td>
-                <td className="py-3 px-3 align-middle text-center leading-normal">{item.quantity}</td>
-                <td className="py-3 px-3 align-middle text-right leading-normal font-mono">{formatMoney(item.unitPriceMinor)}</td>
-                <td className="py-3 px-3 align-middle text-right leading-normal text-muted-foreground">{item.vatExempt ? "Exempt" : `${document.vatRate}%`}</td>
-                <td className="py-3 px-3 align-middle text-right leading-normal font-mono font-medium">{formatMoney(item.lineTotalMinor)}</td>
+            {document.items.map((item, idx) => (
+              <tr key={item.id} className="print:break-inside-avoid border-b border-slate-100 even:bg-slate-50/40 hover:bg-slate-50/50">
+                <td className="py-3 px-4 align-middle text-center leading-normal text-slate-400">{idx + 1}</td>
+                <td className="py-3 px-4 align-middle text-left leading-normal">{item.description}</td>
+                <td className="py-3 px-4 align-middle text-center leading-normal">{item.quantity}</td>
+                <td className="py-3 px-4 align-middle text-right leading-normal font-mono">{formatMoney(item.unitPriceMinor)}</td>
+                <td className="py-3 px-4 align-middle text-right leading-normal text-muted-foreground">{item.vatExempt ? "Exempt" : `${document.vatRate}%`}</td>
+                <td className="py-3 px-4 align-middle text-right leading-normal font-mono font-medium">{formatMoney(item.lineTotalMinor)}</td>
               </tr>
             ))}
           </tbody>
         </table>
 
-        <div className="flex justify-end print:break-inside-avoid">
-          <div className="w-full sm:w-64 space-y-1 text-xs border border-border rounded-lg p-2.5 bg-slate-50/60">
-            <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatMoney(document.subtotalMinor)}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Discount</span><span>-{formatMoney(document.discountMinor)}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">VAT ({document.vatRate}%)</span><span>{formatMoney(document.vatMinor)}</span></div>
-            <div className="flex justify-between border-t-2 border-[#98682E] pt-1.5 mt-1.5 text-sm font-extrabold text-foreground">
+        {/* 4. Totals & calculation card */}
+        <div className="flex justify-end print:break-inside-avoid mb-4">
+          <div className="w-full sm:w-72 space-y-1.5 text-xs border border-slate-200 rounded-lg p-3 bg-white">
+            <div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span className="font-medium text-slate-800">{formatMoney(document.subtotalMinor)}</span></div>
+            {document.discountMinor > 0 && (
+              <div className="flex justify-between"><span className="text-slate-500">Discount</span><span className="font-medium text-slate-800">-{formatMoney(document.discountMinor)}</span></div>
+            )}
+            <div className="flex justify-between"><span className="text-slate-500">VAT ({document.vatRate > 0 ? `${document.vatRate}%` : "Exempt"})</span><span className="font-medium text-slate-800">{formatMoney(document.vatMinor)}</span></div>
+            <div className="flex justify-between items-center border-t-2 pt-1.5 mt-1.5 text-sm font-extrabold text-slate-900 rounded px-1 -mx-1" style={{ borderColor: "#9B722B", backgroundColor: "#9B722B0D" }}>
               <span>Grand Total</span><span>{formatMoney(document.totalMinor)}</span>
+            </div>
+            {document.type !== "QUOTATION" && (
+              <>
+                <div className="flex justify-between pt-1"><span className="text-slate-500">Paid Amount</span><span className="font-medium text-emerald-600">{formatMoney(document.paidMinor)}</span></div>
+                <div className="flex justify-between font-bold">
+                  <span className="text-slate-700">Outstanding Balance</span>
+                  <span className={document.totalMinor - document.paidMinor > 0 ? "text-rose-600" : "text-emerald-600"}>
+                    {formatMoney(Math.max(0, document.totalMinor - document.paidMinor))}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* 5. Terms & signature footer */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 print:break-inside-avoid">
+          <div className="border border-slate-200 rounded-lg p-3 text-[10px] text-slate-600">
+            <span className="font-semibold text-slate-800 uppercase tracking-wide">Terms & Conditions</span>
+            <ul className="list-disc list-inside leading-snug mt-1 space-y-0.5">
+              {document.type === "QUOTATION" ? (
+                <li>Valid for {document.expiryDate ? new Date(document.expiryDate).toLocaleDateString('en-GB') : "30 days from issue date"}; prices subject to change after expiry.</li>
+              ) : (
+                <li>Payment due {document.dueDate ? `by ${new Date(document.dueDate).toLocaleDateString('en-GB')}` : (branding.paymentTerms || "within 14 days of invoice date")}.</li>
+              )}
+              <li>All amounts stated in AED.</li>
+              {(branding.bankName || branding.iban) && (
+                <li>Bank Transfer:{branding.bankName ? ` ${branding.bankName}` : ""}{branding.iban ? ` | IBAN: ${branding.iban}` : ""}{branding.swift ? ` | SWIFT: ${branding.swift}` : ""}</li>
+              )}
+            </ul>
+            {document.notes && (
+              <p className="mt-1.5"><span className="font-semibold text-slate-800">Notes:</span> {document.notes}</p>
+            )}
+          </div>
+
+          {/* Dual signature columns -- ample clearance above each line so a
+              physical or digital signature/stamp has room to sit cleanly. */}
+          <div className="flex items-end justify-between gap-4 pt-2">
+            <div className="w-1/2 text-center">
+              <div className="h-10" />
+              <div className="border-t border-slate-400 pt-1 text-[9px] text-slate-500">Authorized Signatory<br />&mdash; {branding.name}</div>
+            </div>
+            <div className="w-1/2 text-center">
+              <div className="h-10" />
+              <div className="border-t border-slate-400 pt-1 text-[9px] text-slate-500">Client Acceptance & Stamp<br />&mdash; {document.client.name}</div>
             </div>
           </div>
         </div>
 
-        {/* Terms & Conditions -- kept to essentials for single-page fit */}
-        <div className="mt-3 border border-border rounded-lg p-2.5 text-[10px] text-muted-foreground print:break-inside-avoid">
-          <span className="font-semibold text-foreground uppercase tracking-wide">Terms:</span>
-          <ul className="list-disc list-inside leading-snug mt-0.5">
-            {document.type === "QUOTATION" ? (
-              <li>Valid for {document.expiryDate ? new Date(document.expiryDate).toLocaleDateString('en-GB') : "30 days from issue date"}; prices subject to change after expiry.</li>
-            ) : (
-              <li>Payment due {document.dueDate ? `by ${new Date(document.dueDate).toLocaleDateString('en-GB')}` : (branding.paymentTerms || "within 14 days of invoice date")}.</li>
-            )}
-            <li>All amounts stated in AED.</li>
-            {(branding.bankName || branding.iban) && (
-              <li>Bank Transfer:{branding.bankName ? ` ${branding.bankName}` : ""}{branding.iban ? ` | IBAN: ${branding.iban}` : ""}{branding.swift ? ` | SWIFT: ${branding.swift}` : ""}</li>
-            )}
-          </ul>
-          {document.notes && (
-            <p className="mt-1"><span className="font-semibold text-foreground">Notes:</span> {document.notes}</p>
-          )}
-        </div>
-
-        {/* Signatures + footer, combined into one slim bar -- pt-8 pb-4
-            keeps it clear of the Terms box above and the page's bottom
-            border/margin below, instead of the two colliding at mt-3. */}
-        <div className="flex items-end justify-between gap-4 pt-8 pb-4 print:break-inside-avoid">
-          <div className="w-2/5 text-center">
-            <div className="h-8" />
-            <div className="border-t border-slate-400 pt-1 text-[9px] text-muted-foreground">Authorized Signatory &mdash; {branding.name}</div>
-          </div>
-          <p className="flex-1 text-center text-[9px] text-slate-400 px-2">
-            Thank you for choosing {branding.name}{branding.portalUrl ? ` | ${branding.portalUrl}` : ""}
-          </p>
-          <div className="w-2/5 text-center">
-            <div className="h-8" />
-            <div className="border-t border-slate-400 pt-1 text-[9px] text-muted-foreground">Client Acceptance / Stamp &mdash; {document.client.name}</div>
-          </div>
-        </div>
+        <p className="text-center text-xs text-slate-400 pt-6 pb-2 print:break-inside-avoid">
+          Thank you for your business{branding.portalUrl ? ` | ${branding.portalUrl}` : ""}
+        </p>
       </div>
 
       {/* Audit History -- never shown on print */}
