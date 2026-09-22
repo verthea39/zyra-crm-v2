@@ -175,6 +175,8 @@ model Client {
   passportNo      String?
   passportExpiry  DateTime?
   emiratesIdNo    String?
+  emiratesIdExpiry DateTime?
+  visaExpiry      DateTime? // Residence Visa expiry
   tradeLicenseNo  String?
   expiryDate      DateTime?
   trnNumber           String?   // Corporate: Tax Registration Number

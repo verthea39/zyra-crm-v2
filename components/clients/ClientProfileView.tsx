@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import {
   ArrowLeft, FileText, GitMerge, ShieldAlert, Download, Loader2,
-  Phone, Mail, MapPin, MessageCircle,
+  Phone, Mail, MapPin, MessageCircle, Pencil, IdCard,
 } from "lucide-react";
 import { printClientStatement, type StatementRange } from "@/lib/clientStatement";
 import { getBranding } from "@/app/actions/branding";
+import { updateClientDocumentExpiry } from "@/app/actions/clients";
 
 const STAGE_LABELS: Record<string, string> = {
   DRAFT_INTAKE: "Draft / Intake",
@@ -51,17 +53,26 @@ const EXPIRING_SOON_WINDOW_DAYS = 30;
 
 function expiryBadge(expiryDate: string | Date | null | undefined) {
   if (!expiryDate) {
-    return { status: "No Data", label: "No Expiry Data", detail: null as string | null, className: "bg-slate-100 border-slate-200 text-slate-500" };
+    return { status: "Not Uploaded", label: "Not Uploaded", detail: null as string | null, className: "bg-slate-100 border-slate-200 text-slate-500" };
   }
   const days = Math.ceil((new Date(expiryDate).getTime() - Date.now()) / (1000 * 3600 * 24));
   if (days < 0) {
-    return { status: "Expired", label: "Expired", detail: `${Math.abs(days)}d ago`, className: "bg-rose-50 border-rose-200 text-rose-700" };
+    return { status: "Expired", label: "Expired", detail: `Expired ${Math.abs(days)}d ago`, className: "bg-rose-50 border-rose-200 text-rose-700" };
   }
   if (days <= EXPIRING_SOON_WINDOW_DAYS) {
-    return { status: "Expiring", label: "Expiring", detail: `${days}d left`, className: "bg-amber-50 border-amber-200 text-amber-700" };
+    return { status: "Expiring Soon", label: "Expiring Soon", detail: `Expires in ${days}d`, className: "bg-amber-50 border-amber-200 text-amber-700" };
   }
-  return { status: "Valid", label: "Valid", detail: `${days}d left`, className: "bg-emerald-50 border-emerald-200 text-emerald-700" };
+  return { status: "Valid", label: "Valid", detail: `Expires in ${days}d`, className: "bg-emerald-50 border-emerald-200 text-emerald-700" };
 }
+
+// The three documents every client is expected to keep current -- surfaced
+// together in the Key Documents Status card regardless of client type, since
+// staff track all three for both individuals and corporate contacts.
+const KEY_DOCUMENT_FIELDS: { key: "emiratesIdExpiry" | "visaExpiry" | "passportExpiry"; label: string }[] = [
+  { key: "emiratesIdExpiry", label: "Emirates ID" },
+  { key: "visaExpiry", label: "Residence Visa" },
+  { key: "passportExpiry", label: "Passport" },
+];
 
 type TabKey = "billing" | "cases" | "vault";
 
@@ -78,17 +89,6 @@ export function ClientProfileView({ client }: { client: any }) {
   const outstanding = totalBilled - totalPaid;
 
   const formattedPhone = client.phone?.replace(/[^0-9]/g, "");
-
-  // Primary tracked document at the client level (separate from the
-  // Document Vault attachments below): trade license for corporates,
-  // passport for individuals -- the same field used to flag "expiring soon"
-  // clients elsewhere (ClientsTable, LedgerView).
-  const trackedDocs: { label: string; expiryDate: string | Date | null }[] = [
-    client.type === "CORPORATE"
-      ? { label: "Trade License", expiryDate: client.expiryDate }
-      : { label: "Passport", expiryDate: client.passportExpiry },
-  ];
-  const visibleTrackedDocs = trackedDocs.filter((d) => d.expiryDate);
 
   return (
     <div className="max-w-6xl mx-auto w-full pb-16">
@@ -119,22 +119,6 @@ export function ClientProfileView({ client }: { client: any }) {
                 <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {client.place}</span>
               )}
             </div>
-            {visibleTrackedDocs.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2 mt-3">
-                {visibleTrackedDocs.map((doc) => {
-                  const badge = expiryBadge(doc.expiryDate);
-                  return (
-                    <span
-                      key={doc.label}
-                      title={`${doc.label} expires ${formatDate(doc.expiryDate)}`}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide rounded-full border ${badge.className}`}
-                    >
-                      {doc.label}: {badge.label}{badge.detail ? ` · ${badge.detail}` : ""}
-                    </span>
-                  );
-                })}
-              </div>
-            )}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
@@ -176,6 +160,8 @@ export function ClientProfileView({ client }: { client: any }) {
         </div>
       </div>
 
+      <KeyDocumentsCard client={client} />
+
       {/* Tabs */}
       <div className="flex items-center gap-1 mb-4 border-b border-slate-200 overflow-x-auto">
         <TabButton active={activeTab === "billing"} onClick={() => setActiveTab("billing")} icon={FileText} label={`Invoices & Billing (${invoices.length})`} />
@@ -190,6 +176,75 @@ export function ClientProfileView({ client }: { client: any }) {
       {statementOpen && (
         <StatementDialog client={client} invoices={invoices} onClose={() => setStatementOpen(false)} />
       )}
+    </div>
+  );
+}
+
+function KeyDocumentsCard({ client }: { client: any }) {
+  const [expiries, setExpiries] = useState<Record<string, string | null>>(() =>
+    Object.fromEntries(KEY_DOCUMENT_FIELDS.map((f) => [f.key, client[f.key] ? new Date(client[f.key]).toISOString().slice(0, 10) : null]))
+  );
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
+
+  const handleSave = async (key: string, value: string) => {
+    setSavingKey(key);
+    const res = await updateClientDocumentExpiry(client.id, key as any, value || null);
+    setSavingKey(null);
+    if (res.success) {
+      setExpiries((prev) => ({ ...prev, [key]: value || null }));
+      setEditingKey(null);
+      toast.success("Expiry date updated");
+    } else {
+      toast.error(res.error || "Failed to update expiry date");
+    }
+  };
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm mb-6">
+      <div className="flex items-center gap-2 mb-4">
+        <IdCard className="w-4 h-4 text-slate-400" />
+        <h2 className="text-sm font-bold text-slate-900">Key Documents Status</h2>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {KEY_DOCUMENT_FIELDS.map(({ key, label }) => {
+          const badge = expiryBadge(expiries[key]);
+          const isEditing = editingKey === key;
+          return (
+            <div key={key} className="border border-slate-100 rounded-xl p-3 flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold text-slate-700">{label}</p>
+                <button
+                  type="button"
+                  onClick={() => setEditingKey(isEditing ? null : key)}
+                  title="Update expiry date"
+                  className="text-slate-400 hover:text-[#98682E] shrink-0"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <span className={`inline-flex w-fit items-center px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide rounded-full border ${badge.className}`}>
+                {badge.label}
+              </span>
+              {badge.detail && <p className="text-[11px] text-slate-400">{badge.detail}</p>}
+
+              {isEditing && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <input
+                    type="date"
+                    defaultValue={expiries[key] || ""}
+                    disabled={savingKey === key}
+                    onChange={(e) => handleSave(key, e.target.value)}
+                    className="w-full h-8 rounded-md border border-slate-200 px-2 text-xs focus:border-[#98682E] focus:ring-1 focus:ring-[#98682E]/30 outline-none"
+                  />
+                  {savingKey === key && <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400 shrink-0" />}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

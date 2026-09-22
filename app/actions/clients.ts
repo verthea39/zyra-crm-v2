@@ -72,6 +72,27 @@ export async function updateClient(id: string, data: any) {
   }
 }
 
+const TRACKED_EXPIRY_FIELDS = ["passportExpiry", "emiratesIdExpiry", "visaExpiry"] as const;
+type TrackedExpiryField = (typeof TRACKED_EXPIRY_FIELDS)[number];
+
+/** Quick single-field update for the Client Profile "Key Documents Status" card -- avoids the full updateClient payload wiping unrelated fields. */
+export async function updateClientDocumentExpiry(id: string, field: TrackedExpiryField, date: string | null) {
+  if (!TRACKED_EXPIRY_FIELDS.includes(field)) {
+    return { success: false, error: "Invalid document field." };
+  }
+  try {
+    await prisma.client.update({
+      where: { id },
+      data: { [field]: date ? new Date(date) : null },
+    });
+    revalidatePath(`/clients/${id}`);
+    return { success: true };
+  } catch (error) {
+    logServerError(error, { action: "updateClientDocumentExpiry", extra: { clientId: id, field } });
+    return { success: false, error: "Failed to update expiry date." };
+  }
+}
+
 export async function getClient(id: string) {
   try {
     return await prisma.client.findUnique({
