@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { advanceCaseStage, deleteCase } from "@/app/actions/pipeline";
 import { toast } from "sonner";
-import { Clock, MessageCircle, MoveRight, Receipt, FileText, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Clock, MessageCircle, MoveRight, Receipt, FileText, MoreVertical, Pencil, Trash2, Phone, Wallet } from "lucide-react";
 import { CaseDetailsSheet } from "./CaseDetailsSheet";
 import { EditCaseModal } from "./EditCaseModal";
 import {
@@ -14,13 +15,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// Standard UAE clearance sequence -- 7 stages, in order.
 const STAGES = [
   { id: "DRAFT_INTAKE", label: "Draft / Intake", short: "Draft" },
   { id: "OFFER_LETTER_MOHRE", label: "Offer Letter & MOHRE", short: "MOHRE" },
   { id: "ENTRY_PERMIT", label: "Entry Permit", short: "Entry" },
+  { id: "CHANGE_STATUS", label: "Change Status", short: "Status" },
   { id: "MEDICAL_BIOMETRICS", label: "Medical & Biometrics", short: "Medical" },
-  { id: "VISA_STAMPING_EID", label: "Visa Stamping / EID", short: "Visa" },
-  { id: "COMPLETED_HANDOVER", label: "Completed", short: "Done" },
+  { id: "VISA_STAMPING_EID", label: "Visa Stamping & Emirates ID", short: "Visa" },
+  { id: "COMPLETED_HANDOVER", label: "Completed / Handover", short: "Done" },
 ];
 
 const STAGE_IDS = new Set(STAGES.map((s) => s.id));
@@ -101,6 +104,19 @@ export function KanbanBoard({ cases, onCasesChange, clients = [], coordinators =
     return "bg-sky-100 text-sky-700  ";
   };
 
+  // Zone (FREEZONE/MAINLAND) is stored as free text on Client.visaType (e.g.
+  // "FREEZON Freelance Visa") rather than a dedicated column -- derive the
+  // badge from a case-insensitive match instead of an exact-value lookup.
+  const getZoneBadge = (visaType: string | undefined | null): { label: string; className: string } | null => {
+    const v = (visaType || "").toUpperCase();
+    if (v.includes("FREEZON")) return { label: "FREEZONE", className: "bg-teal-50 border-teal-200 text-teal-800" };
+    if (v.includes("MAINLAND")) return { label: "MAINLAND", className: "bg-orange-50 border-orange-200 text-orange-800" };
+    return null;
+  };
+
+  const formatMoney = (major: number) =>
+    `AED ${major.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
   const getTimeInStage = (dateStr: string | Date | undefined) => {
     if (!dateStr) return "Just now";
     const diff = Math.floor((new Date().getTime() - new Date(dateStr).getTime()) / (1000 * 3600 * 24));
@@ -155,7 +171,7 @@ export function KanbanBoard({ cases, onCasesChange, clients = [], coordinators =
         return (
           <div key={stage.id} className="flex flex-col min-w-[320px] w-[320px] bg-slate-50/50 rounded-xl overflow-hidden border border-border shrink-0 h-[calc(100vh-180px)] min-h-[600px] backdrop-blur-sm">
             <div className="p-4 border-b border-border bg-slate-100/60 font-bold flex justify-between items-center text-sm shrink-0">
-              <span className="text-foreground tracking-wide uppercase text-xs">{stage.label}</span>
+              <span className="text-foreground tracking-wide uppercase text-xs">{stage.label} ({stageCases.length})</span>
               <span className="bg-white text-slate-600 px-2 py-0.5 rounded-full text-xs font-mono border border-slate-200">
                 {stageCases.length}
               </span>
@@ -196,6 +212,11 @@ export function KanbanBoard({ cases, onCasesChange, clients = [], coordinators =
 
     return stageCases.map((c, index) => {
       const isUrgent = c.stageUpdatedAt && Math.floor((new Date().getTime() - new Date(c.stageUpdatedAt).getTime()) / (1000 * 3600 * 24)) >= 5;
+      const zoneBadge = getZoneBadge(c.client?.visaType);
+      const txs: { amountTotal: number; amountPaid: number }[] = c.transactions || [];
+      const billedMinor = txs.reduce((sum, t) => sum + t.amountTotal, 0);
+      const paidMinor = txs.reduce((sum, t) => sum + t.amountPaid, 0);
+      const outstandingMinor = billedMinor - paidMinor;
 
       const cardBody = (dragHandleProps?: any, isDragging?: boolean) => (
         <div
@@ -219,6 +240,11 @@ export function KanbanBoard({ cases, onCasesChange, clients = [], coordinators =
                 {c.reference}
               </span>
               <div className="flex items-center gap-1.5">
+                {zoneBadge && (
+                  <span className={`text-[9px] font-bold px-2 py-1 rounded uppercase tracking-widest border ${zoneBadge.className}`}>
+                    {zoneBadge.label}
+                  </span>
+                )}
                 <span className={`text-[9px] font-bold px-2 py-1 rounded uppercase tracking-widest border ${
                   c.client?.type === 'CORPORATE' ? 'bg-indigo-50 border-indigo-200 text-indigo-800' : 'bg-sky-50 border-sky-200 text-sky-800'
                 }`}>
@@ -247,9 +273,44 @@ export function KanbanBoard({ cases, onCasesChange, clients = [], coordinators =
             <h3 className="font-bold text-foreground text-sm mb-1 leading-tight tracking-tight">
               {c.applicantName || "Unnamed Applicant"}
             </h3>
-            <p className="text-xs text-muted-foreground mb-4 line-clamp-1">
-              Sponsor: <span className="font-medium text-slate-700">{c.client?.name}</span>
+            <p className="text-xs text-muted-foreground mb-1 line-clamp-1">
+              Sponsor:{" "}
+              {c.clientId ? (
+                <Link
+                  href={`/clients/${c.clientId}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="font-medium text-slate-700 hover:text-primary hover:underline"
+                >
+                  {c.client?.name}
+                </Link>
+              ) : (
+                <span className="font-medium text-slate-700">{c.client?.name}</span>
+              )}
             </p>
+            {c.client?.phone && (
+              <p className="text-[11px] text-muted-foreground mb-2 flex items-center gap-1.5">
+                <Phone className="w-3 h-3 opacity-60" /> {c.client.phone}
+              </p>
+            )}
+
+            {c.notes && (
+              <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2 py-1 mb-2 truncate" title={c.notes}>
+                {c.notes}
+              </p>
+            )}
+
+            {billedMinor > 0 && (
+              <div className="flex items-center justify-between gap-2 text-[10.5px] mb-2 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5">
+                <div className="flex items-center gap-1 text-slate-500" title="Billed Total">
+                  <Wallet className="w-3 h-3 opacity-60" />
+                  <span>{formatMoney(billedMinor / 100)}</span>
+                </div>
+                <div className="text-emerald-600" title="Paid">Paid {formatMoney(paidMinor / 100)}</div>
+                <div className={outstandingMinor > 0 ? "text-rose-600 font-semibold" : "text-slate-400"} title="Outstanding Balance">
+                  Bal {formatMoney(Math.max(0, outstandingMinor) / 100)}
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-2 text-[11px] text-muted-foreground bg-slate-50 p-2 rounded-lg border border-slate-200">
               <div className="flex items-center gap-1.5" title="Time in current stage">

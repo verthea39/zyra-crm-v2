@@ -29,7 +29,13 @@ export async function getCases() {
         },
         coordinator: {
           select: { name: true }
-        }
+        },
+        // For the card's financial snippet (Billed/Paid/Outstanding) -- a
+        // case can carry more than one invoice, so these get summed client-side.
+        transactions: {
+          where: { type: "INCOME" },
+          select: { amountTotal: true, amountPaid: true },
+        },
       },
       orderBy: {
         createdAt: 'desc'
