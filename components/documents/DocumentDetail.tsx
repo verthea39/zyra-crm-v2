@@ -146,13 +146,13 @@ export function DocumentDetail({ document, branding, activity = [] }: { document
       {/* Printable content -- kept tight so a typical 3-5 item document fits one A4 page */}
       <div data-print-area className="bg-white border border-border rounded-xl p-4 sm:p-6 text-sm print:text-[11px] print:leading-tight">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between border-b-2 border-[#98682E] pb-2 mb-3">
-          <div className="flex items-start gap-2.5">
+          <div className="flex items-start gap-2.5 min-w-0 flex-1">
             <img
               src={ZYRA_LOGO_GOLD_PATH}
               alt={branding.name}
               className="h-9 w-auto object-contain shrink-0 print:h-8"
             />
-            <div className="text-[10.5px] text-muted-foreground leading-snug">
+            <div className="text-[10.5px] text-muted-foreground leading-snug min-w-0">
               <p>{branding.address}</p>
               <p>
                 {[branding.phone && `Tel: ${branding.phone}`, branding.email && `Email: ${branding.email}`]
@@ -166,9 +166,13 @@ export function DocumentDetail({ document, branding, activity = [] }: { document
               </p>
             </div>
           </div>
-          <div className="text-left sm:text-right shrink-0">
+          {/* min-w-0 above lets the address block wrap/shrink first, so this
+              column -- title, full reference, and status badge -- always
+              keeps its natural width instead of being clipped by the page
+              edge on print. */}
+          <div className="text-left sm:text-right shrink-0 w-full sm:w-auto sm:max-w-[45%]">
             <p className="text-base font-extrabold uppercase tracking-wide text-foreground leading-tight">{typeLabel}</p>
-            <p className="font-mono text-xs text-muted-foreground">{document.reference}</p>
+            <p className="font-mono text-xs text-muted-foreground break-all">{document.reference}</p>
             <span className={`inline-block mt-0.5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide rounded-full border ${STATUS_STYLE[document.status]}`}>
               {document.status}
             </span>
@@ -256,17 +260,19 @@ export function DocumentDetail({ document, branding, activity = [] }: { document
           )}
         </div>
 
-        {/* Signatures + footer, combined into one slim bar */}
-        <div className="flex items-end justify-between gap-4 mt-3 print:break-inside-avoid">
+        {/* Signatures + footer, combined into one slim bar -- pt-8 pb-4
+            keeps it clear of the Terms box above and the page's bottom
+            border/margin below, instead of the two colliding at mt-3. */}
+        <div className="flex items-end justify-between gap-4 pt-8 pb-4 print:break-inside-avoid">
           <div className="w-2/5 text-center">
-            <div className="h-6" />
+            <div className="h-8" />
             <div className="border-t border-slate-400 pt-1 text-[9px] text-muted-foreground">Authorized Signatory &mdash; {branding.name}</div>
           </div>
-          <p className="flex-1 text-center text-[9px] text-slate-400">
+          <p className="flex-1 text-center text-[9px] text-slate-400 px-2">
             Thank you for choosing {branding.name}{branding.portalUrl ? ` | ${branding.portalUrl}` : ""}
           </p>
           <div className="w-2/5 text-center">
-            <div className="h-6" />
+            <div className="h-8" />
             <div className="border-t border-slate-400 pt-1 text-[9px] text-muted-foreground">Client Acceptance / Stamp &mdash; {document.client.name}</div>
           </div>
         </div>

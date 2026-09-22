@@ -41,7 +41,7 @@ export const DEFAULT_BRANDING: CompanyBranding = {
   whatsapp: null,
   email: COMPANY_PROFILE.email,
   website: COMPANY_PROFILE.website,
-  portalUrl: "crm.zyrabusinesshub.com",
+  portalUrl: "zyrabusinesshub.com",
   trn: null,
   tradeLicenseNo: null,
   logoUrl: ZYRA_LOGO_GOLD_DATA_URI,

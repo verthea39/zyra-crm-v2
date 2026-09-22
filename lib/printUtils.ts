@@ -326,17 +326,18 @@ async function buildDocumentContent(
         ${isQuotation && (data as QuotationData).notes ? `<p style="margin: 4px 0 0 0;"><strong>Notes:</strong> ${(data as QuotationData).notes}</p>` : ''}
       </div>
 
-      <!-- Signatures + footer combined into one slim bar -->
-      <div style="page-break-inside: avoid; display: flex; justify-content: space-between; align-items: flex-end; gap: 20px;">
+      <!-- Signatures + footer combined into one slim bar -- padding keeps it
+           clear of the Terms box above and the page's bottom border/margin. -->
+      <div style="page-break-inside: avoid; display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; padding-top: 20px; padding-bottom: 10px;">
         <div style="width: 40%; text-align: center;">
-          <div style="height: 24px;"></div>
+          <div style="height: 30px;"></div>
           <div style="border-top: 1px solid #94a3b8; padding-top: 3px; font-size: 9px; color: #64748b;">Authorized Signatory &mdash; ${branding.name}</div>
         </div>
-        <div style="flex: 1; text-align: center; font-size: 9px; color: #94a3b8;">
+        <div style="flex: 1; text-align: center; font-size: 9px; color: #94a3b8; padding: 0 8px;">
           Thank you for choosing ${branding.name}${branding.portalUrl ? ` &bull; ${branding.portalUrl}` : ''}
         </div>
         <div style="width: 40%; text-align: center;">
-          <div style="height: 24px;"></div>
+          <div style="height: 30px;"></div>
           <div style="border-top: 1px solid #94a3b8; padding-top: 3px; font-size: 9px; color: #64748b;">Client Acceptance / Stamp &mdash; ${data.clientName}</div>
         </div>
       </div>
